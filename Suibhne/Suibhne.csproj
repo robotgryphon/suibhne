@@ -34,6 +34,11 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Launch.cs" />
+    <Compile Include="IrcBotModule.cs" />
+    <Compile Include="..\Modules\ExampleModule.cs">
+      <Link>Modules\ExampleModule.cs</Link>
+    </Compile>
+    <Compile Include="IrcBot.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Net" />
@@ -44,5 +49,25 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
+    <Folder Include="Configuration\" />
+    <Folder Include="Modules\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Api\Ostenvighx.Api.Networking\Ostenvighx.Api.Networking.csproj">
+      <Project>{BB9C3D27-4438-4ED3-B1A0-90EC7D81C49D}</Project>
+      <Name>Ostenvighx.Api.Networking</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Api\Ostenvighx.Api\Ostenvighx.Api.csproj">
+      <Project>{F5996533-E51A-485B-AD68-8089477A4F7E}</Project>
+      <Name>Ostenvighx.Api</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Configuration\Configuration.xml">
+      <Link>Configuration\Configuration.xml</Link>
+    </None>
+    <None Include="..\Configuration\Servers\Localhost.xml">
+      <Link>Configuration\Servers\Localhost.xml</Link>
+    </None>
   </ItemGroup>
 </Project>
