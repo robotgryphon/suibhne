@@ -1,16 +1,18 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Launch.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="../Configuration/Servers/Localhost.xml">
     <Files>
-      <File FileName="Launch.cs" Line="58" Column="1" />
-      <File FileName="../../Api/Ostenvighx.Api.Networking/Irc/IrcConnection.cs" Line="1" Column="1" />
-      <File FileName="../../Api/Ostenvighx.Api.Networking/Irc/IrcMessage.cs" Line="1" Column="1" />
+      <File FileName="../Configuration/Servers/Localhost.xml" Line="8" Column="36" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="Suibhne" expanded="True">
-            <Node name="config" expanded="True" selected="True" />
+            <Node name="Configuration" expanded="True">
+              <Node name="Servers" expanded="True">
+                <Node name="Localhost.xml" selected="True" />
+              </Node>
+            </Node>
           </Node>
         </State>
       </Pad>
