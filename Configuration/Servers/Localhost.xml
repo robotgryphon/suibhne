@@ -7,6 +7,10 @@
 	<username>Suibhne</username>
 	<display>Delenas Freshtt</display>
 	<channels>
-		</channel chan="#suibhne" pass="" />
+		<channel chan="#suibhne" pass="" />
 	</channels>
+	
+	<modules>
+		<module path="Modules/Example" />
+	</modules>
 </server>

@@ -38,4 +38,7 @@ build/
 [Bb]in/
 [Oo]bj/
 
-Configuration/Servers/
+.idea/
+
+[Cc]onfiguration/
+[Cc]onfig/

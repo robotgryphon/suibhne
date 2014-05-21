@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration version="1.0" name="default">
+	<profiles>
+		<profile name="default">
+			<username>Suibhne</username>
+			<nickname>Suibhne</nickname>
+			<realname>Suibhne IRC Bot</realname>
+		</profile>
+	</profiles>
+	
 	<servers>
 		<server friendly="Localhost" config="servers/Localhost.xml" autojoin="true" />
 	</servers>
