@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<server>
+	<hostname>127.0.0.1</hostname>
+	<friendly>Localhost</friendly>
+	<port>6667</port>
+	<nickname>Suibhne</nickname>
+	<username>Suibhne</username>
+	<display>Delenas Freshtt</display>
+	<channels>
+		</channel chan="#suibhne" pass="" />
+	</channels>
+</server>

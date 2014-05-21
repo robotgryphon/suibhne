@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration version="1.0" name="default">
+	<servers>
+		<server friendly="Localhost" config="servers/Localhost.xml" autojoin="true" />
+	</servers>
+</configuration>
