@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<modules version="1.0" name="default">
+		<module name="Core::NickServ" enabled="false" />
+		<module name="Core::Topics" enabled="false" />
+		<module name="Core::Users" enabled="false" />
+		<module name="Core::Dice" enabled="false" />
+</modules>
