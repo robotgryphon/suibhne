@@ -2,7 +2,7 @@
 using System;
 using Ostenvighx.Suibhne.Core;
 
-namespace Suibhne {
+namespace Ostenvighx.Suibhne.Plugins {
 
 	public class PluginRegistry {
 

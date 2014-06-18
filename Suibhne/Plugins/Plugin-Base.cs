@@ -31,6 +31,10 @@ namespace Ostenvighx.Suibhne.Plugins {
 		{
 			this.ModuleName = moduleName;
 		}
+
+		public string[] RegisterCommands(PluginRegistry registry){
+			return new string[0];
+		}
 	}
 }
 

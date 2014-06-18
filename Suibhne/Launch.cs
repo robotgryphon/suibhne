@@ -15,9 +15,9 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args){
 
-			IrcBot bot = new IrcBot();
+			IrcBot bot = new IrcBot("/media/ted/Development/Suibhne/Configuration/Servers/Localhost/Server.xml");
 
-			bot.Connect();
+			// bot.Connect();
 
 
 		}
