@@ -1,4 +1,3 @@
-
 using System;
 using System.Net;
 using System.IO;
@@ -15,8 +14,14 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args){
 
-			IrcBot bot = new IrcBot("/media/ted/Development/Suibhne/Configuration/Servers/Localhost/Server.xml");
+			IrcBot bot = new IrcBot("/media/ted/Development/Suibhne/Configuration/Servers/Localhost.xml");
 
+			Console.WriteLine(bot.config.hostname);
+			Console.WriteLine(bot.config.port);
+			Console.WriteLine(bot.config.realname);
+			Console.WriteLine(bot.config.username);
+			Console.WriteLine(bot.config.nickname);
+			Console.WriteLine(bot.config.password);
 			// bot.Connect();
 
 

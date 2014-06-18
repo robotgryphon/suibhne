@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <server>
 	<config>
-		<hostname>127.0.0.1</hostname>
 		<friendly>Localhost</friendly>
+		<hostname>127.0.0.1</hostname>		
 		<port>6667</port>
 		<nickname>Suibhne</nickname>
 		<username>Suibhne</username>
-		<display>Delenas Freshtt</display>
+		<realname>Delenas Freshtt</realname>
+		<password>*</password>
 	</config>
 	
 	<channels>
