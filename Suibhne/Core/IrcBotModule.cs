@@ -1,7 +1,7 @@
 
 using System;
 
-namespace Ostenvighx.Suibhne {
+namespace Ostenvighx.Suibhne.Core {
 
 	/// <summary>
 	/// An IRC Bot Module contains code that is linked in with an IRC server.

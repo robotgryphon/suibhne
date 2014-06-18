@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using Ostenvighx.Api.Networking;
 using Ostenvighx.Api.Networking.Irc;
 
+using Ostenvighx.Suibhne.Core;
+
 namespace Ostenvighx.Suibhne {
 
 	public class Launch {

@@ -1,6 +1,6 @@
 
 using System;
-using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Core;
 
 namespace Ostenvighx.Suibhne.Modules {
 

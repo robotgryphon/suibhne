@@ -27,9 +27,9 @@ local.properties
 .buildpath
 
 # User-specific files
-*.suo
-*.user
-*.sln.docstates
+*.sln
+*.userprefs
+*.csproj
 
 # Build results
 
