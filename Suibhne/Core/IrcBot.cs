@@ -12,38 +12,46 @@ using Ostenvighx.Suibhne.Plugins;
 using System.Net.Sockets;
 using System.Threading;
 
-using Mono.Data.Sqlite;
-
 namespace Ostenvighx.Suibhne.Core {
 
 	public class IrcBot {
 
 		public IrcConfig config;
 		public IrcConnection conn;
-		public SqliteConnection db;
+
 		public StreamWriter LogFile;
 
 		public List<String> Operators;
 
-		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Servers/Default.xml") {
+		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Default/Server.json") {
 
+		}
+
+		public IrcBot(IrcConfig config){
+			Setup (config);
 		}
 
 		public IrcBot(String configFile){
 			config = new IrcConfig();
 			config.LoadFromFile(configFile);
 
-			conn = new IrcConnection(config);
+			Setup (config);
+
+			// TODO: Add Plugin Registry
+		}
+
+		protected void Setup(IrcConfig config){
+			conn = new IrcConnection (config);
 			conn.OnMessageRecieved += Log;
 			conn.OnNoticeRecieved += Log;
 
-			conn.OnDataRecieved += (connection, data, args) => { Console.WriteLine("Data Recieved: " + data); };
+			conn.OnDataRecieved += (connection, data, args) => {
+				Console.WriteLine ("Data Recieved: " + data);
+			};
 
-			this.LogFile = new StreamWriter(Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
+			this.LogFile = new StreamWriter (Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
 
-			this.Operators = new List<string>();
-
-			// TODO: Add Plugin Registry
+			this.Operators = new List<string> ();
 		}
 
 		public virtual void Connect(){
