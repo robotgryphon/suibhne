@@ -20,7 +20,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			char[] space = new char[] { ' ' };
 			Boolean isOperator = bot.IsBotOperator(message.sender);
 
-			String command = message.message.Split(space)[0].ToLower().Trim();
+			String command = message.message.Split(space)[0].ToLower().TrimStart(new char[]{'!'}).Trim();
 			String[] commandParts = message.message.Split(space);
 
 			// This will soon be handled by the plugin registry
@@ -76,8 +76,8 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 
 				case "quit":
 					if(isOperator) {
-						if(commandParts.Length > 2)
-							bot.conn.Disconnect(message.message.Split(space, 3)[2].Trim());
+						if(commandParts.Length > 1)
+							bot.conn.Disconnect(message.message.Split(space, 2)[1].Trim());
 						else
 							bot.conn.Disconnect();
 					} else {

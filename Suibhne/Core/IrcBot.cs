@@ -56,10 +56,6 @@ namespace Ostenvighx.Suibhne.Core {
 			conn.OnMessageRecieved += HandleMessage;
 			conn.OnNoticeRecieved += HandleMessage;
 
-			conn.OnDataRecieved += (connection, data, args) => {
-				Console.WriteLine("Data Recieved: " + data);
-			};
-
 			conn.OnConnectionComplete += Run;
 
 			this.LogFile = new StreamWriter(Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
@@ -90,7 +86,7 @@ namespace Ostenvighx.Suibhne.Core {
 				OnCommandRecieved(this, message);
 			}
 
-			String command = message.message.Split(new char[]{ ' ' }, 2)[0].Substring(1).Trim().ToLower();
+			String command = message.message.Split(new char[]{ ' ' })[0].ToLower().TrimStart(new char[]{'!'}).TrimEnd();
 			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 		}
 

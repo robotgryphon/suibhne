@@ -15,7 +15,7 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args) {
 
-			IrcConfig connection = IrcConfig.LoadFromFile(Environment.CurrentDirectory + "/Configuration/Servers/irc.furnet.org/Server.json");
+			IrcConfig connection = IrcConfig.LoadFromFile(Environment.CurrentDirectory + "/Configuration/Servers/localhost/Server.json");
 			Console.WriteLine(connection.configDir);
 
 
@@ -28,10 +28,6 @@ namespace Ostenvighx.Suibhne {
 			bot.Autojoin.Add("#ostenvighx");
 
 			bot.Connect();
-
-			bot.conn.OnUserJoin += (conn, channel, user, eargs) => {
-				conn.SendMessage(channel.channelName, "Hallo, " + user.nickname + "!");
-			};
 
 			// Keep the bot alive until bot disconnects
 			while(bot.conn.Connected) { }
