@@ -26,7 +26,9 @@ namespace Ostenvighx.Suibhne {
 
 			bot.Connect();
 
-
+			bot.conn.OnUserJoin += (conn, channel, user, eargs) => {
+				conn.SendMessage(channel.channelName, "Hallo, " + user.nickname + "!");
+			};
 
 			// Keep the bot alive until user hits any key
 			while(true) { }

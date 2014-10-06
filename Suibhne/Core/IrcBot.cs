@@ -79,8 +79,8 @@ namespace Ostenvighx.Suibhne.Core {
 			}
 		}
 
-		public Boolean IsBotOperator(String nickname) {
-			return Operators.Contains(nickname.ToLower());
+		public Boolean IsBotOperator(IrcUser user) {
+			return Operators.Contains(user.nickname.ToLower());
 		}
 
 		protected void HandleCommand(IrcMessage message) {
