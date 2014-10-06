@@ -10,15 +10,19 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			this.Name = "Basic Commands";
 			this.Author = "Ted Senft";
 		}
-
-		public override void Prepare(IrcBot bot) {
-			bot.OnCommandRecieved += HandleOnCommandRecieved;
+			
+		public override void EnableOnServer(BotServerConnection server) {
+			server.OnCommandRecieved += HandleOnCommandRecieved;
 		}
 
-		void HandleOnCommandRecieved (IrcBot bot, IrcMessage message)
+		public override void DisableOnServer(BotServerConnection server) {
+			server.OnCommandRecieved -= HandleOnCommandRecieved;
+		}
+			
+		void HandleOnCommandRecieved (BotServerConnection server, IrcMessage message)
 		{
 			char[] space = new char[] { ' ' };
-			Boolean isOperator = bot.IsBotOperator(message.sender);
+			Boolean isOperator = server.IsBotOperator(message.sender);
 
 			String command = message.message.Split(space)[0].ToLower().TrimStart(new char[]{'!'}).Trim();
 			String[] commandParts = message.message.Split(space);
@@ -28,9 +32,9 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			switch(command) {
 				case "join":
 					if(isOperator)
-						bot.conn.JoinChannel(commandParts[1]);
+						server.Connection.JoinChannel(commandParts[1]);
 					else
-						bot.conn.SendMessage(message.location, "You are not an operator.");
+						server.Connection.SendMessage(message.location, "You are not an operator.");
 
 					break;
 
@@ -38,20 +42,20 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 					if(isOperator) {
 						switch(commandParts.Length) {
 							case 2:
-								bot.conn.PartChannel(commandParts[1]);
+								server.Connection.PartChannel(commandParts[1]);
 								break;
 
 							case 3:
 								String reason = message.message.Split(space, 3)[2];
-								bot.conn.PartChannel(commandParts[1], reason);
+								server.Connection.PartChannel(commandParts[1], reason);
 								break;
 
 							default:
-								bot.conn.SendMessage(message.sender, "Not enough parameters. Need the channel to leave.");
+								server.Connection.SendMessage(message.sender, "Not enough parameters. Need the channel to leave.");
 								break;
 						}
 					} else {
-						bot.conn.SendMessage(message.location, "You are not an operator.");
+						server.Connection.SendMessage(message.location, "You are not an operator.");
 					}
 
 					break;
@@ -59,9 +63,9 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 
 				case "server":
 					if(isOperator) {
-						bot.conn.SendMessage(message.location, "Not implemented yet.");
+						server.Connection.SendMessage(message.location, "Not implemented yet.");
 					} else {
-						bot.conn.SendMessage(message.location, "You are not an operator.");
+						server.Connection.SendMessage(message.location, "You are not an operator.");
 					}
 
 					break;
@@ -69,7 +73,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 				case "msg":
 					if(commandParts.Length >= 3) {
 						String msg = message.message.Split(space, 3)[2];
-						bot.conn.SendMessage(commandParts[1], msg);
+						server.Connection.SendMessage(commandParts[1], msg);
 					}
 
 					break;
@@ -77,11 +81,11 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 				case "quit":
 					if(isOperator) {
 						if(commandParts.Length > 1)
-							bot.conn.Disconnect(message.message.Split(space, 2)[1].Trim());
+							server.Connection.Disconnect(message.message.Split(space, 2)[1].Trim());
 						else
-							bot.conn.Disconnect();
+							server.Connection.Disconnect();
 					} else {
-						bot.conn.SendMessage(message.location, "You are not an operator.");
+						server.Connection.SendMessage(message.location, "You are not an operator.");
 					}
 
 					break;

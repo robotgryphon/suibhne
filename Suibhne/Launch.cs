@@ -8,6 +8,7 @@ using Ostenvighx.Api.Networking.Irc;
 
 using Ostenvighx.Suibhne.Core;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace Ostenvighx.Suibhne {
 
@@ -15,23 +16,20 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args) {
 
-			IrcConfig connection = IrcConfig.LoadFromFile(Environment.CurrentDirectory + "/Configuration/Servers/localhost/Server.json");
-			Console.WriteLine(connection.configDir);
+			IrcBot bot = new IrcBot();
+			Console.WriteLine(bot.Configuration.ConfigDirectory);
 
+			ServerConfig localhost = ServerConfig.LoadFromFile(bot.Configuration.ConfigDirectory + "Servers/Localhost/Server.json");
+			ServerConfig furnet = ServerConfig.LoadFromFile(bot.Configuration.ConfigDirectory + "Servers/Furnet/Server.json");
 
-			IrcBot bot = new IrcBot(connection);
+			BotServerConnection localhostServer = new BotServerConnection(localhost, bot.Plugins);
+			BotServerConnection furnetServer = new BotServerConnection(furnet, bot.Plugins);
 
-			// Add delenas to the bot operator list (will soon change to connection op list)
-			bot.Operators.Add("delenas");
+			localhostServer.Connect();
+			furnetServer.Connect();
 
-			// Add #ostenvighx to the autojoin list
-			bot.Autojoin.Add("#ostenvighx");
-
-			bot.Connect();
-
-			// Keep the bot alive until bot disconnects
-			while(bot.conn.Connected) { }
-
+			while(true) {
+			}
 		}
 	}
 }

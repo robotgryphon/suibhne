@@ -22,26 +22,32 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			this.Name = "NickServ Auth Plugin";
 			this.Version = "1.0.0";
 		}
-
-		public override void Prepare(IrcBot bot) {
-			bot.conn.OnConnectionComplete += HandleOnConnectionComplete;
-
-			this.bot = bot;
+			
+		public override void EnableOnServer(BotServerConnection server) {
+			server.OnConnectionComplete += HandleOnConnectionComplete;
 		}
 
-		void HandleOnConnectionComplete (IrcConnection conn, EventArgs args)
+		public override void DisableOnServer(BotServerConnection server){
+			server.OnConnectionComplete -= HandleOnConnectionComplete;
+		}
+
+		void HandleOnConnectionComplete (BotServerConnection server, EventArgs args)
 		{
+		
 			Console.WriteLine("[NickServ Plugin] Identifying with nickserv..");
 			// Gather config information out of file
 
-			String filename = Environment.CurrentDirectory + "/Configuration/Servers/" + bot.config.hostname + "/Plugins/NickServ.json";
+			String filename = bot.Configuration.ConfigDirectory + server.Configuration.ConfigurationDirectory + "/Plugins/NickServ.json";
 
 			String nickservText = System.IO.File.ReadAllText(filename);
 
 			NickServConfig config = JsonConvert.DeserializeObject<NickServConfig>(nickservText);
 
-			conn.SendMessage(config.NickservName, "identify " + config.Password);
+			server.Connection.SendMessage(config.NickservName, "identify " + config.Password);
+			
 		}
+
+
 	}
 }
 

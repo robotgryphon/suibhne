@@ -12,6 +12,8 @@ namespace Ostenvighx.Suibhne.Plugins {
 	/// </summary>
 	public abstract class PluginBase {
 
+		public IrcBot bot { get; protected set; }
+
 		/// <summary>
 		/// The friendly name for the plugin.
 		/// </summary>
@@ -33,10 +35,6 @@ namespace Ostenvighx.Suibhne.Plugins {
 		/// </summary>
 		public String Version { get; protected set; }
 
-		// public String UpdateURL;
-
-		public IrcBot bot;
-
 		/// <summary>
 		/// Create a new IrcBotModule instance.
 		/// </summary>
@@ -49,11 +47,20 @@ namespace Ostenvighx.Suibhne.Plugins {
 			this.Version = "0.0.1";
 		}
 
+
+		public virtual void Prepare(IrcBot bot){
+			this.bot = bot;
+		}
+
 		/// <summary>
 		/// Prepare the plugin by hooking into all the necessary events this plugin will need.
 		/// </summary>
-		/// <param name="bot">Bot.</param>
-		public abstract void Prepare(IrcBot bot);
+		public abstract void EnableOnServer(BotServerConnection server);
+
+		/// <summary>
+		/// Disable the plugin by unhooking all the events previously hooked.
+		/// </summary>
+		public abstract void DisableOnServer(BotServerConnection server);
 	}
 }
 
