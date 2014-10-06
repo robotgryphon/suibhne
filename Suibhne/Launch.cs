@@ -14,7 +14,7 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args) {
 
-			IrcConfig connection = new IrcConfig("localhost", 6667, "Suibhne", "Suibhne", "Suibhne", "Suibhne");
+			IrcConfig connection = new IrcConfig("irc.furnet.org", 6667, "Suibhne", "Suibhne", "Suibhne", "Suibhne");
 
 			IrcBot bot = new IrcBot(connection);
 
@@ -30,8 +30,8 @@ namespace Ostenvighx.Suibhne {
 				conn.SendMessage(channel.channelName, "Hallo, " + user.nickname + "!");
 			};
 
-			// Keep the bot alive until user hits any key
-			while(true) { }
+			// Keep the bot alive until bot disconnects
+			while(bot.conn.Connected) { }
 		}
 	}
 }

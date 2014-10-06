@@ -36,7 +36,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 
 				case "part":
 					if(isOperator) {
-						switch(commandParts.Length){
+						switch(commandParts.Length) {
 							case 2:
 								bot.conn.PartChannel(commandParts[1]);
 								break;
@@ -50,8 +50,9 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 								bot.conn.SendMessage(message.sender, "Not enough parameters. Need the channel to leave.");
 								break;
 						}
-					} else
+					} else {
 						bot.conn.SendMessage(message.location, "You are not an operator.");
+					}
 
 					break;
 
@@ -59,25 +60,28 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 				case "server":
 					if(isOperator) {
 						bot.conn.SendMessage(message.location, "Not implemented yet.");
-					} else
+					} else {
 						bot.conn.SendMessage(message.location, "You are not an operator.");
+					}
+
+					break;
+
+				case "msg":
+					if(isOperator && commandParts.Length >= 3) {
+						String msg = message.message.Split(space, 3)[2];
+						bot.conn.SendMessage(commandParts[1], msg);
+					} else {
+						bot.conn.SendMessage(message.location, "You are not an operator.");
+					}
 
 					break;
 
 				case "quit":
 					if(isOperator) {
-						switch(commandParts.Length){
-							case 2:
-								bot.conn.Disconnect(commandParts[1]);
-								break;
-
-							default:
-								bot.conn.Disconnect();
-
-								break;
-						}
-					} else
+						bot.conn.Disconnect();
+					} else {
 						bot.conn.SendMessage(message.location, "You are not an operator.");
+					}
 
 					break;
 			}
