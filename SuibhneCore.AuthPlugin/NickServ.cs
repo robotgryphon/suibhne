@@ -3,7 +3,7 @@ using Ostenvighx.Suibhne.Core;
 using Ostenvighx.Suibhne.Plugins;
 using Ostenvighx.Api.Networking.Irc;
 
-namespace Suibhne.Plugins.Auth {
+namespace Suibhne.CorePlugins {
 	public class NickServ : PluginBase {
 
 		public NickServ() {
