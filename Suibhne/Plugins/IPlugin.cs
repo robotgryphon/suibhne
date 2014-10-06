@@ -6,7 +6,8 @@ namespace Ostenvighx.Suibhne.Plugins {
 
 	public interface IPlugin {
 
-		string[] RegisterCommands(PluginRegistry registry);
+		void Prepare(IrcBot bot);
+
 	}
 }
 

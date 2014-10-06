@@ -1,6 +1,7 @@
 
 using System;
 using Ostenvighx.Suibhne.Core;
+using Suibhne.Core;
 
 namespace Ostenvighx.Suibhne.Plugins {
 
@@ -10,7 +11,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 	/// listeners and update methods occur. This is useful for plugin-style code management,
 	/// for things such as custom Authentication servers, media plugins, polls, etc...
 	/// </summary>
-	public abstract class SuibhnePlugin : IPlugin {
+	public abstract class PluginBase : IPlugin {
 
 		/// <summary>
 		/// This is a custom identifier for the module to use.
@@ -27,13 +28,17 @@ namespace Ostenvighx.Suibhne.Plugins {
 		/// Create a new IrcBotModule instance.
 		/// </summary>
 		/// <param name="moduleName">Module name.</param>
-		public SuibhnePlugin( String moduleName )
+		public PluginBase( String moduleName )
 		{
 			this.ModuleName = moduleName;
 		}
 
-		public string[] RegisterCommands(PluginRegistry registry){
+		public virtual string[] RegisterCommands(PluginRegistry registry){
 			return new string[0];
+		}
+
+		public virtual void HandleCommand(IrcBotCommand command){
+
 		}
 	}
 }

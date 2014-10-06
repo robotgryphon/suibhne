@@ -24,11 +24,13 @@ namespace Ostenvighx.Suibhne.Core {
 		public List<String> Operators;
 		public List<String> Autojoin;
 
+		protected PluginRegistry plugins;
+
 		public delegate void IrcCommandEvent(IrcBot bot, IrcMessage message);
 
 		public event IrcCommandEvent OnCommandRecieved;
 
-		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Default/Server.json") {
+		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Servers/Default/Server.json") {
 
 		}
 
@@ -60,6 +62,9 @@ namespace Ostenvighx.Suibhne.Core {
 
 			this.Operators = new List<string>();
 			this.Autojoin = new List<String>();
+			this.plugins = new PluginRegistry(this);
+			plugins.RegisterPlugins();
+
 		}
 
 		public virtual void Connect() {

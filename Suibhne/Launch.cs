@@ -14,7 +14,7 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args) {
 
-			IrcConfig fuzzies = new IrcConfig("irc.furnet.org", 6667, "Suibhne", "Suibhne", "Suibhne", "Suibhne");
+			IrcConfig fuzzies = new IrcConfig("localhost", 6667, "Suibhne", "Suibhne", "Suibhne", "Suibhne");
 
 			IrcBot bot = new IrcBot(fuzzies);
 			bot.OnCommandRecieved += HandleOnCommandRecieved;
@@ -30,9 +30,7 @@ namespace Ostenvighx.Suibhne {
 
 
 			// Keep the bot alive until user hits any key
-			while(true) {
-
-			}
+			while(true) { }
 		}
 
 		static void HandleOnCommandRecieved(IrcBot bot, IrcMessage message) {
