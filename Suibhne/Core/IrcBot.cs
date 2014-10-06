@@ -41,8 +41,7 @@ namespace Ostenvighx.Suibhne.Core {
 		}
 
 		public IrcBot(String configFile) {
-			config = new IrcConfig();
-			config.LoadFromFile(configFile);
+			config = IrcConfig.LoadFromFile(configFile);
 
 			Setup(config);
 
@@ -50,6 +49,9 @@ namespace Ostenvighx.Suibhne.Core {
 		}
 
 		protected void Setup(IrcConfig config) {
+
+			this.config = config;
+
 			conn = new IrcConnection(config);
 			conn.OnMessageRecieved += HandleMessage;
 			conn.OnNoticeRecieved += HandleMessage;

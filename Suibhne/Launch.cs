@@ -7,6 +7,7 @@ using Ostenvighx.Api.Networking;
 using Ostenvighx.Api.Networking.Irc;
 
 using Ostenvighx.Suibhne.Core;
+using System.Threading;
 
 namespace Ostenvighx.Suibhne {
 
@@ -14,7 +15,9 @@ namespace Ostenvighx.Suibhne {
 
 		public static void Main(String[] args) {
 
-			IrcConfig connection = new IrcConfig("irc.furnet.org", 6667, "Suibhne", "Suibhne", "Suibhne", "Suibhne");
+			IrcConfig connection = IrcConfig.LoadFromFile(Environment.CurrentDirectory + "/Configuration/Servers/irc.furnet.org/Server.json");
+			Console.WriteLine(connection.configDir);
+
 
 			IrcBot bot = new IrcBot(connection);
 
@@ -32,6 +35,7 @@ namespace Ostenvighx.Suibhne {
 
 			// Keep the bot alive until bot disconnects
 			while(bot.conn.Connected) { }
+
 		}
 	}
 }

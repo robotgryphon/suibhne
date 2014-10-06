@@ -20,7 +20,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			char[] space = new char[] { ' ' };
 			Boolean isOperator = bot.IsBotOperator(message.sender);
 
-			String command = message.message.Split(space, 2)[0].Substring(1).Trim().ToLower();
+			String command = message.message.Split(space)[0].ToLower().Trim();
 			String[] commandParts = message.message.Split(space);
 
 			// This will soon be handled by the plugin registry
@@ -67,18 +67,19 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 					break;
 
 				case "msg":
-					if(isOperator && commandParts.Length >= 3) {
+					if(commandParts.Length >= 3) {
 						String msg = message.message.Split(space, 3)[2];
 						bot.conn.SendMessage(commandParts[1], msg);
-					} else {
-						bot.conn.SendMessage(message.location, "You are not an operator.");
 					}
 
 					break;
 
 				case "quit":
 					if(isOperator) {
-						bot.conn.Disconnect();
+						if(commandParts.Length > 2)
+							bot.conn.Disconnect(message.message.Split(space, 3)[2].Trim());
+						else
+							bot.conn.Disconnect();
 					} else {
 						bot.conn.SendMessage(message.location, "You are not an operator.");
 					}
