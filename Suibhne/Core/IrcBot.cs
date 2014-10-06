@@ -23,93 +23,68 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public List<String> Operators;
 
+		public delegate void IrcCommandEvent(IrcBot bot, IrcMessage message);
+
+		public event IrcCommandEvent OnCommandRecieved;
+
 		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Default/Server.json") {
 
 		}
 
-		public IrcBot(IrcConfig config){
-			Setup (config);
+		public IrcBot(IrcConfig config) {
+			Setup(config);
 		}
 
-		public IrcBot(String configFile){
+		public IrcBot(String configFile) {
 			config = new IrcConfig();
 			config.LoadFromFile(configFile);
 
-			Setup (config);
+			Setup(config);
 
 			// TODO: Add Plugin Registry
 		}
 
-		protected void Setup(IrcConfig config){
-			conn = new IrcConnection (config);
+		protected void Setup(IrcConfig config) {
+			conn = new IrcConnection(config);
 			conn.OnMessageRecieved += Log;
 			conn.OnNoticeRecieved += Log;
 
 			conn.OnDataRecieved += (connection, data, args) => {
-				Console.WriteLine ("Data Recieved: " + data);
+				Console.WriteLine("Data Recieved: " + data);
 			};
 
-			this.LogFile = new StreamWriter (Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
+			this.LogFile = new StreamWriter(Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
 
-			this.Operators = new List<string> ();
+			this.Operators = new List<string>();
 		}
 
-		public virtual void Connect(){
+		public virtual void Connect() {
 			conn.Connect();
-
-			Thread.Sleep(4000);
-
-			// Thread.Sleep(5000); 
-			// conn.Disconnect("Here we go again..");
 		}
 
-		public Boolean IsBotOperator(String nickname){
+		public Boolean IsBotOperator(String nickname) {
 			return Operators.Contains(nickname.ToLower());
 		}
 
-		public void Log(IrcConnection conn, IrcMessage message, EventArgs args){
+		protected void HandleCommand(IrcMessage message) {
+			if(this.OnCommandRecieved != null) {
+				OnCommandRecieved(this, message);
+			}
+
+			String command = message.message.Split(new char[]{ ' ' }, 2)[0].Substring(1).Trim().ToLower();
+			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
+		}
+
+		//TODO: Rename or move these commands
+		public void Log(IrcConnection conn, IrcMessage message, EventArgs args) {
 
 			Console.WriteLine(message.ToString());
 
 			String timestamp = DateTime.Now.ToString();
 			LogFile.WriteLine(String.Format("[{0}] {1}", timestamp, message.ToString()));
 
-			if(message.message.StartsWith("!")) {
-				String command = message.message.Split(new char[]{' '}, 2)[0].Substring(1).Trim().ToLower();
-				Console.WriteLine(command);
-
-				switch(command){
-					case "join":
-						if(IsBotOperator(message.sender)) {
-							String chan = message.message.Split(new char[]{' '})[1];
-							Console.WriteLine(chan);
-							conn.JoinChannel(chan);
-						}
-						break;
-
-						case "part":
-						if(IsBotOperator(message.sender)) {
-							String chan = message.message.Split(new char[]{' '})[1];
-							Console.WriteLine(chan);
-							conn.PartChannel(chan);
-						}
-						break;
-
-						case "quit":
-						if(IsBotOperator(message.sender)) {
-							conn.Disconnect();
-						}
-						break;
-
-						default:
-						// moduleSystem.CheckCommand(command, message);
-
-						conn.SendMessage(message.location, "Unrecognized command.");
-						break;
-				}
-
-
-			}
+			if(message.message.StartsWith("!"))
+				HandleCommand(message);
 		}
 	}
 }
