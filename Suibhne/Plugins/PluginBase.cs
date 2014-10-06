@@ -10,7 +10,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 	/// listeners and update methods occur. This is useful for plugin-style code management,
 	/// for things such as custom Authentication servers, media plugins, polls, etc...
 	/// </summary>
-	public abstract class PluginBase : IPlugin {
+	public abstract class PluginBase {
 
 		/// <summary>
 		/// The friendly name for the plugin.
