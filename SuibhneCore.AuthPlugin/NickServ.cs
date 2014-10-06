@@ -4,9 +4,9 @@ using Ostenvighx.Suibhne.Plugins;
 using Ostenvighx.Api.Networking.Irc;
 
 namespace Suibhne.Plugins.Auth {
-	public class NickServPlugin : PluginBase {
+	public class NickServ : PluginBase {
 
-		public NickServPlugin() {
+		public NickServ() {
 			this.Author = "Ted Senft";
 			this.Name = "NickServ Auth Plugin";
 		}
@@ -17,7 +17,10 @@ namespace Suibhne.Plugins.Auth {
 
 		void HandleOnConnectionComplete (IrcConnection conn, EventArgs args)
 		{
-			Console.WriteLine("[NickServ Plugin] Connection registered! Ready to send passwords and stuffs.");
+			Console.WriteLine("[NickServ Plugin] Connection started!");
+			// Gather config information out of file
+
+			// conn.SendMessage("NickServ", "identify " + PluginConfig.Password);
 		}
 	}
 }

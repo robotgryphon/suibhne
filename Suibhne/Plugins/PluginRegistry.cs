@@ -10,12 +10,12 @@ namespace Ostenvighx.Suibhne.Plugins {
 	public class PluginRegistry {
 
 		protected IrcBot bot;
-		protected List<IPlugin> Plugins;
+		protected List<PluginBase> Plugins;
 
 		public PluginRegistry(IrcBot bot)
 		{
 			this.bot = bot;
-			this.Plugins = new List<IPlugin>();
+			this.Plugins = new List<PluginBase>();
 		}
 
 		public void RegisterPlugins(){
@@ -37,6 +37,9 @@ namespace Ostenvighx.Suibhne.Plugins {
 						Console.WriteLine("Plugin Loaded: " + plugin.Name);
 
 						plugin.Prepare(bot);
+
+						// Add plugin to loaded list
+						Plugins.Add(plugin);
 					}
 				}
 			}

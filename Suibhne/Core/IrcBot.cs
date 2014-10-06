@@ -26,9 +26,11 @@ namespace Ostenvighx.Suibhne.Core {
 
 		protected PluginRegistry plugins;
 
+		#region Event Handlers
 		public delegate void IrcCommandEvent(IrcBot bot, IrcMessage message);
 
 		public event IrcCommandEvent OnCommandRecieved;
+		#endregion
 
 		public IrcBot() : this(Environment.CurrentDirectory + "/Configuration/Servers/Default/Server.json") {
 
