@@ -22,6 +22,7 @@ namespace Ostenvighx.Suibhne.Core {
 		public StreamWriter LogFile;
 
 		public List<String> Operators;
+		public List<String> Autojoin;
 
 		public delegate void IrcCommandEvent(IrcBot bot, IrcMessage message);
 
@@ -46,20 +47,29 @@ namespace Ostenvighx.Suibhne.Core {
 
 		protected void Setup(IrcConfig config) {
 			conn = new IrcConnection(config);
-			conn.OnMessageRecieved += Log;
-			conn.OnNoticeRecieved += Log;
+			conn.OnMessageRecieved += HandleMessage;
+			conn.OnNoticeRecieved += HandleMessage;
 
 			conn.OnDataRecieved += (connection, data, args) => {
 				Console.WriteLine("Data Recieved: " + data);
 			};
 
+			conn.OnConnectionComplete += Run;
+
 			this.LogFile = new StreamWriter(Environment.CurrentDirectory + "/data/log.txt", true) { AutoFlush = true };
 
 			this.Operators = new List<string>();
+			this.Autojoin = new List<String>();
 		}
 
 		public virtual void Connect() {
 			conn.Connect();
+		}
+
+		public void AutojoinChannels(){
+			foreach(String channel in Autojoin) {
+				conn.JoinChannel(channel);
+			}
 		}
 
 		public Boolean IsBotOperator(String nickname) {
@@ -75,8 +85,14 @@ namespace Ostenvighx.Suibhne.Core {
 			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 		}
 
-		//TODO: Rename or move these commands
-		public void Log(IrcConnection conn, IrcMessage message, EventArgs args) {
+		void Run(IrcConnection conn, EventArgs args) {
+			// Bot is connected
+			Console.WriteLine("Connection complete.");
+
+			AutojoinChannels();
+		}
+			
+		public void HandleMessage(IrcConnection conn, IrcMessage message, EventArgs args) {
 
 			Console.WriteLine(message.ToString());
 
