@@ -4,6 +4,16 @@ using Ostenvighx.Suibhne.Core;
 using Ostenvighx.Api.Networking.Irc;
 
 namespace Ostenvighx.Suibhne.CorePlugins {
+
+	public class BasicCommandsConfig : Plugins.PluginConfig {
+
+		public Boolean MessageRequiresOp;
+
+		public BasicCommandsConfig() : base("BasicCommands") {
+			this.MessageRequiresOp = false;
+		}
+	}
+
 	public class BasicCommands : PluginBase {
 
 		public BasicCommands() {
@@ -32,9 +42,9 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			switch(command) {
 				case "join":
 					if(isOperator)
-						server.Connection.JoinChannel(commandParts[1]);
+						server.Connection.JoinChannel(new IrcChannel(commandParts[1]));
 					else
-						server.Connection.SendMessage(message.location, "You are not an operator.");
+						server.Connection.SendMessage(new IrcMessage(message.location, "", "You are not an operator."));
 
 					break;
 
@@ -74,6 +84,17 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 					if(commandParts.Length >= 3) {
 						String msg = message.message.Split(space, 3)[2];
 						server.Connection.SendMessage(commandParts[1], msg);
+					}
+
+					break;
+
+				case "act":
+					if(commandParts.Length >= 3) {
+						String msg = message.message.Split(space, 3)[2];
+						IrcMessage msgMessage = new IrcMessage(commandParts[1], "Suibhne", msg);
+						msgMessage.isAction = true;
+
+						server.Connection.SendMessage(msgMessage);
 					}
 
 					break;

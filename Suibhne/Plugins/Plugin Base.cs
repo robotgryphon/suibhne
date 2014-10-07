@@ -35,6 +35,8 @@ namespace Ostenvighx.Suibhne.Plugins {
 		/// </summary>
 		public String Version { get; protected set; }
 
+		public PluginConfig Configuration;
+
 		/// <summary>
 		/// Create a new IrcBotModule instance.
 		/// </summary>
@@ -45,6 +47,9 @@ namespace Ostenvighx.Suibhne.Plugins {
 			this.Identifier = Guid.NewGuid();
 			this.Author = "Plugin Author";
 			this.Version = "0.0.1";
+
+			this.Configuration = new PluginConfig(this.Name);
+			Configuration.PluginName = this.Name;
 		}
 
 

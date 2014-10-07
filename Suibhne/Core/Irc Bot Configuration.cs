@@ -5,16 +5,25 @@ using Newtonsoft.Json;
 using System.IO;
 
 namespace Ostenvighx.Suibhne {
-	public struct IrcBotConfiguration {
+	public class IrcBotConfiguration {
 
 		public String ConfigDirectory;
-		public String[] Servers;
+		public List<String> Servers;
 
-		public void LoadFrom(String filename){
+		public IrcBotConfiguration(){
+			this.ConfigDirectory = Environment.CurrentDirectory + "/Configuration/";
+			this.Servers = new List<String>();
+		}
+
+		public static IrcBotConfiguration CreateFromFile(String filename){
+			IrcBotConfiguration config = new IrcBotConfiguration();
+
 			using (StreamReader file = File.OpenText(filename)) {
 				JsonSerializer serializer = new JsonSerializer();
-				this = (IrcBotConfiguration) serializer.Deserialize(file, typeof(IrcBotConfiguration));
+				config = (IrcBotConfiguration) serializer.Deserialize(file, typeof(IrcBotConfiguration));
 			}
+
+			return config;
 		}
 	}
 }

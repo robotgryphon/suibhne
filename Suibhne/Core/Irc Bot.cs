@@ -22,21 +22,46 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public PluginRegistry Plugins { get; protected set; }
 
+		public int ConnectedCount { get; protected set; }
+
 		public IrcBot() {
 			this.Connections = new Dictionary<string, BotServerConnection>();
-			this.Configuration = new IrcBotConfiguration();
-			this.Configuration.LoadFrom(Environment.CurrentDirectory + "/Configuration/Bot.json");
+			this.Configuration = IrcBotConfiguration.CreateFromFile(Environment.CurrentDirectory + "/Configuration/Bot.json");
+			this.ConnectedCount = 0;
 
 			this.Plugins = new PluginRegistry(this, Configuration.ConfigDirectory + "Plugins/");
 			Console.WriteLine(Plugins.PluginDirectory);
 
 		}
 
+		public void LoadServers(){
+			foreach(String serverName in Configuration.Servers) {
+				Console.WriteLine("Attempting load of server config: " + serverName);
+
+				try {
+					ServerConfig sc = ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/Server.json");
+					BotServerConnection conn = new BotServerConnection(sc, Plugins);
+					AddConnection(serverName, conn);
+				}
+
+				catch(Exception e){
+					Console.WriteLine(e);
+				}
+			}
+		}
+
 		public void AddConnection(String connID, BotServerConnection connection) {
 
 			if(!this.Connections.ContainsKey(connID)) {
 				this.Connections.Add(connID, connection);
-				connection.Connect();
+			} else {
+				throw new Exception("That server is already in the list");
+			}
+		}
+
+		public void Start(){
+			foreach(KeyValuePair<String, BotServerConnection> conn in Connections) {
+				conn.Value.Connect();
 			}
 		}
 	}

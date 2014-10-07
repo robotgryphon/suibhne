@@ -17,18 +17,11 @@ namespace Ostenvighx.Suibhne {
 		public static void Main(String[] args) {
 
 			IrcBot bot = new IrcBot();
-			Console.WriteLine(bot.Configuration.ConfigDirectory);
-
-			ServerConfig localhost = ServerConfig.LoadFromFile(bot.Configuration.ConfigDirectory + "Servers/Localhost/Server.json");
-			ServerConfig furnet = ServerConfig.LoadFromFile(bot.Configuration.ConfigDirectory + "Servers/Furnet/Server.json");
-
-			BotServerConnection localhostServer = new BotServerConnection(localhost, bot.Plugins);
-			BotServerConnection furnetServer = new BotServerConnection(furnet, bot.Plugins);
-
-			localhostServer.Connect();
-			furnetServer.Connect();
+			bot.LoadServers();
+			bot.Start();
 
 			while(true) {
+				// Keep alive
 			}
 		}
 	}
