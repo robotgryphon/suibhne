@@ -8,12 +8,12 @@ namespace Ostenvighx.Suibhne {
 		public String PluginSetName;
 
 		public List<Type> AvailablePlugins;
-		public List<PluginBase> ActivatedPlugins;
+		public Dictionary<String, PluginBase> ActivatedPlugins;
 
 		public PluginMain() {
 			this.PluginSetName = "Plugin Set";
 			this.AvailablePlugins = new List<Type>();
-			this.ActivatedPlugins = new List<PluginBase>();
+			this.ActivatedPlugins = new Dictionary<String, PluginBase>();
 		}
 	}
 }

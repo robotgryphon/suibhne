@@ -6,8 +6,8 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 		public CorePlugins() {
 			this.PluginSetName = "Core Plugins";
 
-			this.AvailablePlugins.Add(typeof(BasicCommands));
-			this.AvailablePlugins.Add(typeof(NickServ));
+			this.AvailablePlugins.Add("BasicCommands", typeof(BasicCommands));
+			this.AvailablePlugins.Add("NickServ", typeof(NickServ));
 		}
 	}
 }

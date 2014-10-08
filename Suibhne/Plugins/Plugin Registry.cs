@@ -47,7 +47,10 @@ namespace Ostenvighx.Suibhne.Plugins {
 											PluginBase plugin = (PluginBase) Activator.CreateInstance(pluginType);
 
 											plugin.PrepareBot(bot);
-											pluginMain.ActivatedPlugins.Add(plugin);
+											String pluginClassName = plugin.GetType().ToString().Substring(plugin.GetType().ToString().LastIndexOf(".") + 1);
+											Console.WriteLine(pluginClassName);
+
+											pluginMain.ActivatedPlugins.Add(pluginClassName, plugin);
 
 											Console.WriteLine("[Plugins System] Plugin loaded: " + plugin.Name + " (Version: " + plugin.Version + ")");
 										} else {
@@ -90,6 +93,11 @@ namespace Ostenvighx.Suibhne.Plugins {
 				// Plugin set is loaded, get plugin
 				PluginMain pluginMain = ActivePluginSets[pluginFile];
 
+				if(pluginMain.ActivatedPlugins.ContainsKey(pluginName)) {
+					return pluginMain.ActivatedPlugins[pluginName];
+				} else {
+					return null;
+				}
 			} else {
 				LoadPluginSet(pluginFile);
 				GetPlugin(pluginFile, pluginName);
@@ -99,14 +107,19 @@ namespace Ostenvighx.Suibhne.Plugins {
 		}
 
 		public void EnablePluginsFromList(BotServerConnection server){
+		
 			foreach(PluginSet set in server.Configuration.Plugins) {
+
 				foreach(String pluginName in set.Plugins) {
+
 					// Get plugin by name
 					PluginBase plugin = GetPlugin(set.PluginFile, pluginName);
 
 					if(plugin != null) {
 						Console.WriteLine("[Plugins System] Enabling " + plugin.Name + " on server " + server.Configuration.FriendlyName);
 						plugin.EnableOnServer(server);
+					} else {
+						Console.WriteLine("[Plugins System] Failed to enable plugin (" + pluginName + "): Not found");
 					}
 				}
 			}
