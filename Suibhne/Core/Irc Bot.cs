@@ -26,20 +26,17 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public IrcBot() {
 			this.Connections = new Dictionary<string, BotServerConnection>();
-			this.Configuration = IrcBotConfiguration.CreateFromFile(Environment.CurrentDirectory + "/Configuration/Bot.json");
+			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Configuration/Bot.json");
 			this.ConnectedCount = 0;
 
 			this.Plugins = new PluginRegistry(this, Configuration.ConfigDirectory + "Plugins/");
-			Console.WriteLine(Plugins.PluginDirectory);
-
 		}
 
 		public void LoadServers(){
 			foreach(String serverName in Configuration.Servers) {
-				Console.WriteLine("Attempting load of server config: " + serverName);
 
 				try {
-					ServerConfig sc = ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/Server.json");
+					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/Server.json");
 					BotServerConnection conn = new BotServerConnection(sc, Plugins);
 					AddConnection(serverName, conn);
 				}

@@ -3,7 +3,7 @@ using Ostenvighx.Suibhne.Plugins;
 using Ostenvighx.Api.Networking.Irc;
 using System.Collections.Generic;
 
-namespace Ostenvighx.Suibhne {
+namespace Ostenvighx.Suibhne.Core {
 	public class BotServerConnection {
 		public IrcConnection Connection;
 
@@ -35,9 +35,8 @@ namespace Ostenvighx.Suibhne {
 
 			this.Connection = new IrcConnection(config.Server);
 
-			this.Plugins.RegisterPlugins(config.Plugins);
-			this.Plugins.EnablePlugins(this);
-
+			this.Plugins.RegisterPluginSets(config.Plugins);
+			this.Plugins.EnablePluginsFromList(this);
 
 			this.Connection.OnMessageRecieved += HandleMessageRecieved;
 			this.Connection.OnConnectionComplete += (conn, args) => {

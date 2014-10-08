@@ -1,6 +1,9 @@
 
 using System;
 using Ostenvighx.Suibhne.Core;
+using System.Collections.Generic;
+using Ostenvighx.Suibhne.Configuration;
+using System.IO;
 
 namespace Ostenvighx.Suibhne.Plugins {
 
@@ -12,7 +15,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 	/// </summary>
 	public abstract class PluginBase {
 
-		public IrcBot bot { get; protected set; }
+		public IrcBot Bot { get; protected set; }
 
 		/// <summary>
 		/// The friendly name for the plugin.
@@ -35,7 +38,10 @@ namespace Ostenvighx.Suibhne.Plugins {
 		/// </summary>
 		public String Version { get; protected set; }
 
-		public PluginConfig Configuration;
+		/// <summary>
+		/// Holds the loaded server configurations. Also is a list of all the servers this plugin is loaded on (by key)
+		/// </summary>
+		public Dictionary<String, PluginConfig> Configurations;
 
 		/// <summary>
 		/// Create a new IrcBotModule instance.
@@ -48,13 +54,35 @@ namespace Ostenvighx.Suibhne.Plugins {
 			this.Author = "Plugin Author";
 			this.Version = "0.0.1";
 
-			this.Configuration = new PluginConfig(this.Name);
-			Configuration.PluginName = this.Name;
+			this.Configurations = new Dictionary<string, PluginConfig>();
 		}
 
+		public virtual void PrepareBot(IrcBot bot){
+			this.Bot = bot;
+		}
 
-		public virtual void Prepare(IrcBot bot){
-			this.bot = bot;
+		/// <summary>
+		/// Called to load the configuration file for the plugin.
+		/// </summary>
+		/// <param name="server">Server to load configuration file for.</param>
+		public virtual void LoadConfiguration(BotServerConnection server){
+			String pluginConfigFile = Bot.Configuration.ConfigDirectory + server.Configuration.ConfigurationDirectory + "Plugins/" + this.Name + ".json";
+
+			if(File.Exists(pluginConfigFile)) {
+				PluginConfig config = (PluginConfig) PluginConfig.LoadFromFile(pluginConfigFile);
+
+				// Should check config file version and syntax first, but oh well.
+				// TODO: Create config file verifier.
+				Configurations.Add(server.Configuration.FriendlyName, config);
+
+			} else {
+				// Generate new config file
+			}
+		}
+
+		public void RefreshConfiguration(BotServerConnection server){
+			this.Configurations.Remove(server.Configuration.FriendlyName);
+			LoadConfiguration(server);
 		}
 
 		/// <summary>

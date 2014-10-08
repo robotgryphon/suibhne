@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.IO;
 
-namespace Ostenvighx.Suibhne {
+namespace Ostenvighx.Suibhne.Core {
 	public class IrcBotConfiguration {
 
 		public String ConfigDirectory;
@@ -15,13 +15,15 @@ namespace Ostenvighx.Suibhne {
 			this.Servers = new List<String>();
 		}
 
-		public static IrcBotConfiguration CreateFromFile(String filename){
+		public static IrcBotConfiguration LoadFromFile(String filename) {
 			IrcBotConfiguration config = new IrcBotConfiguration();
 
+			// Parse JSON config file
 			using (StreamReader file = File.OpenText(filename)) {
 				JsonSerializer serializer = new JsonSerializer();
 				config = (IrcBotConfiguration) serializer.Deserialize(file, typeof(IrcBotConfiguration));
 			}
+
 
 			return config;
 		}

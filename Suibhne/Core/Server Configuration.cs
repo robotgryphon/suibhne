@@ -3,25 +3,29 @@ using Ostenvighx.Api.Networking.Irc;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using Ostenvighx.Suibhne.Plugins;
 
-namespace Ostenvighx.Suibhne {
-	public struct ServerConfig {
+namespace Ostenvighx.Suibhne.Core {
+	public class ServerConfig {
 
 		public IrcConfig Server;
+
+		public String FriendlyName;
 
 		public List<String> Operators;
 
 		public List<IrcChannel> AutoJoinChannels;
 
-		public List<PluginContainer> Plugins;
+		public List<PluginSet> Plugins;
 
 		public String ConfigurationDirectory;
 
 		public static ServerConfig CreateNew(){
 			ServerConfig config = new ServerConfig();
 			config.Operators = new List<String>();
-			config.Plugins = new List<PluginContainer>();
+			config.Plugins = new List<PluginSet>();
 			config.Server = new IrcConfig();
+			config.FriendlyName = "Default";
 
 			config.AutoJoinChannels = new List<IrcChannel>();
 
@@ -29,7 +33,7 @@ namespace Ostenvighx.Suibhne {
 			return config;
 		}
 
-		public static ServerConfig LoadFromFile(String filename){
+		public static ServerConfig LoadFromFile(String filename) {
 			ServerConfig config = new ServerConfig();
 
 			// Parse JSON config file
