@@ -2,7 +2,7 @@
 using System;
 using Ostenvighx.Suibhne.Core;
 using System.Collections.Generic;
-using Ostenvighx.Suibhne.Configuration;
+
 using System.IO;
 
 namespace Ostenvighx.Suibhne.Plugins {
@@ -39,11 +39,6 @@ namespace Ostenvighx.Suibhne.Plugins {
 		public String Version { get; protected set; }
 
 		/// <summary>
-		/// Holds the loaded server configurations. Also is a list of all the servers this plugin is loaded on (by key)
-		/// </summary>
-		public Dictionary<String, PluginConfig> Configurations;
-
-		/// <summary>
 		/// Create a new IrcBotModule instance.
 		/// </summary>
 		/// <param name="moduleName">Module name.</param>
@@ -53,36 +48,10 @@ namespace Ostenvighx.Suibhne.Plugins {
 			this.Identifier = Guid.NewGuid();
 			this.Author = "Plugin Author";
 			this.Version = "0.0.1";
-
-			this.Configurations = new Dictionary<string, PluginConfig>();
 		}
 
 		public virtual void PrepareBot(IrcBot bot){
 			this.Bot = bot;
-		}
-
-		/// <summary>
-		/// Called to load the configuration file for the plugin.
-		/// </summary>
-		/// <param name="server">Server to load configuration file for.</param>
-		public virtual void LoadConfiguration(BotServerConnection server){
-			String pluginConfigFile = Bot.Configuration.ConfigDirectory + server.Configuration.ConfigurationDirectory + "Plugins/" + this.Name + ".json";
-
-			if(File.Exists(pluginConfigFile)) {
-				PluginConfig config = (PluginConfig) PluginConfig.LoadFromFile(pluginConfigFile);
-
-				// Should check config file version and syntax first, but oh well.
-				// TODO: Create config file verifier.
-				Configurations.Add(server.Configuration.FriendlyName, config);
-
-			} else {
-				// Generate new config file
-			}
-		}
-
-		public void RefreshConfiguration(BotServerConnection server){
-			this.Configurations.Remove(server.Configuration.FriendlyName);
-			LoadConfiguration(server);
 		}
 
 		/// <summary>

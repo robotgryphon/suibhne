@@ -15,11 +15,14 @@ namespace Ostenvighx.Suibhne.Plugins {
 
 		protected Dictionary<String, PluginMain> ActivePluginSets;
 
+		public Dictionary<String, List<PluginBase>> EnabledPlugins { get; protected set; }
+
 		public PluginRegistry(IrcBot bot, String pluginDirectory)
 		{
 			this.bot = bot;
 			this.PluginDirectory = pluginDirectory;
 			this.ActivePluginSets = new Dictionary<string, PluginMain>();
+			this.EnabledPlugins = new Dictionary<string, List<PluginBase>>();
 		}
 
 		public void LoadPluginSet(String filename){
@@ -106,8 +109,20 @@ namespace Ostenvighx.Suibhne.Plugins {
 			return null;
 		}
 
+		public List<PluginBase> GetActivePluginsOnServer(BotServerConnection server){
+			if(EnabledPlugins.ContainsKey(server.Configuration.FriendlyName))
+				return EnabledPlugins[server.Configuration.FriendlyName];
+
+			return new List<PluginBase>();
+		}
+
 		public void EnablePluginsFromList(BotServerConnection server){
 		
+			if(!EnabledPlugins.ContainsKey(server.Configuration.FriendlyName)) {
+				// Add server to plugin tracker
+				EnabledPlugins.Add(server.Configuration.FriendlyName, new List<PluginBase>());
+			}
+
 			foreach(PluginSet set in server.Configuration.Plugins) {
 
 				foreach(String pluginName in set.Plugins) {
@@ -117,6 +132,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 
 					if(plugin != null) {
 						Console.WriteLine("[Plugins System] Enabling " + plugin.Name + " on server " + server.Configuration.FriendlyName);
+						EnabledPlugins[server.Configuration.FriendlyName].Add(plugin);
 						plugin.EnableOnServer(server);
 					} else {
 						Console.WriteLine("[Plugins System] Failed to enable plugin (" + pluginName + "): Not found");
