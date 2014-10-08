@@ -2,17 +2,9 @@
 using Ostenvighx.Suibhne.Plugins;
 using Ostenvighx.Suibhne.Core;
 using Ostenvighx.Api.Networking.Irc;
+using Ostenvighx.Suibhne.Configuration;
 
 namespace Ostenvighx.Suibhne.CorePlugins {
-
-	public class BasicCommandsConfig : Plugins.PluginConfig {
-
-		public Boolean MessageRequiresOp;
-
-		public BasicCommandsConfig() : base("BasicCommands") {
-			this.MessageRequiresOp = false;
-		}
-	}
 
 	public class BasicCommands : PluginBase {
 
@@ -22,11 +14,14 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 		}
 			
 		public override void EnableOnServer(BotServerConnection server) {
+			LoadConfiguration(server);
+
 			server.OnCommandRecieved += HandleOnCommandRecieved;
 		}
 
 		public override void DisableOnServer(BotServerConnection server) {
 			server.OnCommandRecieved -= HandleOnCommandRecieved;
+			this.Configurations.Remove(server.Configuration.FriendlyName);
 		}
 			
 		void HandleOnCommandRecieved (BotServerConnection server, IrcMessage message)

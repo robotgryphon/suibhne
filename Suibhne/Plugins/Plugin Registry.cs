@@ -90,12 +90,12 @@ namespace Ostenvighx.Suibhne.Plugins {
 				// Plugin set is loaded, get plugin
 				PluginMain pluginMain = ActivePluginSets[pluginFile];
 
-
-
 			} else {
 				LoadPluginSet(pluginFile);
 				GetPlugin(pluginFile, pluginName);
 			}
+
+			return null;
 		}
 
 		public void EnablePluginsFromList(BotServerConnection server){

@@ -7,14 +7,6 @@ using Newtonsoft.Json;
 
 namespace Ostenvighx.Suibhne.CorePlugins {
 
-	/// <summary>
-	/// Holds the nickserv configuration layout.
-	/// </summary>
-	public struct NickServConfig {
-		public String NickservName;
-		public String Password;
-	}
-
 	public class NickServ : PluginBase {
 
 		public NickServ() {
@@ -37,6 +29,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			Console.WriteLine("[NickServ Plugin] Identifying with nickserv..");
 			// Gather config information out of file
 
+			/*
 			String filename = bot.Configuration.ConfigDirectory + server.Configuration.ConfigurationDirectory + "/Plugins/NickServ.json";
 
 			String nickservText = System.IO.File.ReadAllText(filename);
@@ -44,7 +37,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			NickServConfig config = JsonConvert.DeserializeObject<NickServConfig>(nickservText);
 
 			server.Connection.SendMessage(config.NickservName, "identify " + config.Password);
-			
+			*/
 		}
 
 
