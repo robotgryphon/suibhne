@@ -18,7 +18,7 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			server.Connection.OnUserPart += HandleOnUserJoin;
 		}
 
-		void HandleOnUserJoin (IrcConnection conn, IrcChannel channel, IrcUser user, EventArgs args)
+		void HandleOnUserJoin (IrcConnection conn, IrcChannel channel, IrcUser user)
 		{
 			if(user.nickname.ToLower() != conn.CurrentNickname.ToLower()) {
 				IrcMessage greeting = new IrcMessage(channel.channelName, conn.CurrentNickname, "waves to " + user.nickname + ". \"Hello, there!\"");
