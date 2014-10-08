@@ -11,6 +11,11 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 		public String NickservName;
 		public String Password;
 
+		public NickServConfig(){
+			this.NickservName = "NickServ";
+			this.Password = "";
+		}
+
 		public static NickServConfig LoadFromFile(String filename) {
 			NickServConfig config = new NickServConfig();
 
@@ -26,6 +31,11 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 
 		public static void GenerateNew(String pluginDirectory, PluginBase plugin){
 			// TODO: Generate
+			NickServConfig config = new NickServConfig();
+
+			String configAsJSON = JsonConvert.SerializeObject(config, Formatting.Indented);
+
+			File.WriteAllText(pluginDirectory + "/" + plugin.Name + ".json", configAsJSON);
 		}
 	}
 

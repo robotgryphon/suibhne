@@ -34,6 +34,8 @@ namespace Ostenvighx.Suibhne.CorePlugins {
 			} else {
 				// Generate new config file
 				NickServConfig.GenerateNew(Bot.Configuration.ConfigDirectory + server.Configuration.ConfigurationDirectory + "/Plugins/", this);
+
+				LoadConfiguration(server);
 			}
 		}
 
