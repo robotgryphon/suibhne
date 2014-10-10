@@ -35,8 +35,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 			this.Connection = new IrcConnection(config.Server);
 
-			this.Plugins.RegisterPluginSets(config.Plugins);
-			this.Plugins.EnablePluginsFromList(this);
+			this.Plugins.EnablePluginsOnServer(this);
 
 			this.Connection.OnMessageRecieved += HandleMessageRecieved;
 			this.Connection.OnConnectionComplete += (conn, args) => {
@@ -65,6 +64,7 @@ namespace Ostenvighx.Suibhne.Core {
 			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 
 			if(command == "plugins") {
+
 				string[] pluginCommandParts = message.message.Split(new char[]{ ' ' }, 3);
 				switch(pluginCommandParts.Length) {
 					case 1:
@@ -74,14 +74,22 @@ namespace Ostenvighx.Suibhne.Core {
 					case 2:
 						switch(pluginCommandParts[1].ToLower()) {
 							case "list":
-								List<PluginBase> activePlugins = Plugins.GetActivePluginsOnServer(this);
+								int[] activePlugins = Plugins.GetActivePluginsOnServer(this);
 								List<String> plugins = new List<string>();
-
-								foreach(PluginBase p in activePlugins) {
-									plugins.Add(p.Name);
+								foreach(int pluginLoopID in activePlugins) {
+									plugins.Add(Plugins.GetPlugin(pluginLoopID).Name);
 								}
+								Connection.SendMessage(message.location, "Plugins Active on " + Configuration.FriendlyName + " [" + activePlugins.Length + "]: " + String.Join(", ", plugins));
 
-								Connection.SendMessage(message.location, "Plugins Active on " + Configuration.FriendlyName + ": " + String.Join(", ", plugins));
+								int[] inactivePluginsArray = Plugins.GetUnactivePluginsOnServer(this);
+								if(inactivePluginsArray.Length > 0) {
+									List<String> inactivePlugins = new List<string>();
+									foreach(int pluginLoopID in inactivePluginsArray) { 
+										inactivePlugins.Add(Plugins.GetPlugin(pluginLoopID).Name);	
+									}
+
+									Connection.SendMessage(message.location, "Plugins Disabled on " + Configuration.FriendlyName + " [" + inactivePluginsArray.Length + "]: " + String.Join(", ", inactivePlugins));
+								}
 								break;
 
 							default:
@@ -93,6 +101,32 @@ namespace Ostenvighx.Suibhne.Core {
 						break;
 
 					case 3:
+
+
+						int pluginID = -1;
+						switch(pluginCommandParts[1].ToLower()) {
+							case "serv-enable":
+								if(IsBotOperator(message.sender)) {
+									pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
+									Plugins.EnablePluginOnServer(pluginID, this);
+								} else {
+									Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+								}
+								break;
+
+							case "serv-disable":
+								if(IsBotOperator(message.sender)) {
+									pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
+									Plugins.DisablePluginOnServer(pluginID, this);
+								} else {
+									Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+								}
+								break;
+
+							default:
+								Connection.SendMessage(message.location, "Unknown command.");
+								break;
+						}
 
 						break;
 

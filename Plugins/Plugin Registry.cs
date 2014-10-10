@@ -1,5 +1,6 @@
 
 using System;
+using System.Linq;
 using Ostenvighx.Suibhne.Core;
 using System.Collections.Generic;
 using System.IO;
@@ -11,133 +12,147 @@ namespace Ostenvighx.Suibhne.Plugins {
 	
 		public IrcBot bot { get; protected set; }
 
-		public String PluginDirectory { get; protected set; }
+		/// <summary>
+		/// A list of all the loaded plugins on the bot, referenced by ID. This should
+		/// contain ALL of the plugins in the plugins directory.
+		/// </summary>
+		protected Dictionary<int, PluginBase> LoadedPlugins;
 
-		protected Dictionary<String, PluginMain> ActivePluginSets;
+		/// <summary>
+		/// A dictionary of plugins enabled on a server. The key is the server's friendly name
+		/// and the values is a list of all the active plugin files on said server.
+		/// </summary>
+		/// <value>The enabled plugins on the servers.</value>
+		public Dictionary<String, List<int>> EnabledPlugins { get; protected set; }
 
-		public Dictionary<String, List<PluginBase>> EnabledPlugins { get; protected set; }
-
-		public PluginRegistry(IrcBot bot, String pluginDirectory)
+		public PluginRegistry(IrcBot bot)
 		{
 			this.bot = bot;
-			this.PluginDirectory = pluginDirectory;
-			this.ActivePluginSets = new Dictionary<string, PluginMain>();
-			this.EnabledPlugins = new Dictionary<string, List<PluginBase>>();
+			this.LoadedPlugins = new Dictionary<int, PluginBase>();
+			this.EnabledPlugins = new Dictionary<string, List<int>>();
+
+			InitializePlugins();
 		}
 
-		public void LoadPluginSet(String filename){
-			if(!ActivePluginSets.ContainsKey(filename)){
-				String pluginFile = PluginDirectory + filename + ".dll";
+		public void InitializePlugins(){
+
+			String[] PluginFolders = Directory.GetDirectories(bot.Configuration.ConfigDirectory + "Plugins/");
+
+			foreach(String PluginFolder in PluginFolders) {
+			
+				String PluginName = PluginFolder.Substring(PluginFolder.LastIndexOf("/") + 1);
+				String pluginFile = PluginFolder + "/" + PluginName + ".dll";
+
+				Console.WriteLine("Plugin file: " + pluginFile);
+
 				if(File.Exists(pluginFile)) {
 
 					try {
-						Assembly LoadedPluginSet = Assembly.LoadFile(pluginFile);
+						Assembly LoadedPlugin = Assembly.LoadFile(pluginFile);
 
-						Type[] types = LoadedPluginSet.GetTypes();
+						Type[] types = LoadedPlugin.GetTypes();
+
 						foreach(Type type in types) {
 
-							if(type.IsSubclassOf(typeof(PluginMain))) {
-								PluginMain pluginMain = (PluginMain) Activator.CreateInstance(type);
-								ActivePluginSets.Add(filename, pluginMain);
+							if(type.IsSubclassOf(typeof(PluginBase))) {
+								PluginBase plugin = (PluginBase) Activator.CreateInstance(type);
 
-								Console.WriteLine("[Plugins System] Plugin set loaded: " + pluginMain.ToString());
+								plugin.PrepareBot(bot);
+								String pluginClassName = type.ToString().Substring(plugin.GetType().ToString().LastIndexOf(".") + 1);
 
-								if(pluginMain.AvailablePlugins.Count > 0){
-									// Has available plugins to load.
-									foreach(Type pluginType in pluginMain.AvailablePlugins){
+								int newID = LoadedPlugins.Count + 1;
+								LoadedPlugins.Add(newID, plugin);
 
-										if(pluginType.IsSubclassOf(typeof(PluginBase))){
-											PluginBase plugin = (PluginBase) Activator.CreateInstance(pluginType);
-
-											plugin.PrepareBot(bot);
-											String pluginClassName = plugin.GetType().ToString().Substring(plugin.GetType().ToString().LastIndexOf(".") + 1);
-											Console.WriteLine(pluginClassName);
-
-											pluginMain.ActivatedPlugins.Add(pluginClassName, plugin);
-
-											Console.WriteLine("[Plugins System] Plugin loaded: " + plugin.Name + " (Version: " + plugin.Version + ")");
-										} else {
-											Console.WriteLine("[Plugins System] Error: Given type is not a plugin or is in an invalid format. [Not subtype of PluginBase]");
-										}
-									}
-								}
-
+								Console.WriteLine("[Plugins System] Plugin loaded: " + plugin.Name + " (Version: " + plugin.Version + ", Given ID #" + newID + ")");
 							}
 						}
 
-
 					} catch(Exception e){
-						Console.WriteLine("[Plugins System] Failed to load plugin set: " + filename);
+						Console.WriteLine("[Plugins System] Failed to load plugin: " + PluginName);
 						Console.WriteLine(e);
 					}
-
-				} else {
-					// Plugin not available
-					throw new FileNotFoundException("Plugin file not found: " + pluginFile);
 				}
 			}
+
+			Console.WriteLine("[Plugins System] Loaded " + LoadedPlugins.Count + " plugins.");
 		}
 
-		public void RegisterPluginSets(List<PluginSet> Plugins){
-
-			foreach(PluginSet pluginSet in Plugins) {
-				if(ActivePluginSets.ContainsKey(pluginSet.PluginFile)){
-					// Plugin already loaded.
-				} else {
-					LoadPluginSet(pluginSet.PluginFile);
+		public int GetPluginID(String pluginName){
+			foreach(KeyValuePair<int, PluginBase> plugin in LoadedPlugins) {
+				if(plugin.Value.Name.ToLower() == pluginName.ToLower()) {
+					return plugin.Key;
 				}
 			}
+
+			return -1;
 		}
 
-		// TODO: Change to be able to reload plugins
-		// public void EnableOnServer(BotServerConnection server, PluginBase plugin){ }
-		public PluginBase GetPlugin(String pluginFile, String pluginName){
-			if(ActivePluginSets.ContainsKey(pluginFile)) {
+		public PluginBase GetPlugin(String pluginName){
+			int pluginID = GetPluginID(pluginName);
+			if(pluginID != -1)
+				return GetPlugin(pluginID);
+
+			return null;
+		}
+
+		public PluginBase GetPlugin(int pluginID){
+			if(LoadedPlugins.ContainsKey(pluginID)) {
 				// Plugin set is loaded, get plugin
-				PluginMain pluginMain = ActivePluginSets[pluginFile];
-
-				if(pluginMain.ActivatedPlugins.ContainsKey(pluginName)) {
-					return pluginMain.ActivatedPlugins[pluginName];
-				} else {
-					return null;
-				}
-			} else {
-				LoadPluginSet(pluginFile);
-				GetPlugin(pluginFile, pluginName);
+				return LoadedPlugins[pluginID];
 			}
 
 			return null;
 		}
 
-		public List<PluginBase> GetActivePluginsOnServer(BotServerConnection server){
-			if(EnabledPlugins.ContainsKey(server.Configuration.FriendlyName))
-				return EnabledPlugins[server.Configuration.FriendlyName];
-
-			return new List<PluginBase>();
+		public void EnablePluginOnServer(int pluginID, BotServerConnection server){
+			// Do checks to make sure plugin exists
+			if(pluginID > 0 && LoadedPlugins.ContainsKey(pluginID)) {
+				GetPlugin(pluginID).EnableOnServer(server);
+				EnabledPlugins[server.Configuration.FriendlyName].Add(pluginID);
+			} else {
+				Console.WriteLine("Plugin not enabled. Not found in the loaded plugin registry.");
+			}
 		}
 
-		public void EnablePluginsFromList(BotServerConnection server){
-		
-			if(!EnabledPlugins.ContainsKey(server.Configuration.FriendlyName)) {
-				// Add server to plugin tracker
-				EnabledPlugins.Add(server.Configuration.FriendlyName, new List<PluginBase>());
+		public void DisablePluginOnServer(int pluginID, BotServerConnection server){
+			// Do checks to make sure plugin exists
+			if(pluginID > 0 && LoadedPlugins.ContainsKey(pluginID)) {
+				GetPlugin(pluginID).DisableOnServer(server);
+				EnabledPlugins[server.Configuration.FriendlyName].Remove(pluginID);
 			}
+		}
 
-			foreach(PluginSet set in server.Configuration.Plugins) {
+		/// <summary>
+		/// Get a list of all the active plugins on a server by their integer IDs.
+		/// </summary>
+		/// <returns>The active plugins on server, by reference to their loaded PluginBase.</returns>
+		/// <param name="server">Server to get plugin list for.</param>
+		public int[] GetActivePluginsOnServer(BotServerConnection server){
+			if(EnabledPlugins.ContainsKey(server.Configuration.FriendlyName))
+				return EnabledPlugins[server.Configuration.FriendlyName].ToArray();
+				
+			return new int[0];
+		}
 
-				foreach(String pluginName in set.Plugins) {
+		public int[] GetUnactivePluginsOnServer(BotServerConnection server){
+			int[] AllPlugins = LoadedPlugins.Keys.ToArray();
+			return AllPlugins.Except(GetActivePluginsOnServer(server)).ToArray();
+		}
 
-					// Get plugin by name
-					PluginBase plugin = GetPlugin(set.PluginFile, pluginName);
-
-					if(plugin != null) {
-						Console.WriteLine("[Plugins System] Enabling " + plugin.Name + " on server " + server.Configuration.FriendlyName);
-						EnabledPlugins[server.Configuration.FriendlyName].Add(plugin);
-						plugin.EnableOnServer(server);
-					} else {
-						Console.WriteLine("[Plugins System] Failed to enable plugin (" + pluginName + "): Not found");
-					}
+		/// <summary>
+		/// Quickly enable all the plugins on a server's configured plugin list.
+		/// </summary>
+		/// <param name="server">Server to enable plugins on/for.</param>
+		public void EnablePluginsOnServer(BotServerConnection server){
+			if(EnabledPlugins.ContainsKey(server.Configuration.FriendlyName)) {
+				List<String> pluginsToEnable = server.Configuration.Plugins;
+				foreach(String pluginToEnable in pluginsToEnable) {
+					int pluginID = GetPluginID(pluginToEnable);
+					EnablePluginOnServer(pluginID, server);
 				}
+			} else {
+				EnabledPlugins.Add(server.Configuration.FriendlyName, new List<int>());
+				EnablePluginsOnServer(server);
 			}
 		}
 	}

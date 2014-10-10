@@ -16,14 +16,14 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public List<IrcChannel> AutoJoinChannels;
 
-		public List<PluginSet> Plugins;
+		public List<String> Plugins;
 
 		public String ConfigurationDirectory;
 
 		public static ServerConfig CreateNew(){
 			ServerConfig config = new ServerConfig();
 			config.Operators = new List<String>();
-			config.Plugins = new List<PluginSet>();
+			config.Plugins = new List<String>();
 			config.Server = new IrcConfig();
 			config.FriendlyName = "Default";
 
