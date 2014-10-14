@@ -1,8 +1,9 @@
 ﻿using System;
-using Ostenvighx.Api.Networking.Irc;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.IO;
+
+using Ostenvighx.Api.Irc;
 
 namespace Ostenvighx.Suibhne.Core {
 	public class IrcBotConfiguration {

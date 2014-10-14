@@ -1,6 +1,6 @@
 ﻿using System;
 using Ostenvighx.Suibhne.Plugins;
-using Ostenvighx.Api.Networking.Irc;
+using Ostenvighx.Api.Irc;
 using System.Collections.Generic;
 
 namespace Ostenvighx.Suibhne.Core {

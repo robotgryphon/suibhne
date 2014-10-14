@@ -1,10 +1,11 @@
 
 using System;
 using System.Linq;
-using Ostenvighx.Suibhne.Core;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+
+using Ostenvighx.Suibhne.Core;
 
 namespace Ostenvighx.Suibhne.Plugins {
 

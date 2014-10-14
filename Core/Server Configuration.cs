@@ -1,8 +1,9 @@
 ﻿using System;
-using Ostenvighx.Api.Networking.Irc;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+
+using Ostenvighx.Api.Irc;
 using Ostenvighx.Suibhne.Plugins;
 
 namespace Ostenvighx.Suibhne.Core {

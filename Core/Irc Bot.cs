@@ -4,8 +4,7 @@ using System.Net;
 using System.IO;
 using System.Collections.Generic;
 
-using Ostenvighx.Api.Networking;
-using Ostenvighx.Api.Networking.Irc;
+using Ostenvighx.Api.Irc;
 
 using Ostenvighx.Suibhne.Plugins;
 
