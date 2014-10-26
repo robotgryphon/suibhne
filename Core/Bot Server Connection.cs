@@ -38,7 +38,7 @@ namespace Ostenvighx.Suibhne.Core {
 			this.Plugins.EnablePluginsOnServer(this);
 
 			this.Connection.OnMessageRecieved += HandleMessageRecieved;
-			this.Connection.OnConnectionComplete += (conn, args) => {
+			this.Connection.OnConnectionComplete += (conn) => {
 				Console.WriteLine("Connection complete on server " + Configuration.Server.hostname);
 
 				if(this.OnConnectionComplete != null){
@@ -63,74 +63,86 @@ namespace Ostenvighx.Suibhne.Core {
 			String command = message.message.Split(new char[]{ ' ' })[0].ToLower().TrimStart(new char[]{'!'}).TrimEnd();
 			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 
-			if(command == "plugins") {
+			switch(command){
+				case "plugins":
 
-				string[] pluginCommandParts = message.message.Split(new char[]{ ' ' }, 3);
-				switch(pluginCommandParts.Length) {
-					case 1:
-						Connection.SendMessage(message.location, "Invalid Parameters. Format: !plugins [command]");
-						break;
+					string[] pluginCommandParts = message.message.Split(new char[]{ ' ' }, 3);
+					switch(pluginCommandParts.Length) {
+						case 1:
+							Connection.SendMessage(message.location, "Invalid Parameters. Format: !plugins [command]");
+							break;
 
-					case 2:
-						switch(pluginCommandParts[1].ToLower()) {
-							case "list":
-								int[] activePlugins = Plugins.GetActivePluginsOnServer(this);
-								List<String> plugins = new List<string>();
-								foreach(int pluginLoopID in activePlugins) {
-									plugins.Add(Plugins.GetPlugin(pluginLoopID).Name);
-								}
-								Connection.SendMessage(message.location, "Plugins Active on " + Configuration.FriendlyName + " [" + activePlugins.Length + "]: " + String.Join(", ", plugins));
-
-								int[] inactivePluginsArray = Plugins.GetUnactivePluginsOnServer(this);
-								if(inactivePluginsArray.Length > 0) {
-									List<String> inactivePlugins = new List<string>();
-									foreach(int pluginLoopID in inactivePluginsArray) { 
-										inactivePlugins.Add(Plugins.GetPlugin(pluginLoopID).Name);	
+						case 2:
+							switch(pluginCommandParts[1].ToLower()) {
+								case "list":
+									int[] activePlugins = Plugins.GetActivePluginsOnServer(this);
+									List<String> plugins = new List<string>();
+									foreach(int pluginLoopID in activePlugins) {
+										plugins.Add(Plugins.GetPlugin(pluginLoopID).Name);
 									}
+									Connection.SendMessage(message.location, "Plugins Active on " + Configuration.FriendlyName + " [" + activePlugins.Length + "]: " + String.Join(", ", plugins));
 
-									Connection.SendMessage(message.location, "Plugins Disabled on " + Configuration.FriendlyName + " [" + inactivePluginsArray.Length + "]: " + String.Join(", ", inactivePlugins));
-								}
-								break;
+									int[] inactivePluginsArray = Plugins.GetUnactivePluginsOnServer(this);
+									if(inactivePluginsArray.Length > 0) {
+										List<String> inactivePlugins = new List<string>();
+										foreach(int pluginLoopID in inactivePluginsArray) { 
+											inactivePlugins.Add(Plugins.GetPlugin(pluginLoopID).Name);	
+										}
 
-							default:
-								Connection.SendMessage(message.location, "Unknown command.");
-								break;
+										Connection.SendMessage(message.location, "Plugins Disabled on " + Configuration.FriendlyName + " [" + inactivePluginsArray.Length + "]: " + String.Join(", ", inactivePlugins));
+									}
+									break;
 
-						}
+								default:
+									Connection.SendMessage(message.location, "Unknown command.");
+									break;
 
-						break;
+							}
+							break;
 
-					case 3:
+						case 3:
+							int pluginID = -1;
+							switch(pluginCommandParts[1].ToLower()) {
+								case "serv-enable":
+									if(IsBotOperator(message.sender)) {
+										pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
+										Plugins.EnablePluginOnServer(pluginID, this);
+									} else {
+										Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+									}
+									break;
 
+								case "serv-disable":
+									if(IsBotOperator(message.sender)) {
+										pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
+										Plugins.DisablePluginOnServer(pluginID, this);
+									} else {
+										Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+									}
+									break;
 
-						int pluginID = -1;
-						switch(pluginCommandParts[1].ToLower()) {
-							case "serv-enable":
-								if(IsBotOperator(message.sender)) {
-									pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
-									Plugins.EnablePluginOnServer(pluginID, this);
-								} else {
-									Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
-								}
-								break;
+								default:
+									Connection.SendMessage(message.location, "Unknown command.");
+									break;
+							}
+							break;
+					}
 
-							case "serv-disable":
-								if(IsBotOperator(message.sender)) {
-									pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
-									Plugins.DisablePluginOnServer(pluginID, this);
-								} else {
-									Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
-								}
-								break;
+					// End plugins
+					break;
 
-							default:
-								Connection.SendMessage(message.location, "Unknown command.");
-								break;
-						}
+				case "raw":
+					if(IsBotOperator(message.sender.ToLower())) {
+						string rawCommand = message.message.Split(new char[]{ ' ' }, 2)[1];
+						Connection.SendRaw(rawCommand);
+					} else {
+						Connection.SendMessage(message.location, "You must be an operator to run raw commands.");
+					}
+					break;
 
-						break;
-
-				}
+				default:
+					// TODO: Check plugin registry for additional command support here?
+					break;
 			}
 		}
 
@@ -142,7 +154,7 @@ namespace Ostenvighx.Suibhne.Core {
 			this.Connection.Disconnect();
 		}
 
-		protected void HandleMessageRecieved (IrcConnection conn, IrcMessage message, EventArgs args)
+		protected void HandleMessageRecieved (IrcConnection conn, IrcMessage message)
 		{
 			Console.WriteLine(message.ToString());
 
