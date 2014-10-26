@@ -63,13 +63,22 @@ namespace Ostenvighx.Suibhne.Core {
 			String command = message.message.Split(new char[]{ ' ' })[0].ToLower().TrimStart(new char[]{'!'}).TrimEnd();
 			Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 
+			IrcMessage response = new IrcMessage(message.location, Connection.CurrentNickname, "Response");
+			response.type = MessageType.ChannelMessage;
+
 			switch(command){
+				case "test":
+					response.message = "Test complete. Probably successful.";
+					Connection.SendMessage(response);
+					break;
+
 				case "plugins":
 
 					string[] pluginCommandParts = message.message.Split(new char[]{ ' ' }, 3);
 					switch(pluginCommandParts.Length) {
 						case 1:
-							Connection.SendMessage(message.location, "Invalid Parameters. Format: !plugins [command]");
+							response.message = "Invalid Parameters. Format: !plugins [command]";
+							Connection.SendMessage(response);
 							break;
 
 						case 2:
@@ -80,7 +89,10 @@ namespace Ostenvighx.Suibhne.Core {
 									foreach(int pluginLoopID in activePlugins) {
 										plugins.Add(Plugins.GetPlugin(pluginLoopID).Name);
 									}
-									Connection.SendMessage(message.location, "Plugins Active on " + Configuration.FriendlyName + " [" + activePlugins.Length + "]: " + String.Join(", ", plugins));
+
+									response.message = "Plugins Active on " + Configuration.FriendlyName + " [" + activePlugins.Length + "]: " + String.Join(", ", plugins);
+
+									Connection.SendMessage(response);
 
 									int[] inactivePluginsArray = Plugins.GetUnactivePluginsOnServer(this);
 									if(inactivePluginsArray.Length > 0) {
@@ -89,12 +101,14 @@ namespace Ostenvighx.Suibhne.Core {
 											inactivePlugins.Add(Plugins.GetPlugin(pluginLoopID).Name);	
 										}
 
-										Connection.SendMessage(message.location, "Plugins Disabled on " + Configuration.FriendlyName + " [" + inactivePluginsArray.Length + "]: " + String.Join(", ", inactivePlugins));
+										response.message = "Plugins Disabled on " + Configuration.FriendlyName + " [" + inactivePluginsArray.Length + "]: " + String.Join(", ", inactivePlugins);
+										Connection.SendMessage(response);
 									}
 									break;
 
 								default:
-									Connection.SendMessage(message.location, "Unknown command.");
+									response.message = "Unknown command.";
+									Connection.SendMessage(response);
 									break;
 
 							}
@@ -108,7 +122,8 @@ namespace Ostenvighx.Suibhne.Core {
 										pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
 										Plugins.EnablePluginOnServer(pluginID, this);
 									} else {
-										Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+										response.message = "You are not a bot operator. No permission to enable and disable plugins.";
+										Connection.SendMessage(response);
 									}
 									break;
 
@@ -117,12 +132,14 @@ namespace Ostenvighx.Suibhne.Core {
 										pluginID = Plugins.GetPluginID(pluginCommandParts[2]);
 										Plugins.DisablePluginOnServer(pluginID, this);
 									} else {
-										Connection.SendMessage(message.location, "You are not a bot operator. No permission.");
+										response.message = "You are not a bot operator. No permission to enable and disable plugins.";
+										Connection.SendMessage(response);
 									}
 									break;
 
 								default:
-									Connection.SendMessage(message.location, "Unknown command.");
+									response.message = "Unknown command.";
+									Connection.SendMessage(response);
 									break;
 							}
 							break;
@@ -136,7 +153,8 @@ namespace Ostenvighx.Suibhne.Core {
 						string rawCommand = message.message.Split(new char[]{ ' ' }, 2)[1];
 						Connection.SendRaw(rawCommand);
 					} else {
-						Connection.SendMessage(message.location, "You must be an operator to run raw commands.");
+						response.message = "You are not a bot operator. No permission to execute raw commands.";
+						Connection.SendMessage(response);
 					}
 					break;
 
