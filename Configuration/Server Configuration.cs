@@ -15,7 +15,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public List<String> Operators;
 
-		public List<IrcChannel> AutoJoinChannels;
+		public List<IrcLocation> AutoJoinChannels;
 
 		public List<String> Plugins;
 
@@ -28,7 +28,7 @@ namespace Ostenvighx.Suibhne.Core {
 			config.Server = new IrcConfig();
 			config.FriendlyName = "Default";
 
-			config.AutoJoinChannels = new List<IrcChannel>();
+			config.AutoJoinChannels = new List<IrcLocation>();
 
 			config.ConfigurationDirectory = "Servers/Default/";
 			return config;

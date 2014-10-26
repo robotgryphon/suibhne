@@ -17,7 +17,7 @@ namespace Ostenvighx.Suibhne.Core {
 		}
 
 		#region Event Handlers
-		public delegate void ServerConnectionEvent(BotServerConnection connection, EventArgs args);
+		public delegate void ServerConnectionEvent(BotServerConnection connection);
 
 		public event ServerConnectionEvent OnConnectionComplete;
 
@@ -42,11 +42,11 @@ namespace Ostenvighx.Suibhne.Core {
 				Console.WriteLine("Connection complete on server " + Configuration.Server.hostname);
 
 				if(this.OnConnectionComplete != null){
-					OnConnectionComplete(this, EventArgs.Empty);
+					OnConnectionComplete(this);
 				}
 
-				foreach(IrcChannel channel in Configuration.AutoJoinChannels){
-					Connection.JoinChannel(channel);
+				foreach(IrcLocation location in Configuration.AutoJoinChannels){
+					Connection.JoinChannel(location);
 				}
 			};
 		}
