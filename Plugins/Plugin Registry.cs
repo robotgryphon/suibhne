@@ -44,8 +44,6 @@ namespace Ostenvighx.Suibhne.Plugins {
 				String PluginName = PluginFolder.Substring(PluginFolder.LastIndexOf("/") + 1);
 				String pluginFile = PluginFolder + "/" + PluginName + ".dll";
 
-				Console.WriteLine("Plugin file: " + pluginFile);
-
 				if(File.Exists(pluginFile)) {
 
 					try {
