@@ -1,0 +1,15 @@
+{
+	"FriendlyName": "Localhost",
+	"Server": {
+		"hostname": "localhost",
+		"port": 6667,
+		"nickname": "Suibhne",
+		"username": "Suibhne",
+		"realname": "Suibhne",
+		"password": ""
+	},
+	"AutoJoinChannels": [ { "locationName": "#ostenvighx" } ],
+	"ConfigurationDirectory": "Servers/Localhost/",
+	"Operators": [ "delenas" ],
+	"Plugins": [ "Basic Commands", "AutoGreeter", "Seen Plugin", "Dice Plugin" ]
+}
