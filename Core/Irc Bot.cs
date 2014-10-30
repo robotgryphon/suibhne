@@ -35,7 +35,7 @@ namespace Ostenvighx.Suibhne.Core {
 			foreach(String serverName in Configuration.Servers) {
 
 				try {
-					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/Server.json");
+					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/" + serverName + ".ini");
 					BotServerConnection conn = new BotServerConnection(sc, Plugins);
 					AddConnection(serverName, conn);
 				}

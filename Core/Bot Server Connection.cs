@@ -52,7 +52,10 @@ namespace Ostenvighx.Suibhne.Core {
 		}
 
 		public Boolean IsBotOperator(String user) {
-			return Configuration.Operators.Contains(user.ToLower());
+			foreach(String nick in Configuration.Operators)
+				if(nick.ToLower() == user.ToLower()) return true;
+
+			return false;
 		}
 
 		protected void HandleCommand(IrcMessage message) {

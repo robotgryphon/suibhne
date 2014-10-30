@@ -109,7 +109,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 				GetPlugin(pluginID).EnableOnServer(server);
 				EnabledPlugins[server.Configuration.FriendlyName].Add(pluginID);
 			} else {
-				Console.WriteLine("Plugin not enabled. Not found in the loaded plugin registry.");
+				Console.WriteLine("Plugin \"" + pluginID + "\" not enabled. Not found in the loaded plugin registry.");
 			}
 		}
 
@@ -144,8 +144,7 @@ namespace Ostenvighx.Suibhne.Plugins {
 		/// <param name="server">Server to enable plugins on/for.</param>
 		public void EnablePluginsOnServer(BotServerConnection server){
 			if(EnabledPlugins.ContainsKey(server.Configuration.FriendlyName)) {
-				List<String> pluginsToEnable = server.Configuration.Plugins;
-				foreach(String pluginToEnable in pluginsToEnable) {
+				foreach(String pluginToEnable in server.Configuration.Plugins) {
 					int pluginID = GetPluginID(pluginToEnable);
 					EnablePluginOnServer(pluginID, server);
 				}
