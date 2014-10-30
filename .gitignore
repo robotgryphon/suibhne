@@ -42,5 +42,10 @@ build/
 [Bb]in/
 [Oo]bj/
 
+*.mdw
+
 Libraries/
 Notes/
+Configuration/
+Release*
+Suibhne/Plugins/
