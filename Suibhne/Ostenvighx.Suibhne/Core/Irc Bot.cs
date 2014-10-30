@@ -25,7 +25,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public IrcBot() {
 			this.Connections = new Dictionary<string, BotServerConnection>();
-			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Bot.json");
+			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
 			this.ConnectedCount = 0;
 
 			this.Plugins = new PluginRegistry(this);
