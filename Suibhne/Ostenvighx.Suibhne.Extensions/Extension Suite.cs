@@ -6,9 +6,11 @@ namespace Ostenvighx.Suibhne.Extensions {
   public enum RequestCode : byte {
 	Unknown = 0,
 
-	ExtensionName = 1,
-	ExtensionVersion = 2,
-	ExtensionUpdateTime = 3
+	Activation = 1,
+
+	ExtensionName = 10,
+	ExtensionVersion = 11,
+	ExtensionUpdateTime = 12
   }
 
   /// <summary>
