@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using Nini.Config;
 
 using Ostenvighx.Api.Irc;
-using Ostenvighx.Suibhne.Plugins;
+using Ostenvighx.Suibhne.Extensions;
 
 namespace Ostenvighx.Suibhne.Core {
 	public class ServerConfig {

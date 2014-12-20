@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 using Ostenvighx.Api.Irc;
 
-using Ostenvighx.Suibhne.Plugins;
+using Ostenvighx.Suibhne.Extensions;
 
 using System.Net.Sockets;
 using System.Threading;
@@ -19,7 +19,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public IrcBotConfiguration Configuration;
 
-		public PluginRegistry Plugins { get; protected set; }
+		public ExtensionRegistry Plugins { get; protected set; }
 
 		public int ConnectedCount { get; protected set; }
 
@@ -28,7 +28,7 @@ namespace Ostenvighx.Suibhne.Core {
 			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
 			this.ConnectedCount = 0;
 
-			this.Plugins = new PluginRegistry(this);
+			this.Plugins = new ExtensionRegistry(this);
 		}
 
 		public void LoadServers(){
