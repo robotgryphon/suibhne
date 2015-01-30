@@ -3,66 +3,107 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 using Nini.Config;
 
 using Ostenvighx.Suibhne.Core;
 using System.Diagnostics;
 using System.Threading;
+using System.Net.Sockets;
 
-namespace Ostenvighx.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions
+{
 
-  public class ExtensionRegistry {
+    /// <summary>
+    /// The extension registry connects an IrcBot and a set of extension suites together.
+    /// It goes through the extensions directory defined in the bot configuration and
+    /// searches through directories for the extension INI files.
+    /// </summary>
+    public class ExtensionRegistry
+    {
 
-	protected IrcBot bot;
+        protected IrcBot bot;
 
-	/// <summary>
-	/// An array of all the prepared extension suites.
-	/// </summary>
-	protected ExtensionSuite[] PreparedSuites;
+        /// <summary>
+        /// An array of all the prepared extension suites.
+        /// </summary>
+        protected ExtensionSuite[] PreparedSuites;
 
-	protected Thread extensionThread;
+        protected Thread extensionThread;
+        protected TcpListener extSocketListener;
 
-	public ExtensionRegistry(IrcBot bot) {
-	  this.bot = bot;
-	  this.PreparedSuites = new ExtensionSuite[0];
+        public ExtensionRegistry(IrcBot bot)
+        {
+            this.bot = bot;
+            this.PreparedSuites = new ExtensionSuite[0];
 
-	  Initialize();
-	}
+            RunExtensionsServer();
+            Initialize();
+        }
 
-	public void Initialize() {
+        public void Initialize()
+        {
 
-	  extensionThread = new Thread(new ThreadStart(RunExtensionsServer));
-	  extensionThread.Start();
+            extensionThread = new Thread(new ThreadStart(RunExtensionsServer));
+            extensionThread.Start();
 
-	  String[] ExtensionDirectories = Directory.GetDirectories(bot.Configuration.ConfigDirectory + "Extensions/");
+            try
+            {
+                String[] ExtensionDirectories = Directory.GetDirectories(bot.Configuration.ConfigDirectory + "Extensions/");
 
-	  foreach (String ExtensionsDirectory in ExtensionDirectories) {
+                foreach (String extDir in ExtensionDirectories)
+                {
+                    String extDirName = extDir.Substring(extDir.LastIndexOf("/") + 1);
 
-		try {
-		  String suiteName = ExtensionsDirectory.Substring(ExtensionsDirectory.LastIndexOf("/") + 1);
-		  String suiteConf = ExtensionsDirectory + "/Suite.ini";
+                    // Attempt to find config file for extension. Start by getting all ini files.
+                    String[] ExtensionFiles = Directory.GetFiles(extDir, "*.ini");
+                    String foundFile = "";
 
-		  if (File.Exists(suiteConf)) {
-			IniConfigSource config = new IniConfigSource(suiteConf);
-			String exec = config.Configs["ExtensionSuite"].GetString("MainExecutable").Trim();
-			if(File.Exists(ExtensionsDirectory + "/" + exec)){
-			  Process.Start(ExtensionsDirectory + "/" + exec, "6700 " + ((byte) Extensions.RequestCode.Activation));
-			}
-		  }
-		} catch (Exception e) {
-		  Console.WriteLine(e);
-		}
-	  }
+                    foreach (String file in ExtensionFiles)
+                    {
+                        if (Path.GetFileName(file).ToLower().Equals("suite.ini"))
+                        {
+                            // Found file
+                            foundFile = file;
 
+                            // Now, poke the extension exe for life.
+                            IniConfigSource extConfig = new IniConfigSource();
+                            extConfig.Load(file);
 
-	  Console.WriteLine("[Extension System] Loaded " + ExtensionDirectories.Length + " plugins.");
-	}
+                            String extExecutable = extConfig.Configs["ExtensionSuite"].GetString("MainExecutable").Trim();
+                            if(extExecutable != ""){
+                                Process.Start(extDir + "/"+ extExecutable);
+                            }
+                        }
+                    }
 
-	protected void RunExtensionsServer(){
-	  Console.WriteLine("[Extension System] Starting socket for responses...");
-	}
+                    if (foundFile == "")
+                    {
+                        Console.WriteLine("[Extension System] Failed to load extension suite from directory '{0}'. Suite file not found.", extDirName);
+                    }
+                    
+                }
+            }
 
-  }
+            catch (IOException ioe)
+            {
+                Console.WriteLine("Failed to open directory.");
+                Console.WriteLine(ioe.Message);
+            }
+            
+
+            
+        }
+
+        protected void RunExtensionsServer()
+        {
+            Console.WriteLine("[Extension System] Starting socket for responses...");
+
+            extSocketListener = new TcpListener(6700);
+            
+        }
+
+    }
 }
 

@@ -67,7 +67,7 @@ namespace Ostenvighx.Suibhne.Core {
 	  String command = message.message.Split(new char[]{ ' ' })[0].ToLower().TrimStart(new char[]{ '!' }).TrimEnd();
 	  Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 
-	  IrcMessage response = new IrcMessage(message.location, Connection.CurrentNickname, "Response");
+	  IrcMessage response = new IrcMessage(message.location, Connection.Me.nickname, "Response");
 	  response.type = MessageType.ChannelMessage;
 
 	  switch (command) {

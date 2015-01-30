@@ -19,7 +19,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 		public IrcBotConfiguration Configuration;
 
-		public ExtensionRegistry Plugins { get; protected set; }
+		public ExtensionRegistry Extensions { get; protected set; }
 
 		public int ConnectedCount { get; protected set; }
 
@@ -28,7 +28,7 @@ namespace Ostenvighx.Suibhne.Core {
 			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
 			this.ConnectedCount = 0;
 
-			this.Plugins = new ExtensionRegistry(this);
+			this.Extensions = new ExtensionRegistry(this);
 		}
 
 		public void LoadServers(){
@@ -36,7 +36,7 @@ namespace Ostenvighx.Suibhne.Core {
 
 				try {
 					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/" + serverName + ".ini");
-					BotServerConnection conn = new BotServerConnection(sc, Plugins);
+					BotServerConnection conn = new BotServerConnection(sc, Extensions);
 					AddConnection(serverName, conn);
 				}
 
