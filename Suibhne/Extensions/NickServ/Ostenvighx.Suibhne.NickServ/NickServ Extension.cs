@@ -1,5 +1,8 @@
 ﻿using System;
 using Ostenvighx.Suibhne.Extensions;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 
 namespace Ostenvighx.Suibhne.NickServ {
 	public class NickServSuite : Extensions.ExtensionSuite {
@@ -8,10 +11,11 @@ namespace Ostenvighx.Suibhne.NickServ {
 			this.Authors = new string[]{ "Ted Senft" };
 			this.SuiteName = "NickServ Auth Suite";
 			this.Extensions = new Extension[] { new NickServ() };
-		}
 
-		public override void PrepareSuite(int port) {
-			Console.WriteLine("[NS Suite] Preparing setup for connection #" + port);
+            PrepareSuite();
+
+            // UnloadSuite();
+            
 		}
 	}
 

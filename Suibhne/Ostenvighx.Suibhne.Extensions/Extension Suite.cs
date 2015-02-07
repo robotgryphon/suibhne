@@ -1,5 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -49,15 +52,20 @@ namespace Ostenvighx.Suibhne.Extensions {
 	/// <value>The filename.</value>
 	public String Filename { get; protected set; }
 
+    protected Thread workThread;
+
+    protected TcpClient client;
+    protected StreamWriter output;
+    protected StreamReader input;
+
+    public Guid id;
+
 	public ExtensionSuite() {
 	  this.SuiteName = "Extension Suite";
 	  this.Authors = new String[] { "Unknown Author" };
 	  this.Version = "0.0.1";
 	  this.Extensions = new Extension[0];
-	}
-
-	protected TcpClient GetConnection(int port) {
-	  return new TcpClient("127.0.0.1", port);
+      this.workThread = new Thread(new ThreadStart(RecieveData));
 	}
 
 	/// <summary>
@@ -65,8 +73,70 @@ namespace Ostenvighx.Suibhne.Extensions {
 	/// The bot uses this to get an initial list of what's available in a suite, rebuilding a suite object in the registry.
 	/// </summary>
 	/// <param name="port">Port of the bot's open comm port.</param>
-	public abstract void PrepareSuite(int port);
+    public void PrepareSuite() {
+        client = new TcpClient();
+        try {
+            client.Connect("127.0.0.1", 6700);
+            client.ReceiveBufferSize = 1024;
 
+            NetworkStream stream = client.GetStream();
+            output = new StreamWriter(stream);
+            output.AutoFlush = true;
+            output.WriteLine("REGISTER: " + SuiteName);
+
+            input = new StreamReader(stream);
+
+            workThread.Start();
+        }
+
+        catch (Exception e) {
+            Console.WriteLine("Failed to start extension.");
+            Console.WriteLine(e);
+            Thread.Sleep(5000);
+
+        }
+        
+    }
+
+    protected void UnloadSuite() {
+        try {
+            output.WriteLine("ext.shutdown");
+            workThread.Abort();
+            client.Close();
+        }
+
+        catch (Exception e) {
+            Console.WriteLine(e);
+
+            Thread.Sleep(10000);
+        }
+        
+    }
+
+    protected void RecieveData() {
+        while (client.Connected) {
+            try {
+                var buffer = new byte[2048];
+                int received = client.Client.Receive(buffer, SocketFlags.None);
+                if (received == 0) return;
+                var data = new byte[received];
+                Array.Copy(buffer, data, received);
+                string text = Encoding.ASCII.GetString(data);
+                Console.WriteLine(text);
+
+                if (text.ToLower().Trim().StartsWith("accepted")) {
+                    id = Guid.Parse(text.Substring(9));
+
+                    output.WriteLine("id.set " + id + " " + SuiteName);
+                }
+            }
+
+            catch(Exception e) {
+                Console.WriteLine(e);
+            }
+           
+        }
+    }
   }
 }
 

@@ -30,24 +30,20 @@ namespace Ostenvighx.Suibhne.Extensions
         /// </summary>
         protected ExtensionSuite[] PreparedSuites;
 
-        protected Thread extensionThread;
-        protected TcpListener extSocketListener;
+        protected ExtensionServer server;
 
         public ExtensionRegistry(IrcBot bot)
         {
             this.bot = bot;
             this.PreparedSuites = new ExtensionSuite[0];
 
-            RunExtensionsServer();
-            Initialize();
+            this.server = new ExtensionServer(bot);
+
+            // Initialize();
         }
 
         public void Initialize()
         {
-
-            extensionThread = new Thread(new ThreadStart(RunExtensionsServer));
-            extensionThread.Start();
-
             try
             {
                 String[] ExtensionDirectories = Directory.GetDirectories(bot.Configuration.ConfigDirectory + "Extensions/");
@@ -93,14 +89,6 @@ namespace Ostenvighx.Suibhne.Extensions
             }
             
 
-            
-        }
-
-        protected void RunExtensionsServer()
-        {
-            Console.WriteLine("[Extension System] Starting socket for responses...");
-
-            extSocketListener = new TcpListener(6700);
             
         }
 
