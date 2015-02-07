@@ -43,11 +43,11 @@ build/
 [Oo]bj/
 
 *.mdw
+*.dgml
 
 Libraries/
 Notes/
 Configuration/
 Release*
-Suibhne/Plugins/
 Suibhne/Suibhne/
 .gitattributes

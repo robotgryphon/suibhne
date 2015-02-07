@@ -65,7 +65,6 @@ namespace Ostenvighx.Suibhne.Core {
             }
 
             String command = message.message.Split(new char[] { ' ' })[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
-            Console.WriteLine("Command recieved from " + message.sender + ": " + command);
 
             IrcMessage response = new IrcMessage(message.location, Connection.Me.nickname, "Response");
             response.type = Reference.MessageType.ChannelMessage;
@@ -76,7 +75,7 @@ namespace Ostenvighx.Suibhne.Core {
                     string[] extCmdParts = message.message.Split(new char[] { ' ' }, 3);
                     switch (extCmdParts.Length) {
                         case 1:
-                            response.message = "Invalid Parameters. Format: !plugins [command]";
+                            response.message = "Invalid Parameters. Format: !ext [command]";
                             Connection.SendMessage(response);
                             break;
 
