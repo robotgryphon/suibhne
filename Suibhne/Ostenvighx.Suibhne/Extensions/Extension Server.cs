@@ -54,7 +54,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 sock.Send(buff);
             }
 
-            catch (SocketException so) {
+            catch (SocketException) {
                 Clients.Remove(sock);
             }
         }

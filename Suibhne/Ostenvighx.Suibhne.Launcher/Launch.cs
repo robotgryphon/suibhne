@@ -11,6 +11,9 @@ namespace Ostenvighx.Suibhne {
 			bot.LoadServers();
 			bot.Start();
 
+            Console.Title = "Suibhne IRC System";
+            Console.Clear();
+
 			while(true) {
 				// Keep alive
 			}
