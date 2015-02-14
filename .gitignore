@@ -1,4 +1,3 @@
-*.pydevproject
 .project
 .metadata
 
@@ -49,5 +48,4 @@ Libraries/
 Notes/
 Configuration/
 Release*
-Suibhne/Suibhne/
 .gitattributes
