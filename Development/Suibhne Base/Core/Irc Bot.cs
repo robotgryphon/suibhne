@@ -4,14 +4,14 @@ using System.Net;
 using System.IO;
 using System.Collections.Generic;
 
-using Ostenvighx.Api.Irc;
+using Raindrop.Api.Irc;
 
-using Ostenvighx.Suibhne.Extensions;
+using Raindrop.Suibhne.Extensions;
 
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Ostenvighx.Suibhne.Core {
+namespace Raindrop.Suibhne.Core {
 
 	public class IrcBot {
 
@@ -22,6 +22,8 @@ namespace Ostenvighx.Suibhne.Core {
 		public ExtensionRegistry Extensions { get; protected set; }
 
 		public int ConnectedCount { get; protected set; }
+
+        public event Reference.IrcMessageEvent OnMessageRecieved;
 
 		public IrcBot() {
 			this.Connections = new Dictionary<string, BotServerConnection>();
@@ -50,10 +52,18 @@ namespace Ostenvighx.Suibhne.Core {
 
 			if(!this.Connections.ContainsKey(connID)) {
 				this.Connections.Add(connID, connection);
+                connection.Connection.OnMessageRecieved += this.HandleMessage;
+
 			} else {
 				throw new Exception("That server is already in the list");
 			}
 		}
+
+        protected void HandleMessage(IrcConnection conn, IrcMessage msg) {
+            if (this.OnMessageRecieved != null) {
+                OnMessageRecieved(conn, msg);
+            }
+        }
 
 		public void Start(){
 			foreach(KeyValuePair<String, BotServerConnection> conn in Connections) {

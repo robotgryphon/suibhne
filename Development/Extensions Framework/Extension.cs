@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using System.IO;
 
-namespace Ostenvighx.Suibhne.Extensions {
+namespace Raindrop.Suibhne.Extensions {
 
   /// <summary>
   /// An extension class here is used to create useful functions and helpers for extension creation.

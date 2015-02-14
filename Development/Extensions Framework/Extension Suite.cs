@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace Ostenvighx.Suibhne.Extensions {
+namespace Raindrop.Suibhne.Extensions {
 
   public enum RequestCode : byte {
 	Unknown = 0,

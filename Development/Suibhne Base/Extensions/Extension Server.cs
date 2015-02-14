@@ -4,12 +4,12 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 
-using Ostenvighx.Api.Irc;
-using Ostenvighx.Suibhne.Core;
+using Raindrop.Api.Irc;
+using Raindrop.Suibhne.Core;
 using System.Net;
 using System.Threading;
 
-namespace Ostenvighx.Suibhne.Extensions {
+namespace Raindrop.Suibhne.Extensions {
     public class ExtensionServer {
 
         protected IrcBot bot;

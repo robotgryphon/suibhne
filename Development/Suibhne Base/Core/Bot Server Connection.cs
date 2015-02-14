@@ -1,9 +1,9 @@
 ﻿using System;
-using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Api.Irc;
+using Raindrop.Suibhne.Extensions;
+using Raindrop.Api.Irc;
 using System.Collections.Generic;
 
-namespace Ostenvighx.Suibhne.Core {
+namespace Raindrop.Suibhne.Core {
     public class BotServerConnection {
         public IrcConnection Connection;
 
@@ -123,7 +123,7 @@ namespace Ostenvighx.Suibhne.Core {
         }
 
         protected void HandleMessageRecieved(IrcConnection conn, IrcMessage message) {
-            Console.WriteLine(message.ToString());
+            Console.WriteLine("Bot connection handling message: " + message.ToString()); 
 
             if (message.message.StartsWith("!"))
                 HandleCommand(message);

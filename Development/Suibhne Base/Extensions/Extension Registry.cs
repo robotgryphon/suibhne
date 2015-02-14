@@ -7,12 +7,12 @@ using System.Text.RegularExpressions;
 
 using Nini.Config;
 
-using Ostenvighx.Suibhne.Core;
+using Raindrop.Suibhne.Core;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
 
-namespace Ostenvighx.Suibhne.Extensions
+namespace Raindrop.Suibhne.Extensions
 {
 
     /// <summary>
