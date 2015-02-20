@@ -2,14 +2,14 @@
 ***
 
 ## Permissions System
-
+***
 The permissions system is used when the bot first sends out registration messages to the extension applications.
 
 It is handled by a request in the format `<token> 1`. Respond to this request with the following format:
 
 > <TOKEN> <EXTENSION_RUNTYPE> <PERMISSIONS_BYTE> <EXTENSION_NAME>
 
-So, written out, that may be: "0000-0000-00000001 1 11110000 Example Extension"
+So, written out, that may be: `0000-0000-00000001 1 11110000 Example Extension`
 
 
 #### Extension Byte:
@@ -18,7 +18,6 @@ This tells the bot whether to expect the extension to keep running after its fir
 
 This is useful for extensions like Nickserv that only need to send a response once. If the extension only runs once, the byte is 0. All other extensions
 should return 1.
-
 
 #### The Permissions Byte:
 
