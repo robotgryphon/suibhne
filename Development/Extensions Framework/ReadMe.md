@@ -38,7 +38,6 @@ The following is a numeric list of responses expected by the extensions system. 
 under `Extension`, where specific details are listed.
 
 #### Client-side
-
 Numeric Code | Parameters
 -----------------------------------
 1  | 1 token runtype permissions <name>
@@ -46,7 +45,6 @@ Numeric Code | Parameters
 11-14 | No client response.
 
 #### Server-side
-
 Numeric Code | Parameters
 -------------------------
 1 | 1 token
