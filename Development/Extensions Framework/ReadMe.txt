@@ -2,14 +2,14 @@
 ***
 
 ## Permissions System
-***
+
 The permissions system is used when the bot first sends out registration messages to the extension applications.
 
 It is handled by a request in the format `<token> 1`. Respond to this request with the following format:
 
-> <TOKEN> <EXTENSION_RUNTYPE> <PERMISSIONS_BYTE> <EXTENSION_NAME>
+> 00000010 <TOKEN> <EXTENSION_RUNTYPE> <PERMISSIONS_BYTE> <EXTENSION_NAME>
 
-So, written out, that may be: `0000-0000-00000001 1 11110000 Example Extension`
+So, written out, that may be: `00000010 0000-0000-00000001 1 11110000 Example Extension`
 
 
 #### Extension Byte:
@@ -28,3 +28,27 @@ This is used by the bot to put the extension into proper categories.
 - The third bit is used for user watching. Enable this bit if you listen in on user joins, parts, nick changes, or quits.
 - The fourth bit is used for location watching. Use this to watch for channel joins, queries, parts, etc.
 - The final four bits are currently unused at the moment, and completely ignored. Pad the byte with four zeroes.
+
+***
+
+## The Communication Code System
+
+Like how IRC has a numeric code system for responses, Suibhne uses a similar system for returning data to extensions.
+The following is a numeric list of responses expected by the extensions system. This is also available in the enum `ResponseCodes`
+under `Extension`, where specific details are listed.
+
+#### Client-side
+
+Numeric Code | Parameters
+-----------------------------------
+1  | 1 token runtype permissions <name>
+10 | 10 token connid
+11-14 | No client response.
+
+#### Server-side
+
+Numeric Code | Parameters
+-------------------------
+1 | 1 token
+10 | 10 token connid status <name>
+11-14 | 11 token connid
