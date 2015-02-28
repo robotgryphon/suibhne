@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Raindrop.Suibhne.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +14,12 @@ namespace Suibhne_Launcher {
         static void Main() {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainWindow());
+
+            IrcBot bot = new IrcBot();
+            bot.LoadServers();
+            bot.Start();
+
+            Application.Run(new SuibhneIcon(bot));
         }
     }
 }

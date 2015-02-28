@@ -11,6 +11,7 @@ using Raindrop.Suibhne.Core;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
+using Raindrop.Api.Irc;
 
 namespace Raindrop.Suibhne.Extensions
 {
@@ -25,24 +26,21 @@ namespace Raindrop.Suibhne.Extensions
 
         protected IrcBot bot;
 
-        /// <summary>
-        /// An array of all the prepared extension suites.
-        /// </summary>
-        protected ExtensionSuite[] PreparedSuites;
+        protected Dictionary<String, Guid> RegisteredCommands;
 
         protected ExtensionServer server;
 
         public ExtensionRegistry(IrcBot bot)
         {
             this.bot = bot;
-            this.PreparedSuites = new ExtensionSuite[0];
 
             this.server = new ExtensionServer(bot);
+            this.RegisteredCommands = new Dictionary<string, Guid>();
 
-            // Initialize();
+            // InitializeExtensions();
         }
 
-        public void Initialize()
+        public void InitializeExtensions()
         {
             try
             {
@@ -87,9 +85,70 @@ namespace Raindrop.Suibhne.Extensions
                 Console.WriteLine("Failed to open directory.");
                 Console.WriteLine(ioe.Message);
             }
-            
+        }
 
-            
+        public void HandleCommand(BotServerConnection conn, IrcMessage message) {
+            String command = message.message.Split(new char[] { ' ' })[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
+
+            IrcMessage response = new IrcMessage(message.location, conn.Connection.Me, "Response");
+            response.type = Reference.MessageType.ChannelMessage;
+
+            switch (command) {
+                case "exts":
+
+                    string[] extCmdParts = message.message.Split(new char[] { ' ' }, 3);
+                    switch (extCmdParts.Length) {
+                        case 1:
+                            response.message = "Invalid Parameters. Format: !ext [command]";
+                            conn.Connection.SendMessage(response);
+                            break;
+
+                        case 2:
+                            switch (extCmdParts[1].ToLower()) {
+                                case "list":
+                                    List<string> names = new List<string>();
+                                    foreach (KeyValuePair<Guid, ExtensionSuiteReference> suite in server.Extensions) {
+                                        names.Add(suite.Value.Name);
+                                    }
+
+                                    response.message = "Enabled extensions on bot: " + String.Join(", ", names);
+                                    break;
+
+                                default:
+                                    response.message = "Unknown command.";
+                                    break;
+                            }
+
+                            conn.Connection.SendMessage(response);
+
+                            break;
+                    }
+
+                    break;
+
+                case "version":
+                    response.type = Reference.MessageType.ChannelAction;
+                    response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                    conn.Connection.SendMessage(response);
+                    break;
+
+
+                case "raw":
+                    if (conn.IsBotOperator(message.sender.nickname.ToLower())) {
+                        string rawCommand = message.message.Split(new char[] { ' ' }, 2)[1];
+                        conn.Connection.SendRaw(rawCommand);
+                    } else {
+                        response.message = "You are not a bot operator. No permission to execute raw commands.";
+                        conn.Connection.SendMessage(response);
+                    }
+                    break;
+
+                default:
+
+                    if (RegisteredCommands.ContainsKey(command))
+                        server.SendToExtension(RegisteredCommands[command], conn.Identifier, message);
+                    break;
+            }
         }
 
     }

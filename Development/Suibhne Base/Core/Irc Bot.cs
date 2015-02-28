@@ -15,18 +15,18 @@ namespace Raindrop.Suibhne.Core {
 
 	public class IrcBot {
 
-		public Dictionary<String, BotServerConnection> Connections;
+		public Dictionary<byte, BotServerConnection> Connections;
 
 		public IrcBotConfiguration Configuration;
 
 		public ExtensionRegistry Extensions { get; protected set; }
 
-		public int ConnectedCount { get; protected set; }
+		public byte ConnectedCount { get; protected set; }
 
         public event Reference.IrcMessageEvent OnMessageRecieved;
 
 		public IrcBot() {
-			this.Connections = new Dictionary<string, BotServerConnection>();
+			this.Connections = new Dictionary<byte, BotServerConnection>();
 			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
 			this.ConnectedCount = 0;
 
@@ -38,8 +38,8 @@ namespace Raindrop.Suibhne.Core {
 
 				try {
 					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/" + serverName + ".ini");
-					BotServerConnection conn = new BotServerConnection(sc, Extensions);
-					AddConnection(serverName, conn);
+					BotServerConnection conn = new BotServerConnection(ConnectedCount++, sc, Extensions);
+					AddConnection(conn);
 				}
 
 				catch(Exception e){
@@ -48,15 +48,11 @@ namespace Raindrop.Suibhne.Core {
 			}
 		}
 
-		public void AddConnection(String connID, BotServerConnection connection) {
+		public void AddConnection(BotServerConnection connection) {
 
-			if(!this.Connections.ContainsKey(connID)) {
-				this.Connections.Add(connID, connection);
-                connection.Connection.OnMessageRecieved += this.HandleMessage;
+			this.Connections.Add(connection.Identifier, connection);
+            connection.Connection.OnMessageRecieved += this.HandleMessage;
 
-			} else {
-				throw new Exception("That server is already in the list");
-			}
 		}
 
         protected void HandleMessage(IrcConnection conn, IrcMessage msg) {
@@ -66,10 +62,18 @@ namespace Raindrop.Suibhne.Core {
         }
 
 		public void Start(){
-			foreach(KeyValuePair<String, BotServerConnection> conn in Connections) {
+			foreach(KeyValuePair<byte, BotServerConnection> conn in Connections) {
 				conn.Value.Connect();
 			}
 		}
+
+        public void Stop() {
+            foreach (KeyValuePair<byte, BotServerConnection> conn in Connections) {
+                conn.Value.Disconnect();
+            }
+
+            Connections.Clear();
+        }
 	}
 }
 

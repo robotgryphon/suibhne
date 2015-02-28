@@ -11,6 +11,8 @@ namespace Raindrop.Suibhne.Core {
 
         public ExtensionRegistry Extensions;
 
+        public byte Identifier { get; protected set; }
+
         public Boolean Connected {
             get { return Connection.Status == Reference.ConnectionStatus.Connected; }
             protected set { }
@@ -29,17 +31,24 @@ namespace Raindrop.Suibhne.Core {
 
         #endregion
 
-        public BotServerConnection(ServerConfig config, ExtensionRegistry exts) {
-
+        public BotServerConnection(byte id, ServerConfig config, ExtensionRegistry exts) {
+            this.Identifier = id;
             this.Configuration = config;
 
             this.Extensions = exts;
 
-            this.Connection = new IrcConnection(config.Server);
+            this.Connection = new IrcConnection(
+                config.Hostname,
+                config.Port,
+                config.Nickname,
+                config.Username,
+                config.DisplayName,
+                config.servPassword,
+                config.authPassword);
 
             this.Connection.OnMessageRecieved += HandleMessageRecieved;
             this.Connection.OnConnectionComplete += (conn) => {
-                Console.WriteLine("Connection complete on server " + Configuration.Server.hostname);
+                Console.WriteLine("Connection complete on server " + Configuration.Hostname);
 
                 if (this.OnConnectionComplete != null) {
                     OnConnectionComplete(this);
@@ -64,54 +73,7 @@ namespace Raindrop.Suibhne.Core {
                 OnCommandRecieved(this, message);
             }
 
-            String command = message.message.Split(new char[] { ' ' })[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
-
-            IrcMessage response = new IrcMessage(message.location, Connection.Me.nickname, "Response");
-            response.type = Reference.MessageType.ChannelMessage;
-
-            switch (command) {
-                case "exts":
-
-                    string[] extCmdParts = message.message.Split(new char[] { ' ' }, 3);
-                    switch (extCmdParts.Length) {
-                        case 1:
-                            response.message = "Invalid Parameters. Format: !ext [command]";
-                            Connection.SendMessage(response);
-                            break;
-
-                        case 2:
-                            switch (extCmdParts[1].ToLower()) {
-                                case "list":
-                                    response.message = "Not yet reimplemented.";
-                                    break;
-
-                                default:
-                                    response.message = "Unknown command.";
-                                    break;
-                            }
-
-                            Connection.SendMessage(response);
-
-                            break;
-                    }
-
-                    break;
-
-
-                case "raw":
-                    if (IsBotOperator(message.sender.ToLower())) {
-                        string rawCommand = message.message.Split(new char[] { ' ' }, 2)[1];
-                        Connection.SendRaw(rawCommand);
-                    } else {
-                        response.message = "You are not a bot operator. No permission to execute raw commands.";
-                        Connection.SendMessage(response);
-                    }
-                    break;
-
-                default:
-                    // TODO: Check plugin registry for additional command support here?
-                    break;
-            }
+            Extensions.HandleCommand(this, message);
         }
 
         public void Connect() {

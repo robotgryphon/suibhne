@@ -39,14 +39,14 @@ under `Extension`, where specific details are listed.
 
 #### Client-side
 Numeric Code | Parameters
-------------: | ----------------------
+------------:| ----------------------
 1  | 1 token runtype permissions <name>
 10 | 10 token connid
 11-14 | No client response.
 
 #### Server-side
 Numeric Code | Parameters
--------------: | ------------
+-------------:| ------------
 1 | 1 token
 10 | 10 token connid status <name>
 11-14 | 11 token connid
