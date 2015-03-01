@@ -16,7 +16,7 @@ namespace Raindrop.Suibhne.Extensions {
         protected IrcBot bot;
         public Socket Connection;
 
-        public static byte[] spaceBytes = Encoding.ASCII.GetBytes(" ");
+        public static byte[] spaceBytes = Encoding.UTF8.GetBytes(" ");
 
         public Dictionary<Guid, ExtensionReference> Extensions {
             get;
@@ -103,7 +103,7 @@ namespace Raindrop.Suibhne.Extensions {
 
             byte[] otherData = new byte[data.Length - 17];
             Array.Copy(data, 17, otherData, 0, data.Length - 17);
-            String otherDataString = Encoding.ASCII.GetString(otherData);
+            String otherDataString = Encoding.UTF8.GetString(otherData);
 
             Console.WriteLine("[Extensions System] Recieved: " + otherDataString);
 

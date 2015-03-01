@@ -19,7 +19,7 @@ namespace Raindrop.Suibhne.Extensions {
         }
 
         public void SendString(String data) {
-            byte[] buff = Encoding.ASCII.GetBytes(data);
+            byte[] buff = Encoding.UTF8.GetBytes(data);
             Send(buff);
         }
 
