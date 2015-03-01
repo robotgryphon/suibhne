@@ -85,6 +85,8 @@ namespace Raindrop.Suibhne.Dice {
                 }
 
                 catch (Exception) { }
+            } else {
+
             }
 
             return diceTotal;
