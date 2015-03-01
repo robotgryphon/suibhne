@@ -12,10 +12,25 @@ namespace Raindrop.Suibhne.Dice {
 
         public static Regex DieFormat = new Regex(@"(?<dice>\d+)d(?<sides>\d+)(?<mod>[\+\-]\d+)?", RegexOptions.None);
 
-        public DiceExtension() : base() {
+        public DiceExtension()
+            : base() {
             this.Name = "Dice Roller";
             this.Authors = new string[] { "Ted Senft" };
             this.Version = "1.0.0";
+            this.PermissionList = new byte[] { (byte)Permissions.HandleCommand };
+
+            this.Connect();
+        }
+
+        protected override void HandleIncomingMessage(byte connID, byte messageType, string sender, string location, string message) {
+            if (message.ToLower().StartsWith("!dice")) {
+                Console.WriteLine("Handling command: " + message);
+                String result = DoDiceRoll(message);
+
+                Console.WriteLine(result);
+
+                SendMessage(connID, 1, location, result);
+            }
         }
 
         /// <summary>
@@ -66,7 +81,7 @@ namespace Raindrop.Suibhne.Dice {
                 }
 
                 catch (FormatException) {
-                    throw new FormatException();
+                    throw;
                 }
 
                 catch (Exception) { }
@@ -75,9 +90,10 @@ namespace Raindrop.Suibhne.Dice {
             return diceTotal;
         }
 
-        public string DoDiceRoll(String command) {
-            string[] commandParts = command.Split(new char[] { ' ' });
-            string message = "";
+        public string DoDiceRoll(String message) {
+            string[] commandParts = message.Split(new char[] { ' ' });
+            string command = commandParts[0].ToLower().Substring(1);
+            string response = "";
 
             if (command == "roll" || command == "dice") {
 
@@ -96,13 +112,13 @@ namespace Raindrop.Suibhne.Dice {
                         }
                     }
 
-                    message = "\u0002\u000306Results\u000f" + ((invalidDice > 0) ? " (Some were in an invalid format)" : "") + ": " + total;
+                    response = "\u0002\u000306Results\u000f" + ((invalidDice > 0) ? " (Some were in an invalid format)" : "") + ": " + total;
                 } else {
-                    message = "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).";
+                    response = "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).";
                 }
             }
 
-            return message;
+            return response;
         }
 
     }

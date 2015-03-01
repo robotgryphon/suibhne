@@ -25,6 +25,8 @@ namespace Raindrop.Suibhne.Core {
 
         public event Reference.IrcMessageEvent OnMessageRecieved;
 
+        public event BotServerConnection.IrcCommandEvent OnCommandRecieved;
+
 		public IrcBot() {
 			this.Connections = new Dictionary<byte, BotServerConnection>();
 			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
@@ -51,15 +53,17 @@ namespace Raindrop.Suibhne.Core {
 		public void AddConnection(BotServerConnection connection) {
 
 			this.Connections.Add(connection.Identifier, connection);
-            connection.Connection.OnMessageRecieved += this.HandleMessage;
+            connection.Connection.OnMessageRecieved += (conn, msg) => {
+                if (this.OnMessageRecieved != null) {
+                    OnMessageRecieved(conn, msg);
+                }
+            };
 
+            connection.OnCommandRecieved += (conn, msg) => {
+                if (this.OnCommandRecieved != null)
+                    OnCommandRecieved(conn, msg);
+            };
 		}
-
-        protected void HandleMessage(IrcConnection conn, IrcMessage msg) {
-            if (this.OnMessageRecieved != null) {
-                OnMessageRecieved(conn, msg);
-            }
-        }
 
 		public void Start(){
 			foreach(KeyValuePair<byte, BotServerConnection> conn in Connections) {

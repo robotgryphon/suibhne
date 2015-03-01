@@ -18,7 +18,7 @@ namespace Raindrop.Suibhne.Extensions {
 
         public static byte[] spaceBytes = Encoding.ASCII.GetBytes(" ");
 
-        public Dictionary<Guid, ExtensionSuiteReference> Extensions {
+        public Dictionary<Guid, ExtensionReference> Extensions {
             get;
             protected set;
         }
@@ -28,7 +28,7 @@ namespace Raindrop.Suibhne.Extensions {
         public ExtensionServer(IrcBot bot) {
             this.bot = bot;
             this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.Extensions = new Dictionary<Guid, ExtensionSuiteReference>();
+            this.Extensions = new Dictionary<Guid, ExtensionReference>();
 
             this.Buffer = new byte[1024];
 
@@ -46,7 +46,7 @@ namespace Raindrop.Suibhne.Extensions {
         }
 
         public void Broadcast(String data) {
-            foreach (KeyValuePair<Guid, ExtensionSuiteReference> suite in Extensions)
+            foreach (KeyValuePair<Guid, ExtensionReference> suite in Extensions)
                 suite.Value.SendString(data);
         }
 
@@ -55,7 +55,7 @@ namespace Raindrop.Suibhne.Extensions {
             Socket s = Connection.EndAccept(result);
             Guid newExtGuid = Guid.NewGuid();
 
-            ExtensionSuiteReference suite = new ExtensionSuiteReference();
+            ExtensionReference suite = new ExtensionReference();
             suite.Identifier = newExtGuid;
             suite.Socket = s;
             
@@ -87,13 +87,13 @@ namespace Raindrop.Suibhne.Extensions {
             }
 
             catch (SocketException se) {
-                Console.WriteLine(se);
+                RemoveBySocket(recievedOn, "Extension crashed.");
             }
-
-
         }
         #endregion
 
+
+        // TODO: Handle extension crash/force close gracefully.
         protected void HandleIncomingData(Socket sock, byte[] data) {
             Extension.ResponseCodes code = (Extension.ResponseCodes)data[0];
             byte[] idBytes = new byte[16];
@@ -101,13 +101,16 @@ namespace Raindrop.Suibhne.Extensions {
 
             Guid suiteID = new Guid(idBytes);
 
-            String otherData = Encoding.ASCII.GetString(data, 17, data.Length - 17);
-            
-            Console.WriteLine("[Extensions System] Recieved: " + otherData);
+            byte[] otherData = new byte[data.Length - 17];
+            Array.Copy(data, 17, otherData, 0, data.Length - 17);
+            String otherDataString = Encoding.ASCII.GetString(otherData);
+
+            Console.WriteLine("[Extensions System] Recieved: " + otherDataString);
 
             // Get the extension suite off the returned Identifier first
-            ExtensionSuiteReference suite = Extensions[suiteID];
+            ExtensionReference suite = Extensions[suiteID];
 
+            #region Handle Code Response
             switch (code) {
 
                 case Extension.ResponseCodes.Activation:
@@ -115,14 +118,34 @@ namespace Raindrop.Suibhne.Extensions {
                     break;
 
                 case Extension.ResponseCodes.SuiteDetails:
-                    suite.Name = otherData.Trim();
+                    suite.Name = otherDataString.Trim();
                     Console.WriteLine("Got extension suite name: " + suite.Name);
-
-                    // TODO: Latch onto permissions here
                     break;
 
                 case Extension.ResponseCodes.ConnectionComplete:
 
+                    break;
+
+                case Extension.ResponseCodes.ExtensionPermissions:
+                    foreach (byte perm in otherData) {
+                        switch ((Extension.Permissions)perm) {
+
+                            case Extension.Permissions.HandleUserEvent:
+                                // bot.OnUserEvent += suite.HandleUserEvent;
+                                break;
+
+                            case Extension.Permissions.HandleCommand:
+
+                                // TODO: Look into registered command dictionary first.
+                                bot.OnCommandRecieved += suite.HandleCommandRecieved;
+                                break;
+
+                            default:
+
+                                break;
+
+                        }
+                    }
                     break;
 
                 case Extension.ResponseCodes.ExtensionRemove:
@@ -132,25 +155,44 @@ namespace Raindrop.Suibhne.Extensions {
 
                 case Extension.ResponseCodes.Message:
                     // Required info: connid, location, type, message
-                    byte connid = 0;
-                    String location = "#channel";
-                    String message = "message";
+                    byte connid = otherData[0];
+                    Reference.MessageType type = (Reference.MessageType) otherData[1];
+
+                    String messageData = Encoding.UTF8.GetString(otherData, 2, otherData.Length - 2);
+                    IrcMessage message = new IrcMessage("#channel", new IrcUser(), "");
+                    string[] messageParts = messageData.Split(new char[] { ' ' }, 2);
+                    message.type = type;
+                    message.location = messageParts[0];
+                    message.sender.nickname = suite.Name;
+                    message.message = messageParts[1];
                     
+
                     IrcConnection conn = bot.Connections[connid].Connection;
-                    conn.SendMessage(new IrcMessage(location, conn.Me, message));
+                    conn.SendMessage(message);
                     break;
 
                 default:
                     // Unknown response
-                    
+
                     break;
 
             }
+            #endregion
         }
 
         public void SendToExtension(Guid extID, byte connID, IrcMessage msg) {
             if (Extensions.ContainsKey(extID))
                 Extensions[extID].SendMessage(connID, msg);
+        }
+
+        protected void RemoveBySocket(Socket s, string reason = "") {
+            foreach (KeyValuePair<Guid, ExtensionReference> extension in Extensions) {
+                if (extension.Value.Socket == s) {
+                    Extensions.Remove(extension.Key);
+                    Console.WriteLine("[Extensions System] Extension '" + extension.Value.Name + "' removed: " + reason);
+                    return;
+                }
+            }
         }
     }
 }

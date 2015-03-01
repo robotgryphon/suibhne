@@ -12,7 +12,6 @@ namespace Raindrop.Suibhne.Dice {
         [STAThread]
         static void Main() {
             DiceExtension dice = new DiceExtension();
-            dice.Prepare();
 
             while (true) {
                 // Do nothing

@@ -37,7 +37,7 @@ namespace Raindrop.Suibhne.Extensions
             this.server = new ExtensionServer(bot);
             this.RegisteredCommands = new Dictionary<string, Guid>();
 
-            // InitializeExtensions();
+            InitializeExtensions();
         }
 
         public void InitializeExtensions()
@@ -56,7 +56,7 @@ namespace Raindrop.Suibhne.Extensions
 
                     foreach (String file in ExtensionFiles)
                     {
-                        if (Path.GetFileName(file).ToLower().Equals("suite.ini"))
+                        if (Path.GetFileName(file).ToLower().Equals("extension.ini"))
                         {
                             // Found file
                             foundFile = file;
@@ -65,7 +65,7 @@ namespace Raindrop.Suibhne.Extensions
                             IniConfigSource extConfig = new IniConfigSource();
                             extConfig.Load(file);
 
-                            String extExecutable = extConfig.Configs["ExtensionSuite"].GetString("MainExecutable").Trim();
+                            String extExecutable = extConfig.Configs["Extension"].GetString("MainExecutable").Trim();
                             if(extExecutable != ""){
                                 Process.Start(extDir + "/"+ extExecutable);
                             }
@@ -107,7 +107,7 @@ namespace Raindrop.Suibhne.Extensions
                             switch (extCmdParts[1].ToLower()) {
                                 case "list":
                                     List<string> names = new List<string>();
-                                    foreach (KeyValuePair<Guid, ExtensionSuiteReference> suite in server.Extensions) {
+                                    foreach (KeyValuePair<Guid, ExtensionReference> suite in server.Extensions) {
                                         names.Add(suite.Value.Name);
                                     }
 
