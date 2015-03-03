@@ -1,5 +1,4 @@
 ﻿using Raindrop.Api.Irc;
-using Raindrop.Suibhne.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +29,7 @@ namespace Raindrop.Suibhne.Extensions {
 
                 byte[] messageRaw = new byte[3 + messageBytes.Length];
 
-                // Set up message prefix
+                // Set up message rawMessage
                 messageRaw[0] = (byte)Extension.ResponseCodes.Message;
                 messageRaw[1] = connID;
                 messageRaw[2] = (byte)msg.type;

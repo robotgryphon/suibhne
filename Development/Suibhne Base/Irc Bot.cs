@@ -11,7 +11,7 @@ using Raindrop.Suibhne.Extensions;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Raindrop.Suibhne.Core {
+namespace Raindrop.Suibhne {
 
 	public class IrcBot {
 
@@ -23,7 +23,7 @@ namespace Raindrop.Suibhne.Core {
 
 		public byte ConnectedCount { get; protected set; }
 
-        public event Reference.IrcMessageEvent OnMessageRecieved;
+        public event Raindrop.Api.Irc.IrcReference.IrcMessageEvent OnMessageRecieved;
 
         public event BotServerConnection.IrcCommandEvent OnCommandRecieved;
 
@@ -76,6 +76,7 @@ namespace Raindrop.Suibhne.Core {
                 conn.Value.Disconnect();
             }
 
+            Extensions.Shutdown();
             Connections.Clear();
         }
 	}

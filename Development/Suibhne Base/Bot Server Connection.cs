@@ -3,7 +3,7 @@ using Raindrop.Suibhne.Extensions;
 using Raindrop.Api.Irc;
 using System.Collections.Generic;
 
-namespace Raindrop.Suibhne.Core {
+namespace Raindrop.Suibhne {
     public class BotServerConnection {
         public IrcConnection Connection;
 
@@ -14,7 +14,7 @@ namespace Raindrop.Suibhne.Core {
         public byte Identifier { get; protected set; }
 
         public Boolean Connected {
-            get { return Connection.Status == Reference.ConnectionStatus.Connected; }
+            get { return Connection.Status == IrcReference.ConnectionStatus.Connected; }
             protected set { }
         }
 

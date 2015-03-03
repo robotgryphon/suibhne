@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 
 using Nini.Config;
 
-using Raindrop.Suibhne.Core;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
@@ -88,38 +87,47 @@ namespace Raindrop.Suibhne.Extensions
         }
 
         public void HandleCommand(BotServerConnection conn, IrcMessage message) {
-            String command = message.message.Split(new char[] { ' ' })[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
+            String[] messageParts = message.message.Split(new char[] { ' ' });
+            String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
+            String subCommand = "";
+            if (messageParts.Length > 1)
+                subCommand = messageParts[1].ToLower();
 
             IrcMessage response = new IrcMessage(message.location, conn.Connection.Me, "Response");
-            response.type = Reference.MessageType.ChannelMessage;
+            response.type = Api.Irc.IrcReference.MessageType.ChannelMessage;
 
             switch (command) {
                 case "exts":
-
-                    string[] extCmdParts = message.message.Split(new char[] { ' ' }, 3);
-                    switch (extCmdParts.Length) {
+                    switch (messageParts.Length) {
                         case 1:
-                            response.message = "Invalid Parameters. Format: !ext [command]";
+                            response.message = "Invalid Parameters. Format: !exts [command]";
                             conn.Connection.SendMessage(response);
                             break;
 
                         case 2:
-                            switch (extCmdParts[1].ToLower()) {
+                            switch (subCommand.ToLower()) {
                                 case "list":
-                                    List<string> names = new List<string>();
-                                    foreach (KeyValuePair<Guid, ExtensionReference> suite in server.Extensions) {
-                                        names.Add(suite.Value.Name);
-                                    }
-
-                                    response.message = "Enabled extensions on bot: " + String.Join(", ", names);
+                                    response.message = "Gathering data. May take a minute.";
+                                    conn.Connection.SendMessage(response);
+                                    server.ShowDetails(conn.Identifier, message.sender.nickname, message.location);
                                     break;
 
                                 default:
                                     response.message = "Unknown command.";
+                                    conn.Connection.SendMessage(response);
                                     break;
                             }
 
-                            conn.Connection.SendMessage(response);
+                            break;
+
+                        case 3:
+                            switch (subCommand.ToLower()) {
+
+                                default:
+
+                                    break;
+
+                            }
 
                             break;
                     }
@@ -127,7 +135,7 @@ namespace Raindrop.Suibhne.Extensions
                     break;
 
                 case "version":
-                    response.type = Reference.MessageType.ChannelAction;
+                    response.type = Api.Irc.IrcReference.MessageType.ChannelAction;
                     response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
                     conn.Connection.SendMessage(response);
                     break;
@@ -149,6 +157,10 @@ namespace Raindrop.Suibhne.Extensions
                         server.SendToExtension(RegisteredCommands[command], conn.Identifier, message);
                     break;
             }
+        }
+
+        public void Shutdown() {
+            server.Shutdown();
         }
 
     }

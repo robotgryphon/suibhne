@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text;
 
 using Raindrop.Api.Irc;
-using Raindrop.Suibhne.Core;
 using System.Net;
 using System.Threading;
 using System.Text.RegularExpressions;
@@ -45,32 +44,44 @@ namespace Raindrop.Suibhne.Extensions {
             Console.WriteLine("[Extensions System] Server setup complete. Extensions system ready.");
         }
 
-        public void Broadcast(String data) {
+        internal void Broadcast(String data) {
             foreach (KeyValuePair<Guid, ExtensionReference> suite in Extensions)
                 suite.Value.SendString(data);
         }
 
         #region Socket Handling Callbacks
         protected void AcceptConnection(IAsyncResult result) {
-            Socket s = Connection.EndAccept(result);
-            Guid newExtGuid = Guid.NewGuid();
+            try {
+                Socket s = Connection.EndAccept(result);
+                Guid newExtGuid = Guid.NewGuid();
 
-            ExtensionReference suite = new ExtensionReference();
-            suite.Identifier = newExtGuid;
-            suite.Socket = s;
-            
-            Extensions.Add(newExtGuid, suite);
+                ExtensionReference suite = new ExtensionReference();
+                suite.Identifier = newExtGuid;
+                suite.Socket = s;
 
-            Console.WriteLine("[Extensions System] Connected extension.");
+                Extensions.Add(newExtGuid, suite);
 
-            s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
-            Connection.BeginAccept(AcceptConnection, null);
+                Console.WriteLine("[Extensions System] Connected extension.");
 
-            byte[] idBytes = suite.Identifier.ToByteArray();
-            byte[] data = new byte[1 + idBytes.Length + spaceBytes.Length];
-            data[0] = (byte)Extension.ResponseCodes.Activation;
-            idBytes.CopyTo(data, 1);
-            Extensions[suite.Identifier].Send(data);
+                s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
+
+                // Why is this null again?
+                Connection.BeginAccept(AcceptConnection, null);
+
+                byte[] idBytes = suite.Identifier.ToByteArray();
+                byte[] data = new byte[1 + idBytes.Length + spaceBytes.Length];
+                data[0] = (byte)Extension.ResponseCodes.Activation;
+                idBytes.CopyTo(data, 1);
+                Extensions[suite.Identifier].Send(data);
+            }
+
+            catch (ObjectDisposedException) {
+                // Socket exposed, this is on bot shutdown usually
+            }
+
+            catch (Exception e) {
+                Console.WriteLine(e);
+            }
         }
 
         protected void RecieveDataCallback(IAsyncResult result) {
@@ -78,12 +89,17 @@ namespace Raindrop.Suibhne.Extensions {
             try {
                 int recievedAmount = recievedOn.EndReceive(result);
 
-                byte[] btemp = new byte[recievedAmount];
-                Array.Copy(Buffer, btemp, recievedAmount);
+                if (recievedAmount > 0) {
+                    byte[] btemp = new byte[recievedAmount];
+                    Array.Copy(Buffer, btemp, recievedAmount);
 
-                HandleIncomingData(recievedOn, btemp);
+                    HandleIncomingData(recievedOn, btemp);
 
-                recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
+                    recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
+                } else {
+                    recievedOn.Shutdown(SocketShutdown.Both);
+                    RemoveBySocket(recievedOn, "Extension shut down.");
+                }
             }
 
             catch (SocketException se) {
@@ -117,11 +133,6 @@ namespace Raindrop.Suibhne.Extensions {
 
                     break;
 
-                case Extension.ResponseCodes.SuiteDetails:
-                    suite.Name = otherDataString.Trim();
-                    Console.WriteLine("Got extension suite name: " + suite.Name);
-                    break;
-
                 case Extension.ResponseCodes.ConnectionComplete:
 
                     break;
@@ -136,7 +147,7 @@ namespace Raindrop.Suibhne.Extensions {
 
                             case Extension.Permissions.HandleCommand:
 
-                                // TODO: Look into registered command dictionary first.
+                                // TODO: Change to send command request back to socket
                                 bot.OnCommandRecieved += suite.HandleCommandRecieved;
                                 break;
 
@@ -156,7 +167,7 @@ namespace Raindrop.Suibhne.Extensions {
                 case Extension.ResponseCodes.Message:
                     // Required info: connid, location, type, message
                     byte connid = otherData[0];
-                    Reference.MessageType type = (Reference.MessageType) otherData[1];
+                    IrcReference.MessageType type = (IrcReference.MessageType) otherData[1];
 
                     String messageData = Encoding.UTF8.GetString(otherData, 2, otherData.Length - 2);
                     IrcMessage message = new IrcMessage("#channel", new IrcUser(), "");
@@ -180,7 +191,7 @@ namespace Raindrop.Suibhne.Extensions {
             #endregion
         }
 
-        public void SendToExtension(Guid extID, byte connID, IrcMessage msg) {
+        internal void SendToExtension(Guid extID, byte connID, IrcMessage msg) {
             if (Extensions.ContainsKey(extID))
                 Extensions[extID].SendMessage(connID, msg);
         }
@@ -192,6 +203,30 @@ namespace Raindrop.Suibhne.Extensions {
                     Console.WriteLine("[Extensions System] Extension '" + extension.Value.Name + "' removed: " + reason);
                     return;
                 }
+            }
+        }
+
+        internal void Shutdown() {
+            foreach (KeyValuePair<Guid, ExtensionReference> ext in Extensions) {
+                ext.Value.Send(new byte[] { (byte)Extension.ResponseCodes.ExtensionRemove });
+                ext.Value.Socket.Shutdown(SocketShutdown.Both);
+            }
+
+            Extensions.Clear();
+            Connection.Close();
+        }
+
+        internal void ShowDetails(byte connID, String sender, String location) {
+
+            if (Extensions.Count > 0) {
+                byte[] prefix = Extension.GetLocalizedPrefix(connID, Extension.ResponseCodes.ExtensionDetails, sender, location);
+                foreach (KeyValuePair<Guid, ExtensionReference> ext in Extensions) {
+                    ext.Value.Send(prefix);
+                    Thread.Sleep(500);
+                }
+            } else {
+                IrcConnection conn = bot.Connections[connID].Connection;
+                conn.SendMessage(new IrcMessage(location, conn.Me, "No extensions active."));
             }
         }
     }
