@@ -28,7 +28,7 @@ namespace Raindrop.Suibhne {
         void Exit(object sender, EventArgs e) {
             // Hide tray icon, otherwise it will remain shown until user mouses over it
             trayIcon.Visible = false;
-            bot.Stop();
+            bot.Disconnect();
 
             Application.Exit();
         }

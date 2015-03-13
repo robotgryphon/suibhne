@@ -15,8 +15,7 @@ namespace Raindrop.Suibhne {
             Application.SetCompatibleTextRenderingDefault(false);
 
             IrcBot bot = new IrcBot();
-            bot.LoadServers();
-            bot.Start();
+            bot.Connect();
 
             Application.Run(new SuibhneIcon(bot));
         }

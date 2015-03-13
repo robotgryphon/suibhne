@@ -11,34 +11,48 @@ using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
 using Raindrop.Api.Irc;
+using System.Net;
+using System.Text;
 
-namespace Raindrop.Suibhne.Extensions
-{
+namespace Raindrop.Suibhne.Extensions {
 
     /// <summary>
     /// The extension registry connects an IrcBot and a set of extension suites together.
     /// It goes through the extensions directory defined in the bot configuration and
     /// searches through directories for the extension INI files.
     /// </summary>
-    public class ExtensionRegistry
-    {
+    public class ExtensionRegistry {
 
-        protected IrcBot bot;
+        public Guid Identifier;
 
-        protected Dictionary<String, Guid> RegisteredCommands;
+        protected Dictionary<Guid, IrcBot> bots;
 
-        protected ExtensionServer server;
+        protected Dictionary<Guid, ExtensionReference> Extensions;
 
-        public ExtensionRegistry(IrcBot bot)
-        {
-            this.bot = bot;
+        protected Dictionary<String, Guid> CommandMapping;
 
-            this.server = new ExtensionServer(bot);
-            this.RegisteredCommands = new Dictionary<string, Guid>();
+        public Socket Connection;
 
-            InitializeExtensions();
+        public static byte[] spaceBytes = Encoding.UTF8.GetBytes(" ");
+
+        protected byte[] Buffer;
+
+        public ExtensionRegistry() {
+            this.bots = new Dictionary<Guid, IrcBot>();
+            this.Identifier = Guid.NewGuid();
+
+            this.CommandMapping = new Dictionary<string, Guid>();
+            this.Extensions = new Dictionary<Guid, ExtensionReference>();
+            this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.Extensions = new Dictionary<Guid, ExtensionReference>();
+
+            this.Buffer = new byte[1024];
+
+            // InitializeExtensions();
+            StartServer();
         }
 
+        /*
         public void InitializeExtensions()
         {
             try
@@ -84,9 +98,16 @@ namespace Raindrop.Suibhne.Extensions
                 Console.WriteLine("Failed to open directory.");
                 Console.WriteLine(ioe.Message);
             }
+        } */
+
+        #region Registry
+        // TODO: Attach events
+        public void AddBot(IrcBot bot) {
+            if (!this.bots.ContainsKey(bot.Identifier))
+                bots.Add(bot.Identifier, bot);
         }
 
-        public void HandleCommand(BotServerConnection conn, IrcMessage message) {
+        public void HandleCommand(IrcBot conn, IrcMessage message) {
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
             String subCommand = "";
@@ -95,6 +116,8 @@ namespace Raindrop.Suibhne.Extensions
 
             IrcMessage response = new IrcMessage(message.location, conn.Connection.Me, "Response");
             response.type = Api.Irc.IrcReference.MessageType.ChannelMessage;
+
+            Console.WriteLine("Handling command: " + command);
 
             switch (command) {
                 case "exts":
@@ -109,7 +132,10 @@ namespace Raindrop.Suibhne.Extensions
                                 case "list":
                                     response.message = "Gathering data. May take a minute.";
                                     conn.Connection.SendMessage(response);
-                                    server.ShowDetails(conn.Identifier, message.sender.nickname, message.location);
+
+                                    ExtensionReference[] exts = GetServerExtensions(conn.Identifier);
+
+                                    // TODO: Finish this
                                     break;
 
                                 default:
@@ -153,15 +179,198 @@ namespace Raindrop.Suibhne.Extensions
 
                 default:
 
-                    if (RegisteredCommands.ContainsKey(command))
-                        server.SendToExtension(RegisteredCommands[command], conn.Identifier, message);
+                    
+
                     break;
             }
         }
+        #endregion
 
-        public void Shutdown() {
-            server.Shutdown();
+
+        #region Server
+        internal void StartServer() {
+            Console.WriteLine("[Extensions System] Setting up server..");
+
+            Connection.Bind(new IPEndPoint(IPAddress.Any, 6700));
+            Connection.Listen(5);
+
+            Connection.BeginAccept(new AsyncCallback(AcceptConnection), null);
+            Console.WriteLine("[Extensions System] Server setup complete. Extensions system ready.");
         }
+
+        #region Socket Handling Callbacks
+        protected void AcceptConnection(IAsyncResult result) {
+            try {
+                Socket s = Connection.EndAccept(result);
+                Guid newExtGuid = Guid.NewGuid();
+
+                ExtensionReference suite = new ExtensionReference();
+                suite.Identifier = newExtGuid;
+                suite.Socket = s;
+
+                Extensions.Add(newExtGuid, suite);
+
+                Console.WriteLine("[Extensions System] Connected extension.");
+
+                s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
+
+                // Why is this null again?
+                Connection.BeginAccept(AcceptConnection, null);
+
+                byte[] data = new byte[33];
+                
+                data[0] = (byte)Extension.ResponseCodes.Activation;
+                Identifier.ToByteArray().CopyTo(data, 1);
+                suite.Identifier.ToByteArray().CopyTo(data, 17);
+
+                Extensions[suite.Identifier].Send(data);
+            }
+
+            catch (ObjectDisposedException) {
+                // Socket exposed, this is on bot shutdown usually
+            }
+
+            catch (Exception e) {
+                Console.WriteLine(e);
+            }
+        }
+
+        protected void RecieveDataCallback(IAsyncResult result) {
+            Socket recievedOn = (Socket)result.AsyncState;
+            try {
+                int recievedAmount = recievedOn.EndReceive(result);
+
+                if (recievedAmount > 0) {
+                    byte[] btemp = new byte[recievedAmount];
+                    Array.Copy(Buffer, btemp, recievedAmount);
+
+                    HandleIncomingData(recievedOn, btemp);
+
+                    recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
+                } else {
+                    recievedOn.Shutdown(SocketShutdown.Both);
+                    RemoveBySocket(recievedOn, "Extension shut down.");
+                }
+            }
+
+            catch (SocketException se) {
+                RemoveBySocket(recievedOn, "Extension crashed.");
+            }
+        }
+        #endregion
+
+        protected void HandleIncomingData(Socket sock, byte[] data) {
+            Extension.ResponseCodes code = (Extension.ResponseCodes)data[0];
+            byte[] guidBytes = new byte[16];
+            Array.Copy(data, 1, guidBytes, 0, 16);
+
+            Guid origin = new Guid(guidBytes);
+
+            // Get the extension suite off the returned Identifier first
+            ExtensionReference suite = Extensions[origin];
+
+            #region Handle Code Response
+            switch (code) {
+
+                case Extension.ResponseCodes.Activation:
+
+                    break;
+
+                case Extension.ResponseCodes.ConnectionComplete:
+
+                    break;
+
+                case Extension.ResponseCodes.ExtensionPermissions:
+                    byte[] permissions = new byte[data.Length - 17];
+                    Array.Copy(data, 17, permissions, 0, permissions.Length);
+                    foreach (byte perm in permissions) {
+                        switch ((Extension.Permissions)perm) {
+
+                            case Extension.Permissions.HandleUserEvent:
+                                // bot.OnUserEvent += suite.HandleUserEvent;
+                                break;
+
+                            case Extension.Permissions.HandleCommand:
+
+                                // TODO: Change to send command request back to socket
+                                foreach (IrcBot bot in bots.Values) {
+                                    bot.OnCommandRecieved += suite.HandleCommandRecieved;
+                                }
+
+                                break;
+
+                            default:
+
+                                break;
+
+                        }
+                    }
+                    break;
+
+                case Extension.ResponseCodes.ExtensionRemove:
+                    sock.Shutdown(SocketShutdown.Both);
+                    sock.Close();
+                    return;
+
+                case Extension.ResponseCodes.Message:
+                    Array.Copy(data, 17, guidBytes, 0, 16);
+                    Guid destination = new Guid(guidBytes);
+
+                    IrcReference.MessageType type = (IrcReference.MessageType) data[34];
+                    byte[] messageBytes = new byte[data.Length - 35];
+                    Array.Copy(data, 35, messageBytes, 0, messageBytes.Length);
+
+                    String messageData = Encoding.UTF8.GetString(messageBytes);
+                    IrcMessage message = new IrcMessage("#channel", new IrcUser(), "");
+                    message.type = type;
+                    Match msg = ExtensionsReference.MessageResponseParser.Match(messageData);
+                    message.message = msg.Groups["message"].Value;
+                    message.location = msg.Groups["location"].Value;
+
+                    try {
+                        IrcBot bot = bots[destination];
+                        bot.Connection.SendMessage(message);
+                    }
+
+                    catch (KeyNotFoundException) {
+                        // Server invalid or changed between requests
+                    }
+
+                    break;
+
+                default:
+                    // Unknown response
+
+                    break;
+
+            }
+            #endregion
+        }
+
+        protected void RemoveBySocket(Socket s, string reason = "") {
+            foreach (KeyValuePair<Guid, ExtensionReference> extension in Extensions) {
+                if (extension.Value.Socket == s) {
+                    Extensions.Remove(extension.Key);
+                    Console.WriteLine("[Extensions System] Extension '" + extension.Value.Name + "' removed: " + reason);
+                    return;
+                }
+            }
+        }
+
+        internal void Shutdown() {
+            foreach (KeyValuePair<Guid, ExtensionReference> ext in Extensions) {
+                ext.Value.Send(new byte[] { (byte)Extension.ResponseCodes.ExtensionRemove });
+                ext.Value.Socket.Shutdown(SocketShutdown.Both);
+            }
+
+            Extensions.Clear();
+            Connection.Close();
+        }
+
+        internal ExtensionReference[] GetServerExtensions(Guid id) {
+            return new ExtensionReference[0];
+        }
+        #endregion
 
     }
 }

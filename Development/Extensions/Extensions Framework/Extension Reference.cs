@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Raindrop.Suibhne.Extensions {
     public class ExtensionsReference {
@@ -50,6 +51,6 @@ namespace Raindrop.Suibhne.Extensions {
         public static String NORMAL = "\u000f";
         public static String COLOR_PREFIX = "\u0003";
 
-
+        public static Regex MessageResponseParser = new Regex(@"^(?<sender>[^\s]+)\s(?<location>[^\s]+)\s(?<message>.*)$");
     }
 }

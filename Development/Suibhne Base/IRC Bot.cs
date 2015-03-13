@@ -4,14 +4,14 @@ using Raindrop.Api.Irc;
 using System.Collections.Generic;
 
 namespace Raindrop.Suibhne {
-    public class BotServerConnection {
+    public class IrcBot {
         public IrcConnection Connection;
 
-        public ServerConfig Configuration;
+        private ServerConfig Configuration;
 
-        public ExtensionRegistry Extensions;
+        protected ExtensionRegistry Extensions;
 
-        public byte Identifier { get; protected set; }
+        public Guid Identifier { get; protected set; }
 
         public Boolean Connected {
             get { return Connection.Status == IrcReference.ConnectionStatus.Connected; }
@@ -20,19 +20,19 @@ namespace Raindrop.Suibhne {
 
         #region Event Handlers
 
-        public delegate void ServerConnectionEvent(BotServerConnection connection);
+        public delegate void ServerConnectionEvent(IrcBot connection);
 
         public event ServerConnectionEvent OnConnectionComplete;
 
 
-        public delegate void IrcCommandEvent(BotServerConnection connection, IrcMessage message);
+        public delegate void IrcCommandEvent(IrcBot connection, IrcMessage message);
 
         public event IrcCommandEvent OnCommandRecieved;
 
         #endregion
 
-        public BotServerConnection(byte id, ServerConfig config, ExtensionRegistry exts) {
-            this.Identifier = id;
+        public IrcBot(ServerConfig config, ExtensionRegistry exts) {
+            this.Identifier = Guid.NewGuid();
             this.Configuration = config;
 
             this.Extensions = exts;
@@ -43,8 +43,8 @@ namespace Raindrop.Suibhne {
                 config.Nickname,
                 config.Username,
                 config.DisplayName,
-                config.servPassword,
-                config.authPassword);
+                config.ServPassword,
+                config.AuthPassword);
 
             this.Connection.OnMessageRecieved += HandleMessageRecieved;
             this.Connection.OnConnectionComplete += (conn) => {
@@ -61,9 +61,7 @@ namespace Raindrop.Suibhne {
         }
 
         public Boolean IsBotOperator(String user) {
-            foreach (String nick in Configuration.Operators)
-                if (nick.ToLower() == user.ToLower())
-                    return true;
+            // TODO: Get status code from nickserv + channel level
 
             return false;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Raindrop.Suibhne.Extensions {
@@ -117,6 +118,7 @@ namespace Raindrop.Suibhne.Extensions {
         public virtual void Connect() {
 
             try {
+                Console.WriteLine("STarting conn");
                 conn.BeginConnect("127.0.0.1", 6700, ConnectedCallback, conn);
             }
 
@@ -131,6 +133,7 @@ namespace Raindrop.Suibhne.Extensions {
             conn = (Socket)result.AsyncState;
             try {
                 conn.EndConnect(result);
+                Console.WriteLine("Conn finished");
                 Connected = true;
                 conn.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, conn);
             }
@@ -168,17 +171,23 @@ namespace Raindrop.Suibhne.Extensions {
             try {
                 // Get data from buffer, handle it
 
-                byte connID;
+                byte[] guidBytes = new byte[16];
+                Array.Copy(data, 1, guidBytes, 0, 16);
+                Guid origin = new Guid(guidBytes);
 
-                ResponseCodes code = (ResponseCodes)data[0];
-                switch (code) {
+                String additionalData = "";
+                if(data.Length > 17)
+                    additionalData = Encoding.UTF8.GetString(data, 17, data.Length - 17);
+
+                switch ((ResponseCodes)data[0]) {
                     case ResponseCodes.Activation:
                         // Allocate space to keep GUID as bytes in, for processing
-                        byte[] idBytes = new byte[16];
-                        Array.Copy(data, 1, idBytes, 0, 16);
+                        Array.Copy(data, 17, guidBytes, 0, 16);
 
                         // Store Identifier for later use
-                        this.Identifier = new Guid(idBytes);
+                        this.Identifier = new Guid(guidBytes);
+
+                        Console.WriteLine("Got identifier: " + Identifier);
 
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
@@ -187,35 +196,36 @@ namespace Raindrop.Suibhne.Extensions {
                         break;
 
                     case ResponseCodes.ExtensionDetails:
-                        connID = data[1];
                         string response = 
                             "[" + ExtensionsReference.COLOR_PREFIX + "05" + Identifier + ExtensionsReference.NORMAL + "] " + 
                             Name + ExtensionsReference.COLOR_PREFIX + "02 (v. " + Version + ")" + ExtensionsReference.NORMAL + 
                             " developed by " + ExtensionsReference.COLOR_PREFIX + "03" + string.Join(", ", Authors);
 
-                        String mv1 = Encoding.UTF8.GetString(data, 2, data.Length - 2);
-                        String[] lbs = mv1.Split(new char[] { ' ' }, 2);
-                        String l1 = lbs[0];
-                        String s1 = lbs[1];
+                        String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
+                        String messageLocation = messageParts[0];
+                        String messageSender = messageParts[1];
 
-                        SendMessage(connID, ExtensionsReference.MessageType.ChannelMessage, l1, response);
+                        SendMessage(origin, ExtensionsReference.MessageType.ChannelMessage, messageLocation, response);
 
                         break;
 
                     case ResponseCodes.Message:
+                        if(data.Length > 34){
+                            byte[] messageData = new byte[data.Length - 35];
+                            Array.Copy(data, 34, messageData, 0, messageData.Length);
+                            String messageTestData = Encoding.UTF8.GetString(messageData);
 
-                        connID = data[1];
-                        ExtensionsReference.MessageType messageType = (ExtensionsReference.MessageType)data[2];
-
-                        String messageValue = Encoding.UTF8.GetString(data, 3, data.Length - 3);
-                        String[] messageParts = messageValue.Split(new char[] { ' ' }, 3);
-                        String l2 = messageParts[0];
-                        String s2 = messageParts[1];
-
-                        String message = messageParts[2].Substring(1);
-
-                        HandleIncomingMessage(connID, messageType, s2, l2, message);
-
+                            Match message = ExtensionsReference.MessageResponseParser.Match(messageTestData);
+                            if (message.Success) {
+                                HandleIncomingMessage(
+                                    origin, 
+                                    (ExtensionsReference.MessageType)data[34], 
+                                    message.Groups["sender"].Value, 
+                                    message.Groups["location"].Value, 
+                                    message.Groups["message"].Value);
+                            }
+                        }
+                        
                         break;
 
 
@@ -248,33 +258,30 @@ namespace Raindrop.Suibhne.Extensions {
             conn.Send(dataToSend);
         }
 
-        protected void SendMessage(byte connID, ExtensionsReference.MessageType type, String location, String message) {
-            // Format: connID messageType location MESSAGE
-            byte[] messageAsBytes = Encoding.UTF8.GetBytes(location + " " + message);
-            byte[] rawMessage = new byte[2 + messageAsBytes.Length];
+        public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String location, String sender, String message) {
+            byte[] messageAsBytes = Encoding.UTF8.GetBytes(location + " " + sender + " " + message);
+            byte[] rawMessage = new byte[35 + messageAsBytes.Length];
 
-            rawMessage[0] = connID;
-            rawMessage[1] = (byte)type;
-            Array.Copy(messageAsBytes, 0, rawMessage, 2, messageAsBytes.Length);
+            rawMessage[0] = (byte)ResponseCodes.Message;
+
+            Array.Copy(origin.ToByteArray(), 0, rawMessage, 1, 16);
+            Array.Copy(destination.ToByteArray(), 0, rawMessage, 17, 16);
+
+            rawMessage[34] = type;
+            Array.Copy(messageAsBytes, 0, rawMessage, 35, messageAsBytes.Length);
+
+            return rawMessage;
+        }
+
+        protected void SendMessage(Guid destination, ExtensionsReference.MessageType type, String location, String message) {
+            // Format: origin messageType location MESSAGE
+            byte[] rawMessage = PrepareMessage(destination, Identifier, (byte) type, location, Name.Replace(' ', '_'), message);
 
             SendBytes(ResponseCodes.Message, rawMessage);
         }
 
-        protected virtual void HandleIncomingMessage(byte connID, ExtensionsReference.MessageType type, String sender, String location, String message) {
+        protected virtual void HandleIncomingMessage(Guid origin, ExtensionsReference.MessageType type, String sender, String location, String message) {
             Console.WriteLine("Recieved message from " + sender + ": " + message);
-        }
-
-        public static byte[] GetLocalizedPrefix(byte connID, Extension.ResponseCodes responseType, String sender, String location) {
-
-            byte[] lBytes = Encoding.UTF8.GetBytes(location + " " + sender);
-
-            byte[] rawMessage = new byte[2 + lBytes.Length];
-
-            rawMessage[0] = (byte)responseType;
-            rawMessage[1] = connID;
-            Array.Copy(lBytes, 0, rawMessage, 2, lBytes.Length);
-
-            return rawMessage;
         }
     }
 }

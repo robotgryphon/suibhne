@@ -22,29 +22,10 @@ namespace Raindrop.Suibhne.Extensions {
             Send(buff);
         }
 
-        public void SendMessage(byte connID, IrcMessage msg){
-            try {
-                String message = msg.location + " " + msg.sender + " :" + msg.message;
-                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-
-                byte[] messageRaw = new byte[3 + messageBytes.Length];
-
-                // Set up message rawMessage
-                messageRaw[0] = (byte)Extension.ResponseCodes.Message;
-                messageRaw[1] = connID;
-                messageRaw[2] = (byte)msg.type;
-
-                Array.Copy(messageBytes, 0, messageRaw, 3, messageBytes.Length);
-
-                Socket.Send(messageRaw);
-            }
-            catch (SocketException se) {
-                Console.WriteLine(se);
-            }
-        }
-
-        public void HandleCommandRecieved(BotServerConnection conn, IrcMessage message) {
-            SendMessage(conn.Identifier, message);
+        public void HandleCommandRecieved(IrcBot conn, IrcMessage msg) {
+            Console.WriteLine(Name + " handling command: " + msg.message);
+            byte[] message = Extension.PrepareMessage(conn.Identifier, Identifier, (byte) msg.type, msg.location, msg.sender.nickname, msg.message);
+            Send(message);
         }
     }
 }

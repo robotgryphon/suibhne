@@ -13,7 +13,6 @@ namespace Raindrop.Suibhne.Dice {
         internal string format;
         internal int[] values;
         internal long total;
-        internal string error_msg;
 
         public override string ToString() {
             return this.total.ToString();
@@ -34,7 +33,7 @@ namespace Raindrop.Suibhne.Dice {
             this.Connect();
         }
 
-        protected override void HandleIncomingMessage(byte connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
+        protected override void HandleIncomingMessage(Guid connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
             if (message.ToLower().StartsWith("!dice") || message.ToLower().StartsWith("!roll")) {
                 DoDiceRoll(connID, location, message);                
             }
@@ -94,7 +93,7 @@ namespace Raindrop.Suibhne.Dice {
             return result;
         }
 
-        public void DoDiceRoll(byte connID, String location, String message) {
+        public void DoDiceRoll(Guid connID, String location, String message) {
             string[] commandParts = message.Split(new char[] { ' ' });
            
 

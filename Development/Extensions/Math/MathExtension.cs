@@ -19,13 +19,13 @@ namespace Math_Extension {
                 this.Connect();
         }
 
-        protected override void HandleIncomingMessage(byte connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
+        protected override void HandleIncomingMessage(Guid connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
             if (message.ToLower().StartsWith("!math")) {
                 ParseMath(connID, sender, location, message);
             }
         }
 
-        protected void ParseMath(byte conn, String sender, String location, String message) {
+        protected void ParseMath(Guid conn, String sender, String location, String message) {
             String[] messageParts = message.Split(new char[] { ' ' }, 2);
             if (messageParts.Length > 1) {
                 try {

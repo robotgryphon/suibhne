@@ -1,84 +1,93 @@
-
-using System;
-using System.Net;
-using System.IO;
+﻿using System;
+using Raindrop.Suibhne.Extensions;
+using Raindrop.Api.Irc;
 using System.Collections.Generic;
 
-using Raindrop.Api.Irc;
-
-using Raindrop.Suibhne.Extensions;
-
-using System.Net.Sockets;
-using System.Threading;
-
 namespace Raindrop.Suibhne {
+    public class IrcBot {
+        public IrcConnection Connection;
 
-	public class IrcBot {
+        private ServerConfig Configuration;
 
-		public Dictionary<byte, BotServerConnection> Connections;
+        protected ExtensionRegistry Extensions;
 
-		public IrcBotConfiguration Configuration;
+        public Guid Identifier { get; protected set; }
 
-		public ExtensionRegistry Extensions { get; protected set; }
+        public Boolean Connected {
+            get { return Connection.Status == IrcReference.ConnectionStatus.Connected; }
+            protected set { }
+        }
 
-		public byte ConnectedCount { get; protected set; }
+        #region Event Handlers
 
-        public event Raindrop.Api.Irc.IrcReference.IrcMessageEvent OnMessageRecieved;
+        public delegate void ServerConnectionEvent(IrcBot connection);
 
-        public event BotServerConnection.IrcCommandEvent OnCommandRecieved;
+        public event ServerConnectionEvent OnConnectionComplete;
 
-		public IrcBot() {
-			this.Connections = new Dictionary<byte, BotServerConnection>();
-			this.Configuration = IrcBotConfiguration.LoadFromFile(Environment.CurrentDirectory + "/Suibhne.ini");
-			this.ConnectedCount = 0;
 
-			this.Extensions = new ExtensionRegistry(this);
-		}
+        public delegate void IrcCommandEvent(IrcBot connection, IrcMessage message);
 
-		public void LoadServers(){
-			foreach(String serverName in Configuration.Servers) {
+        public event IrcCommandEvent OnCommandRecieved;
 
-				try {
-					ServerConfig sc = (ServerConfig) ServerConfig.LoadFromFile(Configuration.ConfigDirectory + "Servers/" + serverName + "/" + serverName + ".ini");
-					BotServerConnection conn = new BotServerConnection(ConnectedCount++, sc, Extensions);
-					AddConnection(conn);
-				}
+        #endregion
 
-				catch(Exception e){
-					Console.WriteLine(e);
-				}
-			}
-		}
+        public IrcBot(ServerConfig config, ExtensionRegistry exts) {
+            this.Identifier = Guid.NewGuid();
+            this.Configuration = config;
 
-		public void AddConnection(BotServerConnection connection) {
+            this.Extensions = exts;
 
-			this.Connections.Add(connection.Identifier, connection);
-            connection.Connection.OnMessageRecieved += (conn, msg) => {
-                if (this.OnMessageRecieved != null) {
-                    OnMessageRecieved(conn, msg);
+            this.Connection = new IrcConnection(
+                config.Hostname,
+                config.Port,
+                config.Nickname,
+                config.Username,
+                config.DisplayName,
+                config.ServPassword,
+                config.AuthPassword);
+
+            this.Connection.OnMessageRecieved += HandleMessageRecieved;
+            this.Connection.OnConnectionComplete += (conn) => {
+                Console.WriteLine("Connection complete on server " + Configuration.Hostname);
+
+                if (this.OnConnectionComplete != null) {
+                    OnConnectionComplete(this);
+                }
+
+                foreach (IrcLocation location in Configuration.AutoJoinChannels) {
+                    Connection.JoinChannel(location);
                 }
             };
+        }
 
-            connection.OnCommandRecieved += (conn, msg) => {
-                if (this.OnCommandRecieved != null)
-                    OnCommandRecieved(conn, msg);
-            };
-		}
+        public Boolean IsBotOperator(String user) {
+            // TODO: Get status code from nickserv + channel level
 
-		public void Start(){
-			foreach(KeyValuePair<byte, BotServerConnection> conn in Connections) {
-				conn.Value.Connect();
-			}
-		}
+            return false;
+        }
 
-        public void Stop() {
-            foreach (KeyValuePair<byte, BotServerConnection> conn in Connections) {
-                conn.Value.Disconnect();
+        protected void HandleCommand(IrcMessage message) {
+            if (this.OnCommandRecieved != null) {
+                OnCommandRecieved(this, message);
             }
 
-            Extensions.Shutdown();
-            Connections.Clear();
+            Extensions.HandleCommand(this, message);
         }
-	}
+
+        public void Connect() {
+            this.Connection.Connect();
+        }
+
+        public void Disconnect() {
+            this.Connection.Disconnect();
+        }
+
+        protected void HandleMessageRecieved(IrcConnection conn, IrcMessage message) {
+            Console.WriteLine("Bot connection handling message: " + message.ToString()); 
+
+            if (message.message.StartsWith("!"))
+                HandleCommand(message);
+        }
+    }
 }
 
