@@ -317,8 +317,8 @@ namespace Raindrop.Suibhne.Extensions {
                     Guid destination = new Guid(guidBytes);
 
                     IrcReference.MessageType type = (IrcReference.MessageType) data[34];
-                    byte[] messageBytes = new byte[data.Length - 35];
-                    Array.Copy(data, 35, messageBytes, 0, messageBytes.Length);
+                    byte[] messageBytes = new byte[data.Length - 34];
+                    Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
 
                     String messageData = Encoding.UTF8.GetString(messageBytes);
                     IrcMessage message = new IrcMessage("#channel", new IrcUser(), "");
@@ -327,6 +327,7 @@ namespace Raindrop.Suibhne.Extensions {
                     message.message = msg.Groups["message"].Value;
                     message.location = msg.Groups["location"].Value;
 
+                    // TODO: Fix send- destination wrong
                     try {
                         IrcBot bot = bots[destination];
                         bot.Connection.SendMessage(message);

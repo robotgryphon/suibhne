@@ -267,15 +267,15 @@ namespace Raindrop.Suibhne.Extensions {
             Array.Copy(origin.ToByteArray(), 0, rawMessage, 1, 16);
             Array.Copy(destination.ToByteArray(), 0, rawMessage, 17, 16);
 
-            rawMessage[34] = type;
-            Array.Copy(messageAsBytes, 0, rawMessage, 35, messageAsBytes.Length);
+            rawMessage[33] = type;
+            Array.Copy(messageAsBytes, 0, rawMessage, 34, messageAsBytes.Length);
 
             return rawMessage;
         }
 
         protected void SendMessage(Guid destination, ExtensionsReference.MessageType type, String location, String message) {
             // Format: origin messageType location MESSAGE
-            byte[] rawMessage = PrepareMessage(destination, Identifier, (byte) type, location, Name.Replace(' ', '_'), message);
+            byte[] rawMessage = PrepareMessage(Identifier, destination, (byte) type, location, Name.Replace(' ', '_'), message);
 
             SendBytes(ResponseCodes.Message, rawMessage);
         }
