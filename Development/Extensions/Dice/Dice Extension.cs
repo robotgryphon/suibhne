@@ -8,10 +8,22 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Raindrop.Suibhne.Dice {
+
+    struct DieRollResult {
+        internal string format;
+        internal int[] values;
+        internal long total;
+        internal string error_msg;
+
+        public override string ToString() {
+            return this.total.ToString();
+        }
+    }
+
     class DiceExtension : Extensions.Extension {
 
-        public static Regex DieFormat = new Regex(@"(?<dice>\d+)d(?<sides>\d+)(?<mod>[\+\-]\d+)?", RegexOptions.None);
-
+        private static Regex DieFormat = new Regex(@"(?<dice>\d+)d(?<sides>\d+)(?<mod>[\+\-]\d+)?", RegexOptions.None);
+        
         public DiceExtension()
             : base() {
             this.Name = "Dice Roller";
@@ -22,14 +34,9 @@ namespace Raindrop.Suibhne.Dice {
             this.Connect();
         }
 
-        protected override void HandleIncomingMessage(byte connID, byte messageType, string sender, string location, string message) {
-            if (message.ToLower().StartsWith("!dice")) {
-                Console.WriteLine("Handling command: " + message);
-                String result = DoDiceRoll(message);
-
-                Console.WriteLine(result);
-
-                SendMessage(connID, 1, location, result);
+        protected override void HandleIncomingMessage(byte connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
+            if (message.ToLower().StartsWith("!dice") || message.ToLower().StartsWith("!roll")) {
+                DoDiceRoll(connID, location, message);                
             }
         }
 
@@ -38,12 +45,15 @@ namespace Raindrop.Suibhne.Dice {
         /// </summary>
         /// <param name="die">Standard fie rolling format, aka 1d6+4.</param>
         /// <returns></returns>
-        protected long GetDiceValue(String die) {
-            long diceTotal = 0;
+        protected DieRollResult GetDiceValue(String die) {
+
+            DieRollResult result = new DieRollResult();
 
             Match dice = DieFormat.Match(die);
             if (dice.Success) {
 
+                result.format = die;
+               
                 String numDiceString = dice.Groups["dice"].Value;
                 String numSidesString = dice.Groups["sides"].Value;
                 String modString = dice.Groups["mod"].Value;
@@ -53,31 +63,25 @@ namespace Raindrop.Suibhne.Dice {
                     int numSides = int.Parse(numSidesString);
                     int mod = 0;
 
+                    result.values = new int[numSides];
+
                     if (modString != "")
                         mod = int.Parse(modString.TrimStart(new char[] { '+', '-' }));
 
                     if (numDice >= 1 && numDice <= 500) {
                         if (numSides <= 10000 && numSides >= 1) {
                             if (mod < 5000000) {
-
-                                int total = 0;
-
                                 Random randomizer = new Random();
                                 for (int i = 0; i < numDice; i++) {
-                                    total += randomizer.Next(1, numSides);
+                                    result.values[i] = randomizer.Next(1, numSides);
+                                    if (modString.StartsWith("-")) mod = -mod;
+                                    result.values[i] += mod;
+
+                                    result.total += result.values[i];
                                 }
-
-                                if (modString.StartsWith("-"))
-                                    mod = -mod;
-
-                                total += mod;
-                                diceTotal += total;
-                            } else
-                                throw new FormatException("Modifier must be less than 5 million.");
-                        } else
-                            throw new FormatException("Number of sides must be between 1 and 10 thousand.");
-                    } else
-                        throw new FormatException("Can only roll 1 to 500 dice at a time.");
+                            }
+                        }
+                    }
                 }
 
                 catch (FormatException) {
@@ -85,42 +89,35 @@ namespace Raindrop.Suibhne.Dice {
                 }
 
                 catch (Exception) { }
-            } else {
-
             }
 
-            return diceTotal;
+            return result;
         }
 
-        public string DoDiceRoll(String message) {
+        public void DoDiceRoll(byte connID, String location, String message) {
             string[] commandParts = message.Split(new char[] { ' ' });
-            string command = commandParts[0].ToLower().Substring(1);
-            string response = "";
+           
 
-            if (command == "roll" || command == "dice") {
+            long total = 0;
+            if (commandParts.Length >= 2 && commandParts.Length <= 11) {
 
-                long total = 0;
-                if (commandParts.Length >= 2 && commandParts.Length <= 11) {
+                List<DieRollResult> rolls = new List<DieRollResult>();
 
-                    int invalidDice = 0;
-
-                    for (int die = 1; die < commandParts.Length; die++) {
-                        try {
-                            total += GetDiceValue(commandParts[die]);
-                        }
-
-                        catch (FormatException fe) {
-                            invalidDice++;
-                        }
-                    }
-
-                    response = "\u0002\u000306Results\u000f" + ((invalidDice > 0) ? " (Some were in an invalid format)" : "") + ": " + total;
-                } else {
-                    response = "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).";
+                for (int die = 1; die < commandParts.Length; die++) {
+                    DieRollResult result = GetDiceValue(commandParts[die]);
+                    rolls.Add(result);
+                    total += result.total;
                 }
-            }
 
-            return response;
+                String response = ExtensionsReference.BOLD + ExtensionsReference.COLOR_PREFIX + "06rolls a few dice, and the results are: " + ExtensionsReference.NORMAL + total + "! [Rolls: ";
+                response += String.Join(", ", rolls);
+                response += "]";
+
+                SendMessage(connID, ExtensionsReference.MessageType.ChannelAction, location, response);
+            } else {
+                SendMessage(connID, ExtensionsReference.MessageType.ChannelMessage, location, 
+                    "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
+            }
         }
 
     }

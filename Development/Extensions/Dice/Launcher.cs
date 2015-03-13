@@ -12,8 +12,12 @@ namespace Raindrop.Suibhne.Dice {
         [STAThread]
         static void Main() {
             DiceExtension dice = new DiceExtension();
+            while (!dice.Connected) {
+                Thread.Sleep(1000); // Wait until connection is made
+            }
 
-            while (true) {
+            // Now that connection is done, keep alive
+            while (dice.Connected) {
                 // Do nothing
                 Thread.Sleep(5000);
             }
