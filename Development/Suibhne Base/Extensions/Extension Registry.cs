@@ -101,7 +101,6 @@ namespace Raindrop.Suibhne.Extensions {
         } */
 
         #region Registry
-        // TODO: Attach events
         public void AddBot(IrcBot bot) {
             if (!this.bots.ContainsKey(bot.Identifier))
                 bots.Add(bot.Identifier, bot);
