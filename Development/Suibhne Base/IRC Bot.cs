@@ -83,7 +83,7 @@ namespace Raindrop.Suibhne {
         }
 
         protected void HandleMessageRecieved(IrcConnection conn, IrcMessage message) {
-            Console.WriteLine("Bot connection handling message: " + message.ToString()); 
+            Console.WriteLine("Bot connection handling message: " + message.ToString());
 
             if (message.message.StartsWith("!"))
                 HandleCommand(message);
