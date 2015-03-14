@@ -130,12 +130,25 @@ namespace Raindrop.Suibhne.Extensions {
                         case 2:
                             switch (subCommand.ToLower()) {
                                 case "list":
-                                    response.message = "Gathering data. May take a minute.";
+                                    response.message = "Gathering data for global extension list. May take a minute.";
                                     conn.Connection.SendMessage(response);
 
                                     ExtensionReference[] exts = GetServerExtensions(conn.Identifier);
 
-                                    // TODO: Finish this
+                                    if (exts.Length > 0) {
+                                        byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
+                                        byte[] request = new byte[17 + originBytes.Length];
+                                        request[0] = (byte)Extension.ResponseCodes.ExtensionDetails;
+                                        Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
+                                        Array.Copy(originBytes, 0, request, 18, 16);
+
+                                        foreach (ExtensionReference ext in exts) {
+                                            ext.Send(request);
+                                        }
+                                    } else {
+                                        response.message = "No extensions loaded on server.";
+                                        conn.Connection.SendMessage(response);
+                                    }
                                     break;
 
                                 default:
@@ -330,7 +343,6 @@ namespace Raindrop.Suibhne.Extensions {
 
                         msg.type = (IrcReference.MessageType)type;
 
-                        // TODO: Fix send- destination wrong
                         try {
                             IrcBot bot = bots[destination];
                             bot.Connection.SendMessage(msg);
@@ -375,8 +387,11 @@ namespace Raindrop.Suibhne.Extensions {
             Connection.Close();
         }
 
+        // TODO: Start tracking which extensions are enabled on which server
+
         internal ExtensionReference[] GetServerExtensions(Guid id) {
             return new ExtensionReference[0];
+
         }
         #endregion
 

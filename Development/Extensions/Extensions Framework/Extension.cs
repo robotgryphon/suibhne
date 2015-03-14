@@ -288,7 +288,6 @@ namespace Raindrop.Suibhne.Extensions {
         }
 
         protected void SendMessage(Guid destination, ExtensionsReference.MessageType type, String location, String message) {
-            // Format: origin messageType location MESSAGE
             byte[] rawMessage = PrepareMessage(Identifier, destination, (byte) type, location, Name.Replace(' ', '_'), message);
             conn.Send(rawMessage);            
         }
