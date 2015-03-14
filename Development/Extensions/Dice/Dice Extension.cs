@@ -28,14 +28,28 @@ namespace Raindrop.Suibhne.Dice {
             this.Name = "Dice Roller";
             this.Authors = new string[] { "Ted Senft" };
             this.Version = "1.0.0";
-            this.PermissionList = new byte[] { (byte)Permissions.HandleCommand };
+            this.PermissionList = new byte[] { (byte) Permissions.HandleCommand };
 
             this.Connect();
         }
 
-        protected override void HandleIncomingMessage(Guid connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
+        protected override void HandleIncomingMessage(byte[] data) {
+            byte type = 1;
+            String location, nickname, message;
+
+            Guid origin;
+            Guid destination = this.Identifier;            
+            ParseMessage(
+                data,
+                out origin,
+                out destination,
+                out type,
+                out location,
+                out nickname,
+                out message);
+
             if (message.ToLower().StartsWith("!dice") || message.ToLower().StartsWith("!roll")) {
-                DoDiceRoll(connID, location, message);                
+                DoDiceRoll(origin, location, message);                
             }
         }
 

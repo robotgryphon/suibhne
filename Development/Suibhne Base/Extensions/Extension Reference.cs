@@ -17,11 +17,6 @@ namespace Raindrop.Suibhne.Extensions {
             Socket.Send(data);
         }
 
-        public void SendString(String data) {
-            byte[] buff = Encoding.UTF8.GetBytes(data);
-            Send(buff);
-        }
-
         public void HandleCommandRecieved(IrcBot conn, IrcMessage msg) {
             Console.WriteLine(Name + " handling command: " + msg.message);
             byte[] message = Extension.PrepareMessage(conn.Identifier, Identifier, (byte) msg.type, msg.location, msg.sender.nickname, msg.message);

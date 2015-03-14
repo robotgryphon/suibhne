@@ -51,6 +51,6 @@ namespace Raindrop.Suibhne.Extensions {
         public static String NORMAL = "\u000f";
         public static String COLOR_PREFIX = "\u0003";
 
-        public static Regex MessageResponseParser = new Regex(@"^(?<sender>[^\s]+)\s(?<location>[^\s]+)\s(?<message>.*)$");
+        public static Regex MessageResponseParser = new Regex(@"^(?<location>[^\s]+)\s(?<sender>[^\s]+)\s(?<message>.*)$");
     }
 }

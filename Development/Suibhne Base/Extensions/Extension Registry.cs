@@ -267,85 +267,92 @@ namespace Raindrop.Suibhne.Extensions {
             Guid origin = new Guid(guidBytes);
 
             // Get the extension suite off the returned Identifier first
-            ExtensionReference suite = Extensions[origin];
+            try {
 
-            #region Handle Code Response
-            switch (code) {
+                ExtensionReference suite = Extensions[origin];
 
-                case Extension.ResponseCodes.Activation:
+                #region Handle Code Response
+                switch (code) {
 
-                    break;
+                    case Extension.ResponseCodes.Activation:
 
-                case Extension.ResponseCodes.ConnectionComplete:
+                        break;
 
-                    break;
+                    case Extension.ResponseCodes.ConnectionComplete:
 
-                case Extension.ResponseCodes.ExtensionPermissions:
-                    byte[] permissions = new byte[data.Length - 17];
-                    Array.Copy(data, 17, permissions, 0, permissions.Length);
-                    foreach (byte perm in permissions) {
-                        switch ((Extension.Permissions)perm) {
+                        break;
 
-                            case Extension.Permissions.HandleUserEvent:
-                                // bot.OnUserEvent += suite.HandleUserEvent;
-                                break;
+                    case Extension.ResponseCodes.ExtensionPermissions:
+                        byte[] permissions = new byte[data.Length - 17];
+                        Array.Copy(data, 17, permissions, 0, permissions.Length);
+                        foreach (byte perm in permissions) {
+                            switch ((Extension.Permissions)perm) {
 
-                            case Extension.Permissions.HandleCommand:
+                                case Extension.Permissions.HandleUserEvent:
+                                    // bot.OnUserEvent += suite.HandleUserEvent;
+                                    break;
 
-                                // TODO: Change to send command request back to socket
-                                foreach (IrcBot bot in bots.Values) {
-                                    bot.OnCommandRecieved += suite.HandleCommandRecieved;
-                                }
+                                case Extension.Permissions.HandleCommand:
 
-                                break;
+                                    // TODO: Change to send command request back to socket
+                                    foreach (IrcBot bot in bots.Values) {
+                                        bot.OnCommandRecieved += suite.HandleCommandRecieved;
+                                    }
 
-                            default:
+                                    break;
 
-                                break;
+                                default:
 
+                                    break;
+
+                            }
                         }
-                    }
-                    break;
+                        break;
 
-                case Extension.ResponseCodes.ExtensionRemove:
-                    sock.Shutdown(SocketShutdown.Both);
-                    sock.Close();
-                    return;
+                    case Extension.ResponseCodes.ExtensionRemove:
+                        sock.Shutdown(SocketShutdown.Both);
+                        sock.Close();
+                        return;
 
-                case Extension.ResponseCodes.Message:
-                    Array.Copy(data, 17, guidBytes, 0, 16);
-                    Guid destination = new Guid(guidBytes);
+                    case Extension.ResponseCodes.Message:
+                        IrcMessage msg = new IrcMessage("", new IrcUser(), "");
+                        Guid destination;
+                        byte type = 1;
 
-                    IrcReference.MessageType type = (IrcReference.MessageType) data[34];
-                    byte[] messageBytes = new byte[data.Length - 34];
-                    Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
+                        Extension.ParseMessage(
+                            data,
+                            out origin,
+                            out destination,
+                            out type,
+                            out msg.location,
+                            out msg.sender.nickname,
+                            out msg.message);
 
-                    String messageData = Encoding.UTF8.GetString(messageBytes);
-                    IrcMessage message = new IrcMessage("#channel", new IrcUser(), "");
-                    message.type = type;
-                    Match msg = ExtensionsReference.MessageResponseParser.Match(messageData);
-                    message.message = msg.Groups["message"].Value;
-                    message.location = msg.Groups["location"].Value;
+                        msg.type = (IrcReference.MessageType)type;
 
-                    // TODO: Fix send- destination wrong
-                    try {
-                        IrcBot bot = bots[destination];
-                        bot.Connection.SendMessage(message);
-                    }
+                        // TODO: Fix send- destination wrong
+                        try {
+                            IrcBot bot = bots[destination];
+                            bot.Connection.SendMessage(msg);
+                        }
 
-                    catch (KeyNotFoundException) {
-                        // Server invalid or changed between requests
-                    }
+                        catch (KeyNotFoundException) {
+                            // Server invalid or changed between requests
+                        }
 
-                    break;
+                        break;
 
-                default:
-                    // Unknown response
+                    default:
+                        // Unknown response
 
-                    break;
+                        break;
 
+                }
+                #endregion
             }
-            #endregion
+            catch (Exception e) {
+                Console.WriteLine(e);
+            }
         }
 
         protected void RemoveBySocket(Socket s, string reason = "") {

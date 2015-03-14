@@ -19,9 +19,23 @@ namespace Math_Extension {
                 this.Connect();
         }
 
-        protected override void HandleIncomingMessage(Guid connID, ExtensionsReference.MessageType messageType, string sender, string location, string message) {
+        protected override void HandleIncomingMessage(byte[] data) {
+            Guid origin = Guid.NewGuid();
+            Guid destination = this.Identifier;
+            byte type = 1;
+            String location, nickname, message;
+
+            ParseMessage(
+                data,
+                out origin,
+                out destination,
+                out type,
+                out location,
+                out nickname,
+                out message);
+
             if (message.ToLower().StartsWith("!math")) {
-                ParseMath(connID, sender, location, message);
+                ParseMath(origin, nickname, location, message);
             }
         }
 

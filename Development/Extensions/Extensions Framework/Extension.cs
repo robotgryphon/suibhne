@@ -210,22 +210,7 @@ namespace Raindrop.Suibhne.Extensions {
                         break;
 
                     case ResponseCodes.Message:
-                        if(data.Length > 34){
-                            byte[] messageData = new byte[data.Length - 35];
-                            Array.Copy(data, 34, messageData, 0, messageData.Length);
-                            String messageTestData = Encoding.UTF8.GetString(messageData);
-
-                            Match message = ExtensionsReference.MessageResponseParser.Match(messageTestData);
-                            if (message.Success) {
-                                HandleIncomingMessage(
-                                    origin, 
-                                    (ExtensionsReference.MessageType)data[34], 
-                                    message.Groups["sender"].Value, 
-                                    message.Groups["location"].Value, 
-                                    message.Groups["message"].Value);
-                            }
-                        }
-                        
+                        HandleIncomingMessage(data);
                         break;
 
 
@@ -260,7 +245,7 @@ namespace Raindrop.Suibhne.Extensions {
 
         public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String location, String sender, String message) {
             byte[] messageAsBytes = Encoding.UTF8.GetBytes(location + " " + sender + " " + message);
-            byte[] rawMessage = new byte[35 + messageAsBytes.Length];
+            byte[] rawMessage = new byte[34 + messageAsBytes.Length];
 
             rawMessage[0] = (byte)ResponseCodes.Message;
 
@@ -273,15 +258,62 @@ namespace Raindrop.Suibhne.Extensions {
             return rawMessage;
         }
 
+        public static void ParseMessage(byte[] data, out Guid origin, out Guid destination, out byte type, out String location, out String sender, out String message) {
+            byte[] guidBytes = new byte[16];
+            
+            Array.Copy(data, 1, guidBytes, 0, 16);
+            origin = new Guid(guidBytes);
+
+            guidBytes = new byte[16];
+
+            Array.Copy(data, 17, guidBytes, 0, 16);
+            destination = new Guid(guidBytes);
+
+            type = data[33];
+
+            byte[] messageBytes = new byte[data.Length - 34];
+            Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
+            String messageString = Encoding.UTF8.GetString(messageBytes);
+
+            Match messageMatch = ExtensionsReference.MessageResponseParser.Match(messageString);
+            if (messageMatch.Success) {
+                location = messageMatch.Groups["location"].Value;
+                sender = messageMatch.Groups["sender"].Value;
+                message = messageMatch.Groups["message"].Value;
+            } else {
+                location = "#channel";
+                sender = "Unknown";
+                message = "Message";
+            }
+        }
+
         protected void SendMessage(Guid destination, ExtensionsReference.MessageType type, String location, String message) {
             // Format: origin messageType location MESSAGE
             byte[] rawMessage = PrepareMessage(Identifier, destination, (byte) type, location, Name.Replace(' ', '_'), message);
-
-            SendBytes(ResponseCodes.Message, rawMessage);
+            conn.Send(rawMessage);            
         }
 
-        protected virtual void HandleIncomingMessage(Guid origin, ExtensionsReference.MessageType type, String sender, String location, String message) {
-            Console.WriteLine("Recieved message from " + sender + ": " + message);
+        protected virtual void HandleIncomingMessage(byte[] data) {
+
+            
+ 
+            Guid destination = this.Identifier;
+            byte type = 1;
+            String location, nickname, message;
+            Guid origin;
+            ParseMessage(
+                data,
+                out origin,
+                out destination,
+                out type,
+                out location,
+                out nickname,
+                out message);
+
+            Console.WriteLine("Origin [server]: " + origin);
+            Console.WriteLine("Destination: " + destination);
+
+            Console.WriteLine("Recieved message from " + nickname + ": " + message);
         }
     }
 }
