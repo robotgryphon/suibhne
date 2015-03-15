@@ -197,15 +197,15 @@ namespace Raindrop.Suibhne.Extensions {
 
                     case ResponseCodes.ExtensionDetails:
                         string response = 
-                            "[" + ExtensionsReference.COLOR_PREFIX + "05" + Identifier + ExtensionsReference.NORMAL + "] " + 
-                            Name + ExtensionsReference.COLOR_PREFIX + "02 (v. " + Version + ")" + ExtensionsReference.NORMAL + 
-                            " developed by " + ExtensionsReference.COLOR_PREFIX + "03" + string.Join(", ", Authors);
+                            "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " + 
+                            Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal + 
+                            " developed by " + Reference.ColorPrefix + "03" + string.Join(", ", Authors);
 
                         String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        SendMessage(origin, ExtensionsReference.MessageType.ChannelMessage, messageLocation, response);
+                        SendMessage(origin, Reference.MessageType.ChannelMessage, messageLocation, response);
 
                         break;
 
@@ -275,7 +275,7 @@ namespace Raindrop.Suibhne.Extensions {
             Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
             String messageString = Encoding.UTF8.GetString(messageBytes);
 
-            Match messageMatch = ExtensionsReference.MessageResponseParser.Match(messageString);
+            Match messageMatch = Reference.MessageResponseParser.Match(messageString);
             if (messageMatch.Success) {
                 location = messageMatch.Groups["location"].Value;
                 sender = messageMatch.Groups["sender"].Value;
@@ -287,7 +287,7 @@ namespace Raindrop.Suibhne.Extensions {
             }
         }
 
-        protected void SendMessage(Guid destination, ExtensionsReference.MessageType type, String location, String message) {
+        protected void SendMessage(Guid destination, Reference.MessageType type, String location, String message) {
             byte[] rawMessage = PrepareMessage(Identifier, destination, (byte) type, location, Name.Replace(' ', '_'), message);
             conn.Send(rawMessage);            
         }

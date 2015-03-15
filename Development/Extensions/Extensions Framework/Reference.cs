@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Raindrop.Suibhne.Extensions {
-    public class ExtensionsReference {
+    public struct Reference {
 
         /// <summary>
         /// Defines various types of messages on a server.
@@ -47,9 +47,11 @@ namespace Raindrop.Suibhne.Extensions {
             Unknown = 0
         }
 
-        public static String BOLD = "\u0002";
-        public static String NORMAL = "\u000f";
-        public static String COLOR_PREFIX = "\u0003";
+        public static String Bold = "\u0002";
+        public static String Italic = "\u001D";
+        public static String Underline = "\u001F";
+        public static String Normal = "\u000f";
+        public static String ColorPrefix = "\u0003";
 
         public static Regex MessageResponseParser = new Regex(@"^(?<location>[^\s]+)\s(?<sender>[^\s]+)\s(?<message>.*)$");
     }

@@ -3,34 +3,45 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 using Raindrop.Api.Irc;
 using Raindrop.Suibhne;
-using Raindrop.Suibhne.Extensions;
+
+using Nini.Config;
 
 namespace Launcher {
     class Program {
         static void Main(string[] args) {
 
-            ServerConfig local = new ServerConfig();
-            local.Username = "suibhne";
-            local.Hostname = "localhost";
-            local.DisplayName = "Suibhne";
-            local.Port = 6667;
-            local.Nickname = "Suibhne";
-            local.AutoJoinChannels = new IrcLocation[] { new IrcLocation("#suibhne") };
+            ExtensionSystem registry = new ExtensionSystem();
 
-            
-            ExtensionRegistry registry = new ExtensionRegistry();
+            try {
+                IniConfigSource systemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
 
-            IrcBot localhost = new IrcBot(local, registry);
-            
+                String serverRootDirectory = systemConfig.Configs["Suibhne"].GetString("ServerRootDirectory", Environment.CurrentDirectory + "/Configuration/Servers/");
+                String[] serverDirectories = Directory.GetDirectories(serverRootDirectory);
 
-            registry.AddBot(localhost);
-            Console.WriteLine("Localhost ID: " + localhost.Identifier); 
-            Console.WriteLine("Ext ID: " + registry.Identifier);
+                foreach (String serverDirectory in serverDirectories) {
+                    String serverConfigFile = serverDirectory + "/connection.ini";
+                    Console.WriteLine("Loading configuration for: " + serverConfigFile);
 
-            localhost.Connect();
+                    ServerConfig servConfig = ServerConfig.LoadFromFile(serverConfigFile);
+                    IrcBot server = new IrcBot(servConfig, registry);
+
+                    registry.AddBot(server);
+                    server.Connect();
+                }
+            }
+
+            catch (FileNotFoundException fnfe) {
+                Console.WriteLine("Server configuration file not found: " + fnfe.Message);
+            }
+
+            catch (Exception e) {
+                Console.WriteLine("Exception thrown: " + e);
+            }
+
             Console.ReadLine();
         }
     }

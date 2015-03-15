@@ -122,7 +122,7 @@ namespace Raindrop.Suibhne.Dice {
                     total += result.total;
                 }
 
-                String response = ExtensionsReference.BOLD + ExtensionsReference.COLOR_PREFIX + "06rolls a few dice, and the results are: " + ExtensionsReference.NORMAL + total + "! [Rolls: ";
+                String response = ExtensionsReference.Bold + ExtensionsReference.ColorPrefix + "06rolls a few dice, and the results are: " + ExtensionsReference.Normal + total + "! [Rolls: ";
                 response += String.Join(", ", rolls);
                 response += "]";
 

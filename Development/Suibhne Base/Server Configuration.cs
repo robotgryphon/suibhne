@@ -7,7 +7,7 @@ using System.Text;
 using Nini.Config;
 
 namespace Raindrop.Suibhne {
-    public class ServerConfig {
+    public struct ServerConfig {
 
         public String Hostname;
         public int Port;
@@ -18,23 +18,9 @@ namespace Raindrop.Suibhne {
         public String DisplayName;
         public String AuthPassword;
 
-        public IrcLocation[] AutoJoinChannels;
+        public Location[] AutoJoinChannels;
 
         public String[] Operators;
-
-        public ServerConfig() {
-            this.Hostname = "localhost";
-            this.Port = 6667;
-            this.ServPassword = "";
-
-            this.Nickname = "Suibhne";
-            this.Username = "suibhne";
-            this.DisplayName = "Suibhne IRC Bot";
-            this.AuthPassword = "";
-
-            this.AutoJoinChannels = new IrcLocation[0];
-            this.Operators = new string[0];
-        }
 
         public static ServerConfig LoadFromFile(String filename) {
             ServerConfig config = new ServerConfig();
@@ -51,10 +37,10 @@ namespace Raindrop.Suibhne {
             config.DisplayName = server.GetString("DisplayName", "");
             config.AuthPassword = server.GetString("AuthPassword", "");
 
-            String[] autojoinChannels = server.GetString("Autojoin", "").Replace(" ", "").Split(new char[] { ',' });
-            List<IrcLocation> chans = new List<IrcLocation>();
+            String[] autojoinChannels = csource.Configs["Locations"].GetString("Autojoin", "").Replace(" ", "").Split(new char[] { ',' });
+            List<Location> chans = new List<Location>();
             foreach (String chan in autojoinChannels) {
-                chans.Add(new IrcLocation(chan));
+                chans.Add(new Location(chan));
             }
 
             config.AutoJoinChannels = chans.ToArray();

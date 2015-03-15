@@ -13,15 +13,16 @@ using System.Net.Sockets;
 using Raindrop.Api.Irc;
 using System.Net;
 using System.Text;
+using Raindrop.Suibhne.Extensions;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Raindrop.Suibhne {
 
     /// <summary>
     /// The extension registry connects an IrcBot and a set of extension suites together.
     /// It goes through the extensions directory defined in the bot configuration and
     /// searches through directories for the extension INI files.
     /// </summary>
-    public class ExtensionRegistry {
+    public class ExtensionSystem {
 
         public Guid Identifier;
 
@@ -37,7 +38,9 @@ namespace Raindrop.Suibhne.Extensions {
 
         protected byte[] Buffer;
 
-        public ExtensionRegistry() {
+        protected DateTime StartTime;
+
+        public ExtensionSystem() {
             this.bots = new Dictionary<Guid, IrcBot>();
             this.Identifier = Guid.NewGuid();
 
@@ -48,57 +51,10 @@ namespace Raindrop.Suibhne.Extensions {
 
             this.Buffer = new byte[1024];
 
-            // InitializeExtensions();
+            this.StartTime = DateTime.Now;
+
             StartServer();
         }
-
-        /*
-        public void InitializeExtensions()
-        {
-            try
-            {
-                String[] ExtensionDirectories = Directory.GetDirectories(bot.Configuration.ConfigDirectory + "Extensions/");
-
-                foreach (String extDir in ExtensionDirectories)
-                {
-                    String extDirName = extDir.Substring(extDir.LastIndexOf("/") + 1);
-
-                    // Attempt to find config file for extension. Start by getting all ini files.
-                    String[] ExtensionFiles = Directory.GetFiles(extDir, "*.ini");
-                    String foundFile = "";
-
-                    foreach (String file in ExtensionFiles)
-                    {
-                        if (Path.GetFileName(file).ToLower().Equals("extension.ini"))
-                        {
-                            // Found file
-                            foundFile = file;
-
-                            // Now, poke the extension exe for life.
-                            IniConfigSource extConfig = new IniConfigSource();
-                            extConfig.Load(file);
-
-                            String extExecutable = extConfig.Configs["Extension"].GetString("MainExecutable").Trim();
-                            if(extExecutable != ""){
-                                Process.Start(extDir + "/"+ extExecutable);
-                            }
-                        }
-                    }
-
-                    if (foundFile == "")
-                    {
-                        Console.WriteLine("[Extension System] Failed to load extension suite from directory '{0}'. Suite file not found.", extDirName);
-                    }
-                    
-                }
-            }
-
-            catch (IOException ioe)
-            {
-                Console.WriteLine("Failed to open directory.");
-                Console.WriteLine(ioe.Message);
-            }
-        } */
 
         #region Registry
         public void AddBot(IrcBot bot) {
@@ -106,93 +62,135 @@ namespace Raindrop.Suibhne.Extensions {
                 bots.Add(bot.Identifier, bot);
         }
 
-        public void HandleCommand(IrcBot conn, IrcMessage message) {
+        public void HandleCommand(IrcBot conn, Message message) {
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
             String subCommand = "";
             if (messageParts.Length > 1)
                 subCommand = messageParts[1].ToLower();
 
-            IrcMessage response = new IrcMessage(message.location, conn.Connection.Me, "Response");
-            response.type = Api.Irc.IrcReference.MessageType.ChannelMessage;
-
-            Console.WriteLine("Handling command: " + command);
+            Message response = new Message(message.location, conn.Me, "Response");
+            response.type = Api.Irc.Reference.MessageType.ChannelMessage;
 
             switch (command) {
-                case "exts":
-                    switch (messageParts.Length) {
-                        case 1:
-                            response.message = "Invalid Parameters. Format: !exts [command]";
-                            conn.Connection.SendMessage(response);
-                            break;
+                case "sys":
+                    #region System Commands
+                    if (messageParts.Length > 1 && subCommand != "") {
+                        if (conn.IsBotOperator(message.sender.nickname)) {
+                            switch (subCommand) {
+                                case "exts":
+                                    #region Extensions System Handling
+                                    switch (messageParts.Length) {
+                                        case 2:
+                                            response.message = "Invalid Parameters. Format: !sys exts [command]";
+                                            conn.SendMessage(response);
+                                            break;
 
-                        case 2:
-                            switch (subCommand.ToLower()) {
-                                case "list":
-                                    response.message = "Gathering data for global extension list. May take a minute.";
-                                    conn.Connection.SendMessage(response);
+                                        case 3:
+                                            switch (subCommand.ToLower()) {
+                                                case "list":
+                                                    response.message = "Gathering data for global extension list. May take a minute.";
+                                                    conn.SendMessage(response);
 
-                                    ExtensionReference[] exts = GetServerExtensions(conn.Identifier);
+                                                    ExtensionReference[] exts = GetServerExtensions(conn.Identifier);
 
-                                    if (exts.Length > 0) {
-                                        byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
-                                        byte[] request = new byte[17 + originBytes.Length];
-                                        request[0] = (byte)Extension.ResponseCodes.ExtensionDetails;
-                                        Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
-                                        Array.Copy(originBytes, 0, request, 18, 16);
+                                                    if (exts.Length > 0) {
+                                                        byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
+                                                        byte[] request = new byte[17 + originBytes.Length];
+                                                        request[0] = (byte)Extension.ResponseCodes.ExtensionDetails;
+                                                        Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
+                                                        Array.Copy(originBytes, 0, request, 18, 16);
 
-                                        foreach (ExtensionReference ext in exts) {
-                                            ext.Send(request);
-                                        }
-                                    } else {
-                                        response.message = "No extensions loaded on server.";
-                                        conn.Connection.SendMessage(response);
+                                                        foreach (ExtensionReference ext in exts) {
+                                                            ext.Send(request);
+                                                        }
+                                                    } else {
+                                                        response.message = "No extensions loaded on server.";
+                                                        conn.SendMessage(response);
+                                                    }
+                                                    break;
+
+                                                default:
+                                                    response.message = "Unknown command.";
+                                                    conn.SendMessage(response);
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case 4:
+                                            switch (subCommand.ToLower()) {
+
+                                                case "add":
+
+                                                    break;
+
+                                                case "res":
+
+                                                    break;
+
+                                                case "rem":
+
+                                                    break;
+
+                                                default:
+
+                                                    break;
+
+                                            }
+
+                                            break;
                                     }
+                                    #endregion
+                                    break;
+
+                                case "version":
+                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                                    conn.SendMessage(response);
+                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    break;
+
+
+                                case "raw":
+                                    string rawCommand = message.message.Split(new char[] { ' ' }, 3)[2];
+                                    conn.SendRaw(rawCommand);
+
+                                    break;
+
+                                case "uptime":
+                                    TimeSpan diff = DateTime.Now - StartTime;
+                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.message = "has been up for " + 
+                                        (diff.Days > 0 ? Formatter.GetColoredText(diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
+                                        (diff.Hours > 0 ? Formatter.GetColoredText(diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
+                                        (diff.Minutes > 0 ? Formatter.GetColoredText(diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") + 
+                                        (diff.Seconds > 0 ? Formatter.GetColoredText(diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
+
+                                    conn.SendMessage(response);
+                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
                                     break;
 
                                 default:
-                                    response.message = "Unknown command.";
-                                    conn.Connection.SendMessage(response);
+                                    response.type = Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.message = "does not know what you are asking for. " + Formatter.GetColoredText("[Invalid subcommand]", Formatter.Colors.Orange);
+                                    conn.SendMessage(response);
+                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
                                     break;
                             }
-
-                            break;
-
-                        case 3:
-                            switch (subCommand.ToLower()) {
-
-                                default:
-
-                                    break;
-
-                            }
-
-                            break;
-                    }
-
-                    break;
-
-                case "version":
-                    response.type = Api.Irc.IrcReference.MessageType.ChannelAction;
-                    response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                    conn.Connection.SendMessage(response);
-                    break;
-
-
-                case "raw":
-                    if (conn.IsBotOperator(message.sender.nickname.ToLower())) {
-                        string rawCommand = message.message.Split(new char[] { ' ' }, 2)[1];
-                        conn.Connection.SendRaw(rawCommand);
+                        } else {
+                            response.message = Formatter.GetColoredText("Error: ", Formatter.Colors.Red) + "You must be a bot operator to run the system command.";
+                            conn.SendMessage(response);
+                        }
                     } else {
-                        response.message = "You are not a bot operator. No permission to execute raw commands.";
-                        conn.Connection.SendMessage(response);
+                        response.message = Formatter.GetColoredText("Error: ", Formatter.Colors.Red) + "System command takes at least a single parameter. Try raw, version, or exts.";
+                        conn.SendMessage(response);
                     }
+                    #endregion
                     break;
 
                 default:
-
-                    
-
+                    // TODO: Handle command through commands registry
                     break;
             }
         }
@@ -230,7 +228,7 @@ namespace Raindrop.Suibhne.Extensions {
                 Connection.BeginAccept(AcceptConnection, null);
 
                 byte[] data = new byte[33];
-                
+
                 data[0] = (byte)Extension.ResponseCodes.Activation;
                 Identifier.ToByteArray().CopyTo(data, 1);
                 suite.Identifier.ToByteArray().CopyTo(data, 17);
@@ -265,7 +263,7 @@ namespace Raindrop.Suibhne.Extensions {
                 }
             }
 
-            catch (SocketException se) {
+            catch (SocketException) {
                 RemoveBySocket(recievedOn, "Extension crashed.");
             }
         }
@@ -327,7 +325,7 @@ namespace Raindrop.Suibhne.Extensions {
                         return;
 
                     case Extension.ResponseCodes.Message:
-                        IrcMessage msg = new IrcMessage("", new IrcUser(), "");
+                        Message msg = new Message("", new User(), "");
                         Guid destination;
                         byte type = 1;
 
@@ -340,11 +338,11 @@ namespace Raindrop.Suibhne.Extensions {
                             out msg.sender.nickname,
                             out msg.message);
 
-                        msg.type = (IrcReference.MessageType)type;
+                        msg.type = (Raindrop.Api.Irc.Reference.MessageType)type;
 
                         try {
                             IrcBot bot = bots[destination];
-                            bot.Connection.SendMessage(msg);
+                            bot.SendMessage(msg);
                         }
 
                         catch (KeyNotFoundException) {

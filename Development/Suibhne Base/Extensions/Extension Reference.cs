@@ -5,9 +5,11 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 
-namespace Raindrop.Suibhne.Extensions {
+using Raindrop.Suibhne.Extensions;
+
+namespace Raindrop.Suibhne {
     
-    public class ExtensionReference {
+    public struct ExtensionReference {
 
         public Guid Identifier;
         public Socket Socket;
@@ -17,7 +19,7 @@ namespace Raindrop.Suibhne.Extensions {
             Socket.Send(data);
         }
 
-        public void HandleCommandRecieved(IrcBot conn, IrcMessage msg) {
+        public void HandleCommandRecieved(IrcBot conn, Message msg) {
             Console.WriteLine(Name + " handling command: " + msg.message);
             byte[] message = Extension.PrepareMessage(conn.Identifier, Identifier, (byte) msg.type, msg.location, msg.sender.nickname, msg.message);
             Send(message);
