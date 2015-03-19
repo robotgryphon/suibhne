@@ -97,7 +97,7 @@ namespace Raindrop.Suibhne {
                                                     if (exts.Length > 0) {
                                                         byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
                                                         byte[] request = new byte[17 + originBytes.Length];
-                                                        request[0] = (byte)Extension.ResponseCodes.ExtensionDetails;
+                                                        request[0] = (byte)Extension.ResponseCodes.Details;
                                                         Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
                                                         Array.Copy(originBytes, 0, request, 18, 16);
 
@@ -292,7 +292,7 @@ namespace Raindrop.Suibhne {
 
                         break;
 
-                    case Extension.ResponseCodes.ExtensionPermissions:
+                    case Extension.ResponseCodes.Permissions:
                         byte[] permissions = new byte[data.Length - 17];
                         Array.Copy(data, 17, permissions, 0, permissions.Length);
                         foreach (byte perm in permissions) {
@@ -319,7 +319,7 @@ namespace Raindrop.Suibhne {
                         }
                         break;
 
-                    case Extension.ResponseCodes.ExtensionRemove:
+                    case Extension.ResponseCodes.Remove:
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
                         return;
@@ -376,7 +376,7 @@ namespace Raindrop.Suibhne {
 
         internal void Shutdown() {
             foreach (KeyValuePair<Guid, ExtensionReference> ext in Extensions) {
-                ext.Value.Send(new byte[] { (byte)Extension.ResponseCodes.ExtensionRemove });
+                ext.Value.Send(new byte[] { (byte)Extension.ResponseCodes.Remove });
                 ext.Value.Socket.Shutdown(SocketShutdown.Both);
             }
 

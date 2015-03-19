@@ -23,11 +23,7 @@ namespace Launcher {
                 String[] serverDirectories = Directory.GetDirectories(serverRootDirectory);
 
                 foreach (String serverDirectory in serverDirectories) {
-                    String serverConfigFile = serverDirectory + "/connection.ini";
-                    Console.WriteLine("Loading configuration for: " + serverConfigFile);
-
-                    ServerConfig servConfig = ServerConfig.LoadFromFile(serverConfigFile);
-                    IrcBot server = new IrcBot(servConfig, registry);
+                    IrcBot server = new IrcBot(serverDirectory, registry);
 
                     registry.AddBot(server);
                     server.Connect();

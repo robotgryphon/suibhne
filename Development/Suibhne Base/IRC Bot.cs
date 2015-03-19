@@ -2,6 +2,8 @@
 using Raindrop.Suibhne.Extensions;
 using Raindrop.Api.Irc;
 using System.Collections.Generic;
+using System.IO;
+using Nini.Config;
 
 namespace Raindrop.Suibhne {
     public class IrcBot : Raindrop.Api.Irc.Connection {
@@ -22,19 +24,15 @@ namespace Raindrop.Suibhne {
         public event IrcCommandEvent OnCommandRecieved;
         #endregion
 
-        public IrcBot(ServerConfig config, ExtensionSystem exts)
-            : base(config.Hostname,
-                config.Port,
-                config.Nickname,
-                config.Username,
-                config.DisplayName,
-                config.ServPassword,
-                config.AuthPassword) {
-
+        public IrcBot(String configDir, ExtensionSystem exts) : base() {
             this.Identifier = Guid.NewGuid();
-            this.Configuration = config;
+            this.Configuration = ServerConfig.LoadFromFile(configDir + "/connection.ini");
+            this.Server = new Location(Configuration.Hostname, Configuration.ServPassword, Api.Irc.Reference.LocationType.Server);
+            this.port = Configuration.Port;
+            this.Me = new User("", Configuration.Username, Configuration.AuthPassword, Configuration.Nickname);
+
             this.Operators = new List<string>();
-            foreach (String op in config.Operators)
+            foreach (String op in Configuration.Operators)
                 Operators.Add(op.ToLower());
 
             this.Extensions = exts;
@@ -42,11 +40,26 @@ namespace Raindrop.Suibhne {
             this.OnMessageRecieved += HandleMessageRecieved;
             this.OnConnectionComplete += (conn) => {
                 Console.WriteLine("Connection complete on server " + Configuration.Hostname);
-
-                foreach (Location location in Configuration.AutoJoinChannels) {
-                    JoinChannel(location);
-                }
+                AutoJoinLocations(configDir);
             };
+        }
+
+        protected void AutoJoinLocations(String configDir) {
+            String[] locations = Directory.GetFiles(configDir + "/Locations/", "*.ini");
+            foreach (String location in locations) {
+                // Load location
+                Console.WriteLine("Got potential location to join: " + location);
+                try {
+                    IniConfigSource locConfig = new IniConfigSource(location);
+                    Location loc = new Location(locConfig.Configs["Location"].GetString("Name", "#Location"), Api.Irc.Reference.LocationType.Channel);
+
+                    JoinChannel(loc);
+                }
+
+                catch (Exception e) {
+                    Console.WriteLine("Location loading failed: " + e.Message);
+                }
+            }
         }
 
         public Boolean IsBotOperator(String user) {

@@ -18,8 +18,6 @@ namespace Raindrop.Suibhne {
         public String DisplayName;
         public String AuthPassword;
 
-        public Location[] AutoJoinChannels;
-
         public String[] Operators;
 
         public static ServerConfig LoadFromFile(String filename) {
@@ -37,13 +35,6 @@ namespace Raindrop.Suibhne {
             config.DisplayName = server.GetString("DisplayName", "");
             config.AuthPassword = server.GetString("AuthPassword", "");
 
-            String[] autojoinChannels = csource.Configs["Locations"].GetString("Autojoin", "").Replace(" ", "").Split(new char[] { ',' });
-            List<Location> chans = new List<Location>();
-            foreach (String chan in autojoinChannels) {
-                chans.Add(new Location(chan));
-            }
-
-            config.AutoJoinChannels = chans.ToArray();
             config.Operators = server.GetString("Operators", "").Replace(" ", "").Split(new char[] { ',' });
 
             return config;

@@ -20,9 +20,9 @@ namespace Raindrop.Suibhne.Extensions {
             /// </summary>
             Activation = 1,
 
-            ExtensionDetails = 2,
+            Details = 2,
 
-            ExtensionPermissions = 3,
+            Permissions = 3,
 
             /// <summary>
             /// Called when bot or extension requests a reactivation
@@ -34,7 +34,7 @@ namespace Raindrop.Suibhne.Extensions {
             /// Called when a bot requests an extension be disabled 
             /// at runtime.
             /// </summary>
-            ExtensionRemove = 5,
+            Remove = 5,
 
             ExtensionCommands = 6,
 
@@ -191,11 +191,11 @@ namespace Raindrop.Suibhne.Extensions {
 
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
-                        SendBytes(ResponseCodes.ExtensionDetails, nameAsBytes);
-                        SendBytes(ResponseCodes.ExtensionPermissions, PermissionList);
+                        SendBytes(ResponseCodes.Details, nameAsBytes);
+                        SendBytes(ResponseCodes.Permissions, PermissionList);
                         break;
 
-                    case ResponseCodes.ExtensionDetails:
+                    case ResponseCodes.Details:
                         string response = 
                             "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " + 
                             Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal + 
@@ -214,7 +214,7 @@ namespace Raindrop.Suibhne.Extensions {
                         break;
 
 
-                    case ResponseCodes.ExtensionRemove:
+                    case ResponseCodes.Remove:
                         conn.Shutdown(SocketShutdown.Both);
                         conn.Close();
                         Connected = false;
