@@ -87,6 +87,7 @@ namespace Raindrop.Suibhne {
                                             break;
 
                                         case 3:
+                                            subCommand = messageParts[2];
                                             switch (subCommand.ToLower()) {
                                                 case "list":
                                                     response.message = "Gathering data for global extension list. May take a minute.";
@@ -275,11 +276,18 @@ namespace Raindrop.Suibhne {
             Array.Copy(data, 1, guidBytes, 0, 16);
 
             Guid origin = new Guid(guidBytes);
+            byte[] extraData= new byte[0];
+            if (data.Length > 17) {
+                extraData = new byte[data.Length - 17];
+                Array.Copy(data, 17, extraData, 0, extraData.Length);
+            }
 
             // Get the extension suite off the returned Identifier first
             try {
 
                 ExtensionReference suite = Extensions[origin];
+
+                Console.WriteLine("Handling response code {0} from suite {1}.", code, suite.Name);
 
                 #region Handle Code Response
                 switch (code) {
@@ -288,14 +296,18 @@ namespace Raindrop.Suibhne {
 
                         break;
 
+                    case Extension.ResponseCodes.Details:
+                        Console.WriteLine("Recieving extension details");
+                        String suiteName = Encoding.UTF8.GetString(extraData);
+                        suite.Name = suiteName;
+                        break;
+
                     case Extension.ResponseCodes.ConnectionComplete:
 
                         break;
 
                     case Extension.ResponseCodes.Permissions:
-                        byte[] permissions = new byte[data.Length - 17];
-                        Array.Copy(data, 17, permissions, 0, permissions.Length);
-                        foreach (byte perm in permissions) {
+                        foreach (byte perm in extraData) {
                             switch ((Extension.Permissions)perm) {
 
                                 case Extension.Permissions.HandleUserEvent:
@@ -317,6 +329,16 @@ namespace Raindrop.Suibhne {
 
                             }
                         }
+                        break;
+
+                    case Extension.ResponseCodes.Commands:
+                        Console.WriteLine("Registering command for extension " + suite.Name);
+
+                        String commandString = Encoding.UTF8.GetString(extraData);
+                        Guid commandID = new Guid(commandString.Substring(commandString.Length - 36));
+                        String commandKey = commandString.Substring(0, commandString.IndexOf(' '));
+                        
+                        Console.WriteLine("Command registration attempt [{0}]: {1}", commandKey, commandID);
                         break;
 
                     case Extension.ResponseCodes.Remove:

@@ -24,8 +24,6 @@ namespace Launcher {
 
                 foreach (String serverDirectory in serverDirectories) {
                     IrcBot server = new IrcBot(serverDirectory, registry);
-
-                    registry.AddBot(server);
                     server.Connect();
                 }
             }

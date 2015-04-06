@@ -29,6 +29,8 @@ namespace Raindrop.Suibhne.Dice {
             this.Authors = new string[] { "Ted Senft" };
             this.Version = "1.0.0";
             this.PermissionList = new byte[] { (byte) Permissions.HandleCommand };
+            this.CommandsList.Add("dice", Guid.NewGuid());
+            this.CommandsList.Add("roll", Guid.NewGuid());
 
             this.Connect();
         }
@@ -122,13 +124,13 @@ namespace Raindrop.Suibhne.Dice {
                     total += result.total;
                 }
 
-                String response = ExtensionsReference.Bold + ExtensionsReference.ColorPrefix + "06rolls a few dice, and the results are: " + ExtensionsReference.Normal + total + "! [Rolls: ";
+                String response = Reference.Bold + Reference.ColorPrefix + "06rolls a few dice, and the results are: " + Reference.Normal + total + "! [Rolls: ";
                 response += String.Join(", ", rolls);
                 response += "]";
 
-                SendMessage(connID, ExtensionsReference.MessageType.ChannelAction, location, response);
+                SendMessage(connID, Reference.MessageType.ChannelAction, location, response);
             } else {
-                SendMessage(connID, ExtensionsReference.MessageType.ChannelMessage, location, 
+                SendMessage(connID, Reference.MessageType.ChannelMessage, location, 
                     "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
             }
         }

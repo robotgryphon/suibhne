@@ -42,6 +42,8 @@ namespace Raindrop.Suibhne {
                 Console.WriteLine("Connection complete on server " + Configuration.Hostname);
                 AutoJoinLocations(configDir);
             };
+
+            exts.AddBot(this);
         }
 
         protected void AutoJoinLocations(String configDir) {

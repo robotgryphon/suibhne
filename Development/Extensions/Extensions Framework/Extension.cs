@@ -28,7 +28,7 @@ namespace Raindrop.Suibhne.Extensions {
             /// Called when bot or extension requests a reactivation
             /// of extension.
             /// </summary>
-            ExtensionRestart = 4,
+            Restart = 4,
 
             /// <summary>
             /// Called when a bot requests an extension be disabled 
@@ -36,7 +36,7 @@ namespace Raindrop.Suibhne.Extensions {
             /// </summary>
             Remove = 5,
 
-            ExtensionCommands = 6,
+            Commands = 6,
 
             /// <summary>
             /// Request for connection details.
@@ -105,6 +105,8 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
+        protected Dictionary<String, Guid> CommandsList;
+
         public Extension() {
             this.Name = "Extension";
             this.Authors = new String[] { "Unknown Author" };
@@ -113,6 +115,7 @@ namespace Raindrop.Suibhne.Extensions {
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.PermissionList = new byte[0];
             this.Connected = false;
+            this.CommandsList = new Dictionary<String, Guid>();
         }
 
         public virtual void Connect() {
@@ -193,6 +196,13 @@ namespace Raindrop.Suibhne.Extensions {
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
                         SendBytes(ResponseCodes.Details, nameAsBytes);
                         SendBytes(ResponseCodes.Permissions, PermissionList);
+
+                        Console.WriteLine("Sending command data..");
+                        foreach (KeyValuePair<String, Guid> command in CommandsList) {
+                            Console.WriteLine("Registering '{0}' using id '{1}'", command.Key, command.Value);
+                            SendBytes(ResponseCodes.Commands, Encoding.UTF8.GetBytes(command.Key + " " + command.Value));
+                        }
+
                         break;
 
                     case ResponseCodes.Details:
@@ -240,6 +250,7 @@ namespace Raindrop.Suibhne.Extensions {
             Array.Copy(Identifier.ToByteArray(), 0, dataToSend, 1, 16);
             Array.Copy(data, 0, dataToSend, 17, data.Length);
 
+            Console.WriteLine("Sending Data");
             conn.Send(dataToSend);
         }
 
