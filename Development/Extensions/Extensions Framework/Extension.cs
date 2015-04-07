@@ -105,8 +105,6 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
-        protected Dictionary<String, Guid> CommandsList;
-
         public Extension() {
             this.Name = "Extension";
             this.Authors = new String[] { "Unknown Author" };
@@ -115,7 +113,8 @@ namespace Raindrop.Suibhne.Extensions {
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.PermissionList = new byte[0];
             this.Connected = false;
-            this.CommandsList = new Dictionary<String, Guid>();
+
+            // TODO: Verify registration of commands in routing table here
         }
 
         public virtual void Connect() {
@@ -197,11 +196,7 @@ namespace Raindrop.Suibhne.Extensions {
                         SendBytes(ResponseCodes.Details, nameAsBytes);
                         SendBytes(ResponseCodes.Permissions, PermissionList);
 
-                        Console.WriteLine("Sending command data..");
-                        foreach (KeyValuePair<String, Guid> command in CommandsList) {
-                            Console.WriteLine("Registering '{0}' using id '{1}'", command.Key, command.Value);
-                            SendBytes(ResponseCodes.Commands, Encoding.UTF8.GetBytes(command.Key + " " + command.Value));
-                        }
+                        // TODO: Handle command registration here
 
                         break;
 
