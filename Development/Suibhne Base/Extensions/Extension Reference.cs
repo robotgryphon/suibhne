@@ -14,6 +14,7 @@ namespace Raindrop.Suibhne {
         public Guid Identifier;
         public Socket Socket;
         public String Name;
+        public List<Guid> Methods;
 
         public void Send(byte[] data) {
             Socket.Send(data);

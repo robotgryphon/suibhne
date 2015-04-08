@@ -14,7 +14,7 @@ namespace Launcher {
     class Program {
         static void Main(string[] args) {
 
-            ExtensionSystem registry = new ExtensionSystem();
+            ExtensionSystem registry = new ExtensionSystem(Environment.CurrentDirectory + "/extensions.ini");
 
             try {
                 IniConfigSource systemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
@@ -22,10 +22,8 @@ namespace Launcher {
                 String serverRootDirectory = systemConfig.Configs["Suibhne"].GetString("ServerRootDirectory", Environment.CurrentDirectory + "/Configuration/Servers/");
                 String[] serverDirectories = Directory.GetDirectories(serverRootDirectory);
 
-                foreach (String serverDirectory in serverDirectories) {
-                    IrcBot server = new IrcBot(serverDirectory, registry);
-                    server.Connect();
-                }
+                // CreateServers(registry, serverDirectories);
+                
             }
 
             catch (FileNotFoundException fnfe) {
@@ -37,6 +35,13 @@ namespace Launcher {
             }
 
             Console.ReadLine();
+        }
+
+        static void CreateServers(ExtensionSystem registry, String[] servers) {
+            foreach (String serverDirectory in servers) {
+                IrcBot server = new IrcBot(serverDirectory, registry);
+                server.Connect();
+            }
         }
     }
 }

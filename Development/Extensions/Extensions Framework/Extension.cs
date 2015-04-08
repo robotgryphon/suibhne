@@ -105,6 +105,10 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
+        public delegate void CommandHandler(Guid origin);
+
+        protected Dictionary<Guid, CommandHandler> Commands;
+
         public Extension() {
             this.Name = "Extension";
             this.Authors = new String[] { "Unknown Author" };
@@ -115,6 +119,7 @@ namespace Raindrop.Suibhne.Extensions {
             this.Connected = false;
 
             // TODO: Verify registration of commands in routing table here
+            this.Commands = new Dictionary<Guid, CommandHandler>();
         }
 
         public virtual void Connect() {
