@@ -22,7 +22,7 @@ namespace Launcher {
                 String serverRootDirectory = systemConfig.Configs["Suibhne"].GetString("ServerRootDirectory", Environment.CurrentDirectory + "/Configuration/Servers/");
                 String[] serverDirectories = Directory.GetDirectories(serverRootDirectory);
 
-                // CreateServers(registry, serverDirectories);
+                CreateServers(registry, serverDirectories);
                 
             }
 

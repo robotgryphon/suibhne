@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Raindrop.Suibhne.Extensions {
     
-    public struct Command {
+    public struct CommandMap {
 
         public String CommandString;
         public Guid Extension;

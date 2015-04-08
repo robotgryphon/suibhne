@@ -30,7 +30,7 @@ namespace Raindrop.Suibhne {
 
         protected Dictionary<Guid, ExtensionReference> Extensions;
 
-        protected Dictionary<String, Command> CommandMapping;
+        protected Dictionary<String, CommandMap> CommandMapping;
 
         public Socket Connection;
 
@@ -44,7 +44,7 @@ namespace Raindrop.Suibhne {
             this.bots = new Dictionary<Guid, IrcBot>();
             this.Identifier = Guid.NewGuid();
 
-            this.CommandMapping = new Dictionary<String, Command>();
+            this.CommandMapping = new Dictionary<String, CommandMap>();
             this.Extensions = new Dictionary<Guid, ExtensionReference>();
             this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -90,18 +90,19 @@ namespace Raindrop.Suibhne {
 
                             extensionRef.Identifier = new Guid(extensionConfig.Configs["Extension"].GetString("identifier", Guid.NewGuid().ToString()));
                             extensionRef.Methods = new List<Guid>();
+                            extensionRef.Ready = false;
 
                             Console.WriteLine("[Extensions System - {0}] Registered identifier string: {1}", ExtensionIdentifier, extensionRef.Identifier);
 
-                            Console.WriteLine("[Extensions System - {0}] Updated on {1}", ExtensionIdentifier, 
+                            Console.WriteLine("[Extensions System - {0}] Updated on {1}", ExtensionIdentifier,
                                 extensionConfig.Configs["Extension"].GetString("updated", DateTime.Now.ToString()));
 
-                            Console.WriteLine("[Extensions System - {0}] Registered methods: {1}", ExtensionIdentifier, 
+                            Console.WriteLine("[Extensions System - {0}] Registered methods: {1}", ExtensionIdentifier,
                                 String.Join(", ", extensionConfig.Configs["Routing"].GetKeys()));
 
                             foreach (String s in extensionConfig.Configs["Routing"].GetKeys())
                                 extensionRef.Methods.Add(new Guid(extensionConfig.Configs["Routing"].GetString(s, Guid.NewGuid().ToString())));
-                            
+
                             Extensions.Add(extensionRef.Identifier, extensionRef);
 
                             Console.WriteLine();
@@ -116,13 +117,13 @@ namespace Raindrop.Suibhne {
                     String commandMap = MainExtensionConfiguration.Configs["Routing"].GetString(commandKey);
                     try {
 
-                        Command c = new Command();
+                        CommandMap c = new CommandMap();
                         c.CommandString = commandKey.ToLower();
                         c.Extension = new Guid(commandMap.Substring(0, commandMap.IndexOf(" ") + 1));
                         if (Extensions.ContainsKey(c.Extension)) {
                             ExtensionReference ext = Extensions[c.Extension];
                             String commandMethod = commandMap.Substring(commandMap.IndexOf(" ") + 1);
-                            
+
                             // Time to map from the extension routing table to the actual thing
                             IniConfigSource extensionConfig = new IniConfigSource(ExtensionsRootDirectory + "/" + c.Extension + "/extension.ini");
                             extensionConfig.CaseSensitive = false;
@@ -134,10 +135,11 @@ namespace Raindrop.Suibhne {
 
                             CommandMapping.Add(commandKey, c);
                         } else {
-                            
+
                         }
 
-                    } catch(FormatException){
+                    }
+                    catch (FormatException) {
                         Console.WriteLine("[Extensions System] Failed to register command '{0}': Invalid mapping format.");
                     }
                 }
@@ -204,26 +206,7 @@ namespace Raindrop.Suibhne {
                                             break;
 
                                         case 4:
-                                            switch (subCommand.ToLower()) {
-
-                                                case "add":
-
-                                                    break;
-
-                                                case "res":
-
-                                                    break;
-
-                                                case "rem":
-
-                                                    break;
-
-                                                default:
-
-                                                    break;
-
-                                            }
-
+                                            // TODO: Manage extension system [enable, disable, remap commands, etc]
                                             break;
                                     }
                                     #endregion
@@ -246,10 +229,10 @@ namespace Raindrop.Suibhne {
                                 case "uptime":
                                     TimeSpan diff = DateTime.Now - StartTime;
                                     response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelAction;
-                                    response.message = "has been up for " + 
+                                    response.message = "has been up for " +
                                         (diff.Days > 0 ? Formatter.GetColoredText(diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
                                         (diff.Hours > 0 ? Formatter.GetColoredText(diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
-                                        (diff.Minutes > 0 ? Formatter.GetColoredText(diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") + 
+                                        (diff.Minutes > 0 ? Formatter.GetColoredText(diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") +
                                         (diff.Seconds > 0 ? Formatter.GetColoredText(diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
 
                                     conn.SendMessage(response);
@@ -275,7 +258,15 @@ namespace Raindrop.Suibhne {
                     break;
 
                 default:
-                    // TODO: Handle command through commands registry
+                    if (CommandMapping.ContainsKey(command)) {
+                        CommandMap mappedCommand = CommandMapping[command];
+
+                        Extensions[CommandMapping[command].Extension].HandleCommandRecieved(conn, mappedCommand.Method, message);
+                    } else {
+                        response.type = Api.Irc.Reference.MessageType.ChannelAction;
+                        response.message = "is not sure what to do with this information. [INVALID COMMAND]";
+                        conn.SendMessage(response);
+                    }
                     break;
             }
         }
@@ -297,28 +288,12 @@ namespace Raindrop.Suibhne {
         protected void AcceptConnection(IAsyncResult result) {
             try {
                 Socket s = Connection.EndAccept(result);
-                Guid newExtGuid = Guid.NewGuid();
-
-                ExtensionReference suite = new ExtensionReference();
-                suite.Identifier = newExtGuid;
-                suite.Socket = s;
-
-                Extensions.Add(newExtGuid, suite);
 
                 Console.WriteLine("[Extensions System] Connected extension.");
 
                 s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
 
-                // Why is this null again?
                 Connection.BeginAccept(AcceptConnection, null);
-
-                byte[] data = new byte[33];
-
-                data[0] = (byte)Extension.ResponseCodes.Activation;
-                Identifier.ToByteArray().CopyTo(data, 1);
-                suite.Identifier.ToByteArray().CopyTo(data, 17);
-
-                Extensions[suite.Identifier].Send(data);
             }
 
             catch (ObjectDisposedException) {
@@ -360,7 +335,7 @@ namespace Raindrop.Suibhne {
             Array.Copy(data, 1, guidBytes, 0, 16);
 
             Guid origin = new Guid(guidBytes);
-            byte[] extraData= new byte[0];
+            byte[] extraData = new byte[0];
             if (data.Length > 17) {
                 extraData = new byte[data.Length - 17];
                 Array.Copy(data, 17, extraData, 0, extraData.Length);
@@ -371,58 +346,28 @@ namespace Raindrop.Suibhne {
 
                 ExtensionReference suite = Extensions[origin];
 
+
                 Console.WriteLine("Handling response code {0} from suite {1}.", code, suite.Name);
 
                 #region Handle Code Response
                 switch (code) {
 
                     case Extension.ResponseCodes.Activation:
+                        Console.WriteLine(origin);
 
+                        if (suite.Socket == null) {
+                            suite.Socket = sock;
+                        }
+
+                        suite.Ready = true;
+
+                        Extensions[suite.Identifier] = suite;
                         break;
 
                     case Extension.ResponseCodes.Details:
                         Console.WriteLine("Recieving extension details");
                         String suiteName = Encoding.UTF8.GetString(extraData);
                         suite.Name = suiteName;
-                        break;
-
-                    case Extension.ResponseCodes.ConnectionComplete:
-
-                        break;
-
-                    case Extension.ResponseCodes.Permissions:
-                        foreach (byte perm in extraData) {
-                            switch ((Extension.Permissions)perm) {
-
-                                case Extension.Permissions.HandleUserEvent:
-                                    // bot.OnUserEvent += suite.HandleUserEvent;
-                                    break;
-
-                                case Extension.Permissions.HandleCommand:
-
-                                    // TODO: Change to send command request back to socket
-                                    foreach (IrcBot bot in bots.Values) {
-                                        bot.OnCommandRecieved += suite.HandleCommandRecieved;
-                                    }
-
-                                    break;
-
-                                default:
-
-                                    break;
-
-                            }
-                        }
-                        break;
-
-                    case Extension.ResponseCodes.Commands:
-                        Console.WriteLine("Registering command for extension " + suite.Name);
-
-                        String commandString = Encoding.UTF8.GetString(extraData);
-                        Guid commandID = new Guid(commandString.Substring(commandString.Length - 36));
-                        String commandKey = commandString.Substring(0, commandString.IndexOf(' '));
-                        
-                        Console.WriteLine("Command registration attempt [{0}]: {1}", commandKey, commandID);
                         break;
 
                     case Extension.ResponseCodes.Remove:

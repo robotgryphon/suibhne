@@ -46,15 +46,15 @@ namespace Math_Extension {
                     String expression = messageParts[1];
                     Expression e = new Expression(expression);
 
-                    SendMessage(conn, ExtensionsReference.MessageType.ChannelMessage, location, "Result: " + e.Evaluate().ToString());
+                    SendMessage(conn, Reference.MessageType.ChannelMessage, location, "Result: " + e.Evaluate().ToString());
                 }
 
                 catch (Exception e) {
-                    SendMessage(conn, ExtensionsReference.MessageType.ChannelMessage, location, "Error: " + e.Message);
+                    SendMessage(conn, Reference.MessageType.ChannelMessage, location, "Error: " + e.Message);
                 }
 
             } else {
-                SendMessage(conn, ExtensionsReference.MessageType.ChannelMessage, location, "Invalid format. Need an expression to parse. (!math <exp>)");
+                SendMessage(conn, Reference.MessageType.ChannelMessage, location, "Invalid format. Need an expression to parse. (!math <exp>)");
             }
         }
     }

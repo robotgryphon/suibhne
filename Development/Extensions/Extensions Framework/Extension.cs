@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
+using Nini.Config;
+
 namespace Raindrop.Suibhne.Extensions {
 
     /// <summary>
@@ -36,7 +38,7 @@ namespace Raindrop.Suibhne.Extensions {
             /// </summary>
             Remove = 5,
 
-            Commands = 6,
+            Command = 6,
 
             /// <summary>
             /// Request for connection details.
@@ -105,7 +107,7 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
-        public delegate void CommandHandler(Guid origin);
+        public delegate void CommandHandler(Guid origin, string sender, string location, string args);
 
         protected Dictionary<Guid, CommandHandler> Commands;
 
@@ -118,6 +120,9 @@ namespace Raindrop.Suibhne.Extensions {
             this.PermissionList = new byte[0];
             this.Connected = false;
 
+            IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
+            this.Identifier = new Guid(config.Configs["Extension"].GetString("identifier", Guid.NewGuid().ToString()));
+
             // TODO: Verify registration of commands in routing table here
             this.Commands = new Dictionary<Guid, CommandHandler>();
         }
@@ -125,7 +130,7 @@ namespace Raindrop.Suibhne.Extensions {
         public virtual void Connect() {
 
             try {
-                Console.WriteLine("STarting conn");
+                Console.WriteLine("Starting conn");
                 conn.BeginConnect("127.0.0.1", 6700, ConnectedCallback, conn);
             }
 
@@ -143,6 +148,9 @@ namespace Raindrop.Suibhne.Extensions {
                 Console.WriteLine("Conn finished");
                 Connected = true;
                 conn.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, conn);
+
+                SendBytes(ResponseCodes.Activation, new byte[0]);
+
             }
 
             catch (SocketException se) {
@@ -194,14 +202,12 @@ namespace Raindrop.Suibhne.Extensions {
                         // Store Identifier for later use
                         this.Identifier = new Guid(guidBytes);
 
-                        Console.WriteLine("Got identifier: " + Identifier);
-
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
                         SendBytes(ResponseCodes.Details, nameAsBytes);
                         SendBytes(ResponseCodes.Permissions, PermissionList);
 
-                        // TODO: Handle command registration here
+                        // TODO: Handle command validation here
 
                         break;
 
@@ -217,6 +223,31 @@ namespace Raindrop.Suibhne.Extensions {
 
                         SendMessage(origin, Reference.MessageType.ChannelMessage, messageLocation, response);
 
+                        break;
+
+                    case ResponseCodes.Command:
+                        if (data.Length > 33) {
+                            guidBytes = new byte[16];
+                            Array.Copy(data, 17, guidBytes, 0, 16);
+                            Guid commandID = new Guid(guidBytes);
+
+                            byte[] commandInfoBytes = new byte[data.Length - 33];
+                            Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
+                            String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
+
+                            Console.WriteLine(commandID);
+                            Console.WriteLine(commandInfo);
+                            Console.WriteLine(Commands[commandID]);
+
+                            Match cmdData = Reference.MessageResponseParser.Match(commandInfo);
+                            if (cmdData.Success && Commands.ContainsKey(commandID)) {
+                                Commands[commandID].Invoke(origin, cmdData.Groups["sender"].Value, cmdData.Groups["location"].Value, cmdData.Groups["message"].Value);
+                            }
+
+                            // Commands[commandID].Invoke(<data>);
+                        } else {
+                            Console.WriteLine("Invalid command string. Need identifier, at least.");
+                        }
                         break;
 
                     case ResponseCodes.Message:

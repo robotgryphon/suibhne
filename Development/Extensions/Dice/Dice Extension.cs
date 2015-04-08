@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+using Nini.Config;
+
 namespace Raindrop.Suibhne.Dice {
 
     struct DieRollResult {
@@ -29,30 +31,11 @@ namespace Raindrop.Suibhne.Dice {
             this.Authors = new string[] { "Ted Senft" };
             this.Version = "1.0.0";
             this.PermissionList = new byte[] { (byte) Permissions.HandleCommand };
-            this.CommandsList.Add("dice", Guid.NewGuid());
-            this.CommandsList.Add("roll", Guid.NewGuid());
+
+            IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
+            this.Commands.Add(new Guid(config.Configs["Routing"].GetString("rollDice")), DoDiceRoll);
 
             this.Connect();
-        }
-
-        protected override void HandleIncomingMessage(byte[] data) {
-            byte type = 1;
-            String location, nickname, message;
-
-            Guid origin;
-            Guid destination = this.Identifier;            
-            ParseMessage(
-                data,
-                out origin,
-                out destination,
-                out type,
-                out location,
-                out nickname,
-                out message);
-
-            if (message.ToLower().StartsWith("!dice") || message.ToLower().StartsWith("!roll")) {
-                DoDiceRoll(origin, location, message);                
-            }
         }
 
         /// <summary>
@@ -109,7 +92,7 @@ namespace Raindrop.Suibhne.Dice {
             return result;
         }
 
-        public void DoDiceRoll(Guid connID, String location, String message) {
+        public void DoDiceRoll(Guid connID, String sender, String location, String message) {
             string[] commandParts = message.Split(new char[] { ' ' });
            
 
