@@ -66,85 +66,51 @@ namespace Raindrop.Suibhne {
             if (File.Exists(config)) {
                 IniConfigSource MainExtensionConfiguration = new IniConfigSource(config);
 
-                Console.WriteLine("[Extensions System] Routing last updated: " + MainExtensionConfiguration.Configs["Extensions"].GetString("updated"));
-                Console.WriteLine();
+                Core.Log("Routing last updated: " + MainExtensionConfiguration.Configs["Extensions"].GetString("updated"), LogType.EXTENSIONS);
 
                 // Get ExtensionDirectories available via directory name
                 String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
 
-                if (Directory.Exists(ExtensionsRootDirectory)) {
-                    String[] ExtensionDirectories = Directory.GetDirectories(ExtensionsRootDirectory);
-                    foreach (String ExtensionDirectory in ExtensionDirectories) {
-                        String ExtensionIdentifier = ExtensionDirectory.Substring(ExtensionDirectory.LastIndexOf("/") + 1);
-                        String extensionConfigurationFile = ExtensionDirectory + "/extension.ini";
+                ExtensionReference[] extensions = Extension_Loader.LoadExtensions(ExtensionsRootDirectory);
 
-                        // Console.WriteLine("[Extensions System] Got extension config file: " + extensionConfigurationFile);
-
-                        // Try to find extension.ini file in there
-                        if (File.Exists(extensionConfigurationFile)) {
-                            // Found extension config file, begin parsing
-                            IniConfigSource extensionConfig = new IniConfigSource(extensionConfigurationFile);
-                            extensionConfig.CaseSensitive = false;
-
-                            ExtensionReference extensionRef = new ExtensionReference();
-
-                            extensionRef.Identifier = new Guid(extensionConfig.Configs["Extension"].GetString("identifier", Guid.NewGuid().ToString()));
-                            extensionRef.Methods = new List<Guid>();
-                            extensionRef.Ready = false;
-
-                            Console.WriteLine("[Extensions System - {0}] Registered identifier string: {1}", ExtensionIdentifier, extensionRef.Identifier);
-
-                            Console.WriteLine("[Extensions System - {0}] Updated on {1}", ExtensionIdentifier,
-                                extensionConfig.Configs["Extension"].GetString("updated", DateTime.Now.ToString()));
-
-                            Console.WriteLine("[Extensions System - {0}] Registered methods: {1}", ExtensionIdentifier,
-                                String.Join(", ", extensionConfig.Configs["Routing"].GetKeys()));
-
-                            foreach (String s in extensionConfig.Configs["Routing"].GetKeys())
-                                extensionRef.Methods.Add(new Guid(extensionConfig.Configs["Routing"].GetString(s, Guid.NewGuid().ToString())));
-
-                            Extensions.Add(extensionRef.Identifier, extensionRef);
-
-                            Console.WriteLine();
-                        }
-                    }
-                } else {
-                    return;
-                }
-
-                String[] commands = MainExtensionConfiguration.Configs["Routing"].GetKeys();
-                foreach (String commandKey in commands) {
-                    String commandMap = MainExtensionConfiguration.Configs["Routing"].GetString(commandKey);
-                    try {
-
-                        CommandMap c = new CommandMap();
-                        c.CommandString = commandKey.ToLower();
-                        c.Extension = new Guid(commandMap.Substring(0, commandMap.IndexOf(" ") + 1));
-                        if (Extensions.ContainsKey(c.Extension)) {
-                            ExtensionReference ext = Extensions[c.Extension];
-                            String commandMethod = commandMap.Substring(commandMap.IndexOf(" ") + 1);
-
-                            // Time to map from the extension routing table to the actual thing
-                            IniConfigSource extensionConfig = new IniConfigSource(ExtensionsRootDirectory + "/" + c.Extension + "/extension.ini");
-                            extensionConfig.CaseSensitive = false;
-
-                            if (extensionConfig.Configs["Routing"].Contains(commandMethod))
-                                c.Method = new Guid(extensionConfig.Configs["Routing"].GetString(commandMethod));
-
-                            Console.WriteLine("[Extensions System] Registering command '{0}' to extension '{1}' (method: {2})", commandKey, ext.Identifier, c.Method);
-
-                            CommandMapping.Add(commandKey, c);
-                        } else {
-
-                        }
-
-                    }
-                    catch (FormatException) {
-                        Console.WriteLine("[Extensions System] Failed to register command '{0}': Invalid mapping format.");
-                    }
-                }
+                Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
             } else {
                 throw new FileNotFoundException("Config file not valid.");
+            }
+        }
+
+        private void MapCommands(IniConfigSource config) {
+            CommandMapping.Clear();
+            String[] commands = config.Configs["Routing"].GetKeys();
+            foreach (String commandKey in commands) {
+                String commandMap = config.Configs["Routing"].GetString(commandKey);
+                try {
+
+                    CommandMap c = new CommandMap();
+                    c.CommandString = commandKey.ToLower();
+                    c.Extension = new Guid(commandMap.Substring(0, commandMap.IndexOf(" ") + 1));
+                    if (Extensions.ContainsKey(c.Extension)) {
+                        ExtensionReference ext = Extensions[c.Extension];
+                        String commandMethod = commandMap.Substring(commandMap.IndexOf(" ") + 1);
+
+                        // Time to map from the extension routing table to the actual thing
+                        /* IniConfigSource extensionConfig = new IniConfigSource(ExtensionsRootDirectory + "/" + c.Extension + "/extension.ini");
+                        extensionConfig.CaseSensitive = false;
+
+                        if (extensionConfig.Configs["Routing"].Contains(commandMethod))
+                            c.Method = new Guid(extensionConfig.Configs["Routing"].GetString(commandMethod));
+
+                        Console.WriteLine("[Extensions System] Registering command '{0}' to extension '{1}' (method: {2})", commandKey, ext.Identifier, c.Method);
+
+                        CommandMapping.Add(commandKey, c); */
+                    } else {
+
+                    }
+
+                }
+                catch (FormatException) {
+                    Core.Log("Failed to register command '{0}': Invalid mapping format.", LogType.EXTENSIONS);
+                }
             }
         }
 
@@ -275,24 +241,22 @@ namespace Raindrop.Suibhne {
 
         #region Server
         internal void StartServer() {
-            Console.WriteLine("[Extensions System] Setting up server..");
+            Core.Log("Setting up server..", LogType.EXTENSIONS);
 
             Connection.Bind(new IPEndPoint(IPAddress.Any, 6700));
             Connection.Listen(5);
 
             Connection.BeginAccept(new AsyncCallback(AcceptConnection), null);
-            Console.WriteLine("[Extensions System] Server setup complete. Extensions system ready.");
+            Core.Log("Server setup complete. Extensions system ready.", LogType.EXTENSIONS);
+            Console.WriteLine();
         }
 
         #region Socket Handling Callbacks
         protected void AcceptConnection(IAsyncResult result) {
             try {
                 Socket s = Connection.EndAccept(result);
-
-                Console.WriteLine("[Extensions System] Connected extension.");
-
+                Core.Log("Connected extension.", LogType.EXTENSIONS);
                 s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
-
                 Connection.BeginAccept(AcceptConnection, null);
             }
 
@@ -300,9 +264,7 @@ namespace Raindrop.Suibhne {
                 // Socket exposed, this is on bot shutdown usually
             }
 
-            catch (Exception e) {
-                Console.WriteLine(e);
-            }
+            catch (Exception) { }
         }
 
         protected void RecieveDataCallback(IAsyncResult result) {
@@ -345,9 +307,6 @@ namespace Raindrop.Suibhne {
             try {
 
                 ExtensionReference suite = Extensions[origin];
-
-
-                Console.WriteLine("Handling response code {0} from suite {1}.", code, suite.Name);
 
                 #region Handle Code Response
                 switch (code) {
@@ -411,7 +370,7 @@ namespace Raindrop.Suibhne {
                 #endregion
             }
             catch (Exception e) {
-                Console.WriteLine(e);
+                Core.Log(e.Message, LogType.ERROR);
             }
         }
 
@@ -419,7 +378,7 @@ namespace Raindrop.Suibhne {
             foreach (KeyValuePair<Guid, ExtensionReference> extension in Extensions) {
                 if (extension.Value.Socket == s) {
                     Extensions.Remove(extension.Key);
-                    Console.WriteLine("[Extensions System] Extension '" + extension.Value.Name + "' removed: " + reason);
+                    Core.Log("Extension '" + extension.Value.Name + "' removed: " + reason, LogType.EXTENSIONS);
                     return;
                 }
             }

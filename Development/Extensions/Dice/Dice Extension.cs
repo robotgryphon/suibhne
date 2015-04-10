@@ -33,7 +33,7 @@ namespace Raindrop.Suibhne.Dice {
             this.PermissionList = new byte[] { (byte) Permissions.HandleCommand };
 
             IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
-            this.Commands.Add(new Guid(config.Configs["Routing"].GetString("rollDice")), DoDiceRoll);
+            this.Commands.Add(Guid.NewGuid(), DoDiceRoll);
 
             this.Connect();
         }

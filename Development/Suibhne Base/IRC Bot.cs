@@ -39,7 +39,7 @@ namespace Raindrop.Suibhne {
 
             this.OnMessageRecieved += HandleMessageRecieved;
             this.OnConnectionComplete += (conn) => {
-                Console.WriteLine("Connection complete on server " + Configuration.Hostname);
+                Core.Log("Connection complete on server " + Configuration.Hostname, LogType.GENERAL);
                 AutoJoinLocations(configDir);
             };
 
@@ -49,8 +49,6 @@ namespace Raindrop.Suibhne {
         protected void AutoJoinLocations(String configDir) {
             String[] locations = Directory.GetFiles(configDir + "/Locations/", "*.ini");
             foreach (String location in locations) {
-                // Load location
-                Console.WriteLine("Got potential location to join: " + location);
                 try {
                     IniConfigSource locConfig = new IniConfigSource(location);
                     Location loc = new Location(locConfig.Configs["Location"].GetString("Name", "#Location"), Api.Irc.Reference.LocationType.Channel);
@@ -59,7 +57,7 @@ namespace Raindrop.Suibhne {
                 }
 
                 catch (Exception e) {
-                    Console.WriteLine("Location loading failed: " + e.Message);
+                    Core.Log("Location loading failed: " + e.Message, LogType.ERROR);
                 }
             }
         }
@@ -77,6 +75,7 @@ namespace Raindrop.Suibhne {
         }
 
         protected void HandleMessageRecieved(Connection conn, Message message) {
+            Core.Log(message.ToString(), LogType.INCOMING);
             if (message.message.StartsWith("!"))
                 HandleCommand(message);
         }
