@@ -14,8 +14,6 @@ namespace Math_Extension {
             : base() {
                 this.Name = "Math Parser";
                 this.Authors = new string[] { "Ted Senft" };
-                this.PermissionList = new byte[] { (byte)Permissions.HandleCommand };
-
                 this.Connect();
         }
 

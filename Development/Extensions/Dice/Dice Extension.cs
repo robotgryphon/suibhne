@@ -30,12 +30,10 @@ namespace Raindrop.Suibhne.Dice {
             this.Name = "Dice Roller";
             this.Authors = new string[] { "Ted Senft" };
             this.Version = "1.0.0";
-            this.PermissionList = new byte[] { (byte) Permissions.HandleCommand };
 
             IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
-            this.Commands.Add(Guid.NewGuid(), DoDiceRoll);
 
-            this.Connect();
+            this.Connect(); 
         }
 
         /// <summary>
@@ -92,6 +90,7 @@ namespace Raindrop.Suibhne.Dice {
             return result;
         }
 
+        [CommandHandler("rollDice"), Help("Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.")]
         public void DoDiceRoll(Guid connID, String sender, String location, String message) {
             string[] commandParts = message.Split(new char[] { ' ' });
            

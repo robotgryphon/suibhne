@@ -7,8 +7,8 @@ using System.Text;
 namespace Raindrop.Suibhne.Extensions {
     class Extension_Loader {
 
-        public static ExtensionReference LoadExtension(String extDir) {
-            ExtensionReference extension = new ExtensionReference();
+        public static ExtensionMap LoadExtension(String extDir) {
+            ExtensionMap extension = new ExtensionMap();
             extension.Ready = false;
             extension.Methods = new List<Guid>();
 
@@ -19,7 +19,6 @@ namespace Raindrop.Suibhne.Extensions {
                 FileStream file = File.OpenRead(extDir + @"\extension");
                 
                 BinaryReader br = new BinaryReader(file);
-
                 extension.Name = br.ReadString();
                 short methods = br.ReadInt16();
                 for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
@@ -89,13 +88,13 @@ namespace Raindrop.Suibhne.Extensions {
             }
         }
 
-        public static ExtensionReference[] LoadExtensions(String extDir) {
-            List<ExtensionReference> extensions = new List<ExtensionReference>();
+        public static ExtensionMap[] LoadExtensions(String extDir) {
+            List<ExtensionMap> extensions = new List<ExtensionMap>();
             if (Directory.Exists(extDir)) {
                 String[] extensionDirectories = Directory.GetDirectories(extDir);
                 foreach (String extensionDir in extensionDirectories) {
-                    ExtensionReference ext = LoadExtension(extensionDir);
-                    if (ext.Identifier != null)
+                    ExtensionMap ext = LoadExtension(extensionDir);
+                    if (ext.Name != "")
                         extensions.Add(ext);
                 }
             }

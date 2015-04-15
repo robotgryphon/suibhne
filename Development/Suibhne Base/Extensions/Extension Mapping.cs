@@ -9,7 +9,7 @@ using Raindrop.Suibhne.Extensions;
 
 namespace Raindrop.Suibhne {
     
-    public struct ExtensionReference {
+    public struct ExtensionMap {
 
         public Guid Identifier;
         public Socket Socket;
@@ -24,7 +24,7 @@ namespace Raindrop.Suibhne {
         public void HandleCommandRecieved(IrcBot conn, Guid method, Message msg) {
             if (Ready) {
                 String commandArgs = msg.message.Substring(msg.message.IndexOf(" ") + 1);
-                Console.WriteLine(commandArgs);
+                Core.Log(commandArgs, LogType.EXTENSIONS);
 
                 byte[] commandArgsBytes = Encoding.UTF8.GetBytes(commandArgs);
                 byte[] messageOriginBytes = Encoding.UTF8.GetBytes(msg.location + " " + msg.sender.nickname + " ");

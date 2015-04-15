@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 
 using Nini.Config;
+using System.Reflection;
 
 namespace Raindrop.Suibhne.Extensions {
 
@@ -102,11 +103,6 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
-        public byte[] PermissionList {
-            get;
-            protected set;
-        }
-
         public delegate void CommandHandler(Guid origin, string sender, string location, string args);
 
         protected Dictionary<Guid, CommandHandler> Commands;
@@ -117,14 +113,82 @@ namespace Raindrop.Suibhne.Extensions {
             this.Version = "0.0.1";
             this.buffer = new byte[2048];
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.PermissionList = new byte[0];
             this.Connected = false;
 
             IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
-            this.Identifier = new Guid(config.Configs["Extension"].GetString("identifier", Guid.NewGuid().ToString()));
+
+            if (File.Exists(Environment.CurrentDirectory + @"\install")) {
+
+                FileStream file = File.OpenRead(Environment.CurrentDirectory + @"\install");
+
+                try {
+                    byte[] guidBytes = new byte[16];
+                    file.Read(guidBytes, 0, 16);
+                    Guid ext = new Guid(guidBytes);
+
+                    this.Identifier = ext;
+                }
+
+                catch (Exception e) {
+
+                }
+
+                file.Close();
+
+            } else {
+
+                // Terminate, extension not installed properly
+                
+            }
 
             // TODO: Verify registration of commands in routing table here
             this.Commands = new Dictionary<Guid, CommandHandler>();
+
+            MapCommandMethods();
+        }
+
+
+        private void MapCommandMethods() {
+            // Get all possible command handler methods and create a mapping dictionary
+
+            Dictionary<String, CommandHandler> methodMap = new Dictionary<string, CommandHandler>();
+
+            MethodInfo[] definedMethods = this.GetType().GetMethods();
+            foreach (MethodInfo method in definedMethods) {
+                Object[] attrs = method.GetCustomAttributes(typeof(CommandHandlerAttribute), false);
+                foreach (Object attr in attrs) {
+                    if (attr.GetType() == typeof(CommandHandlerAttribute)) {
+                        CommandHandlerAttribute handler = (CommandHandlerAttribute) attr;
+                        Console.WriteLine("Got command handler: " + handler.Name + " (maps to " + method.Name + ")");
+
+                        // TODO: Add in validation here for valid CommandHandler delegate
+                        CommandHandler methodDelegate = (CommandHandler) Delegate.CreateDelegate(typeof(CommandHandler), null, method);
+
+                        methodMap.Add(handler.Name,  methodDelegate);
+                    }
+                }
+            }
+
+            if (File.Exists(Environment.CurrentDirectory + @"\extension")) {
+
+                FileStream file = File.OpenRead(Environment.CurrentDirectory + @"\extension");
+
+                BinaryReader br = new BinaryReader(file);
+
+                br.ReadString();
+                short methods = br.ReadInt16();
+                for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
+                    String methodName = br.ReadString();
+                    byte[] guid = br.ReadBytes(16);
+                    Guid g = new Guid(guid);
+
+                    if (methodMap.ContainsKey(methodName)) {
+                        this.Commands.Add(g, methodMap[methodName]);
+                    }
+
+                }
+
+            }
         }
 
         public virtual void Connect() {
@@ -191,9 +255,10 @@ namespace Raindrop.Suibhne.Extensions {
                 Guid origin = new Guid(guidBytes);
 
                 String additionalData = "";
-                if(data.Length > 17)
+                if (data.Length > 17)
                     additionalData = Encoding.UTF8.GetString(data, 17, data.Length - 17);
 
+                Console.WriteLine((ResponseCodes) data[0]);
                 switch ((ResponseCodes)data[0]) {
                     case ResponseCodes.Activation:
                         // Allocate space to keep GUID as bytes in, for processing
@@ -205,16 +270,15 @@ namespace Raindrop.Suibhne.Extensions {
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
                         SendBytes(ResponseCodes.Details, nameAsBytes);
-                        SendBytes(ResponseCodes.Permissions, PermissionList);
 
                         // TODO: Handle command validation here
 
                         break;
 
                     case ResponseCodes.Details:
-                        string response = 
-                            "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " + 
-                            Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal + 
+                        string response =
+                            "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " +
+                            Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal +
                             " developed by " + Reference.ColorPrefix + "03" + string.Join(", ", Authors);
 
                         String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
@@ -226,6 +290,8 @@ namespace Raindrop.Suibhne.Extensions {
                         break;
 
                     case ResponseCodes.Command:
+
+                        // TODO: Fix the command recieve method to handle recieved data from bot system (maybe on that side?)
                         if (data.Length > 33) {
                             guidBytes = new byte[16];
                             Array.Copy(data, 17, guidBytes, 0, 16);
@@ -234,17 +300,10 @@ namespace Raindrop.Suibhne.Extensions {
                             byte[] commandInfoBytes = new byte[data.Length - 33];
                             Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
                             String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
-
-                            Console.WriteLine(commandID);
-                            Console.WriteLine(commandInfo);
-                            Console.WriteLine(Commands[commandID]);
-
                             Match cmdData = Reference.MessageResponseParser.Match(commandInfo);
                             if (cmdData.Success && Commands.ContainsKey(commandID)) {
                                 Commands[commandID].Invoke(origin, cmdData.Groups["sender"].Value, cmdData.Groups["location"].Value, cmdData.Groups["message"].Value);
                             }
-
-                            // Commands[commandID].Invoke(<data>);
                         } else {
                             Console.WriteLine("Invalid command string. Need identifier, at least.");
                         }
@@ -302,7 +361,7 @@ namespace Raindrop.Suibhne.Extensions {
 
         public static void ParseMessage(byte[] data, out Guid origin, out Guid destination, out byte type, out String location, out String sender, out String message) {
             byte[] guidBytes = new byte[16];
-            
+
             Array.Copy(data, 1, guidBytes, 0, 16);
             origin = new Guid(guidBytes);
 
@@ -330,14 +389,14 @@ namespace Raindrop.Suibhne.Extensions {
         }
 
         protected void SendMessage(Guid destination, Reference.MessageType type, String location, String message) {
-            byte[] rawMessage = PrepareMessage(Identifier, destination, (byte) type, location, Name.Replace(' ', '_'), message);
-            conn.Send(rawMessage);            
+            byte[] rawMessage = PrepareMessage(Identifier, destination, (byte)type, location, Name.Replace(' ', '_'), message);
+            conn.Send(rawMessage);
         }
 
         protected virtual void HandleIncomingMessage(byte[] data) {
 
-            
- 
+
+
             Guid destination = this.Identifier;
             byte type = 1;
             String location, nickname, message;
