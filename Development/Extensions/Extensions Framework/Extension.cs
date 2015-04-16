@@ -103,7 +103,7 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
-        public delegate void CommandHandler(Guid origin, string sender, string location, string args);
+        public delegate void CommandHandler(Extension e, Guid origin, string sender, string location, string args);
 
         protected Dictionary<Guid, CommandHandler> Commands;
 
@@ -138,7 +138,7 @@ namespace Raindrop.Suibhne.Extensions {
             } else {
 
                 // Terminate, extension not installed properly
-                
+
             }
 
             // TODO: Verify registration of commands in routing table here
@@ -158,13 +158,13 @@ namespace Raindrop.Suibhne.Extensions {
                 Object[] attrs = method.GetCustomAttributes(typeof(CommandHandlerAttribute), false);
                 foreach (Object attr in attrs) {
                     if (attr.GetType() == typeof(CommandHandlerAttribute)) {
-                        CommandHandlerAttribute handler = (CommandHandlerAttribute) attr;
+                        CommandHandlerAttribute handler = (CommandHandlerAttribute)attr;
                         Console.WriteLine("Got command handler: " + handler.Name + " (maps to " + method.Name + ")");
 
                         // TODO: Add in validation here for valid CommandHandler delegate
-                        CommandHandler methodDelegate = (CommandHandler) Delegate.CreateDelegate(typeof(CommandHandler), null, method);
+                        CommandHandler methodDelegate = (CommandHandler)Delegate.CreateDelegate(typeof(CommandHandler), null, method);
 
-                        methodMap.Add(handler.Name,  methodDelegate);
+                        methodMap.Add(handler.Name, methodDelegate);
                     }
                 }
             }
@@ -258,7 +258,7 @@ namespace Raindrop.Suibhne.Extensions {
                 if (data.Length > 17)
                     additionalData = Encoding.UTF8.GetString(data, 17, data.Length - 17);
 
-                Console.WriteLine((ResponseCodes) data[0]);
+                Console.WriteLine((ResponseCodes)data[0]);
                 switch ((ResponseCodes)data[0]) {
                     case ResponseCodes.Activation:
                         // Allocate space to keep GUID as bytes in, for processing
@@ -285,7 +285,8 @@ namespace Raindrop.Suibhne.Extensions {
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        SendMessage(origin, Reference.MessageType.ChannelMessage, messageLocation, response);
+                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, messageLocation, this.Name.Replace(" ", "_"), response);
+                        SendBytes(ResponseCodes.Message, rawMessage);
 
                         break;
 
@@ -300,9 +301,9 @@ namespace Raindrop.Suibhne.Extensions {
                             byte[] commandInfoBytes = new byte[data.Length - 33];
                             Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
                             String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
-                            Match cmdData = Reference.MessageResponseParser.Match(commandInfo);
-                            if (cmdData.Success && Commands.ContainsKey(commandID)) {
-                                Commands[commandID].Invoke(origin, cmdData.Groups["sender"].Value, cmdData.Groups["location"].Value, cmdData.Groups["message"].Value);
+                            if (Commands.ContainsKey(commandID)) {
+                                string[] cdata = commandInfo.Split(new char[] { ' ' }, 3);
+                                Commands[commandID].Invoke(this, origin, cdata[1], cdata[0], cdata[2]);
                             }
                         } else {
                             Console.WriteLine("Invalid command string. Need identifier, at least.");
@@ -334,7 +335,7 @@ namespace Raindrop.Suibhne.Extensions {
         /// </summary>
         /// <param name="code"></param>
         /// <param name="data"></param>
-        protected virtual void SendBytes(ResponseCodes code, byte[] data) {
+        public virtual void SendBytes(ResponseCodes code, byte[] data) {
             byte[] dataToSend = new byte[17 + data.Length];
             dataToSend[0] = (byte)code;
             Array.Copy(Identifier.ToByteArray(), 0, dataToSend, 1, 16);
@@ -388,11 +389,6 @@ namespace Raindrop.Suibhne.Extensions {
             }
         }
 
-        protected void SendMessage(Guid destination, Reference.MessageType type, String location, String message) {
-            byte[] rawMessage = PrepareMessage(Identifier, destination, (byte)type, location, Name.Replace(' ', '_'), message);
-            conn.Send(rawMessage);
-        }
-
         protected virtual void HandleIncomingMessage(byte[] data) {
 
 
@@ -415,6 +411,15 @@ namespace Raindrop.Suibhne.Extensions {
 
             Console.WriteLine("Recieved message from " + nickname + ": " + message);
         }
+
+        public void SendMessage(Guid destination, Reference.MessageType type, String location, String message) {
+            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, location, this.Name.Replace(' ', '_'), message);
+            conn.Send(rawMessage);
+        }
+
+
     }
+
+
 }
 

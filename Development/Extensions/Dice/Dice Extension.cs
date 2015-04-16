@@ -91,17 +91,17 @@ namespace Raindrop.Suibhne.Dice {
         }
 
         [CommandHandler("rollDice"), Help("Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.")]
-        public void DoDiceRoll(Guid connID, String sender, String location, String message) {
+        public void DoDiceRoll(Extension ext, Guid connID, String sender, String location, String message) {
             string[] commandParts = message.Split(new char[] { ' ' });
            
 
             long total = 0;
-            if (commandParts.Length >= 2 && commandParts.Length <= 11) {
+            if (commandParts.Length >= 1 && commandParts.Length <= 10) {
 
                 List<DieRollResult> rolls = new List<DieRollResult>();
 
-                for (int die = 1; die < commandParts.Length; die++) {
-                    DieRollResult result = GetDiceValue(commandParts[die]);
+                for (int die = 1; die < commandParts.Length + 1; die++) {
+                    DieRollResult result = GetDiceValue(commandParts[die-1]);
                     rolls.Add(result);
                     total += result.total;
                 }
@@ -110,10 +110,9 @@ namespace Raindrop.Suibhne.Dice {
                 response += String.Join(", ", rolls);
                 response += "]";
 
-                SendMessage(connID, Reference.MessageType.ChannelAction, location, response);
+                ext.SendMessage(connID, Reference.MessageType.ChannelMessage, location, response);
             } else {
-                SendMessage(connID, Reference.MessageType.ChannelMessage, location, 
-                    "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
+                ext.SendMessage(connID, Reference.MessageType.ChannelMessage, location, "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
             }
         }
 

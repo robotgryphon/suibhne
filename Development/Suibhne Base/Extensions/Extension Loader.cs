@@ -7,10 +7,39 @@ using System.Text;
 namespace Raindrop.Suibhne.Extensions {
     class Extension_Loader {
 
+        public static Guid GetMethodIdentifier(String extDir, String methodName) {
+            if (File.Exists(extDir + @"\extension")) {
+
+                FileStream file = File.OpenRead(extDir + @"\extension");
+
+                BinaryReader br = new BinaryReader(file);
+                br.ReadString();
+                short methods = br.ReadInt16();
+                for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
+                    String mname = br.ReadString();
+                    byte[] guid = br.ReadBytes(16);
+                    Guid g = new Guid(guid);
+                    if (mname.ToLower() == methodName.ToLower())
+                        return g;
+                }
+
+                br.Close();
+                br.Dispose();
+                file.Dispose();
+
+                file = null;
+                br = null;
+
+            } else {
+                Core.Log("Could not load extension; Extension information files not found.", LogType.ERROR);
+            }
+
+            return Guid.Empty;
+        }
+
         public static ExtensionMap LoadExtension(String extDir) {
             ExtensionMap extension = new ExtensionMap();
             extension.Ready = false;
-            extension.Methods = new List<Guid>();
 
             Core.Log(extDir + @"\extension");
 
@@ -20,14 +49,9 @@ namespace Raindrop.Suibhne.Extensions {
                 
                 BinaryReader br = new BinaryReader(file);
                 extension.Name = br.ReadString();
-                short methods = br.ReadInt16();
-                for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
-                    String methodName = br.ReadString();
-                    byte[] guid = br.ReadBytes(16);
-                    Guid g = new Guid(guid);
-                    extension.Methods.Add(g);
-                }
-
+                file.Close();
+                file.Dispose();
+                file = null;
             } else {
                 Core.Log("Could not load extension; Extension information files not found.", LogType.ERROR);
             }
@@ -50,6 +74,8 @@ namespace Raindrop.Suibhne.Extensions {
                 }
 
                 file.Close();
+                file.Dispose();
+                file = null;
             }
 
             return extension;

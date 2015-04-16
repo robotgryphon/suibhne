@@ -89,18 +89,24 @@ namespace Raindrop.Suibhne {
             foreach (String commandKey in commands) {
                 String commandMap = config.Configs["Routing"].GetString(commandKey);
                 try {
-
                     CommandMap c = new CommandMap();
                     c.CommandString = commandKey.ToLower();
-                    c.Extension = new Guid(commandMap.Substring(0, commandMap.IndexOf(" ") + 1));
-                    if (Extensions.ContainsKey(c.Extension)) {
-                        ExtensionMap ext = Extensions[c.Extension];
-                        String commandMethod = commandMap.Substring(commandMap.IndexOf(" ") + 1);
+                    String ExtensionsRootDirectory = config.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
+                    int nameEnd = commandMap.IndexOf(":");
+                    if (nameEnd == -1) nameEnd = 0;
 
-                        Core.Log("Mapping '" + c.CommandString + "' to extension " + ext.Name + ".", LogType.EXTENSIONS);
-                        this.CommandMapping.Add(c.CommandString, c);
-                    } else {
-                        Core.Log("Command identifier not valid for command: " + commandKey, LogType.ERROR);
+                    String extensionDirectory = ExtensionsRootDirectory + commandMap.Substring(0, nameEnd);
+                    if (Directory.Exists(extensionDirectory)) {
+                        ExtensionMap em = Extension_Loader.LoadExtension(extensionDirectory);
+                        if (em.Identifier != Guid.Empty) {
+                            c.Extension = em.Identifier;
+                            Guid methodID = Extension_Loader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd+1).Trim());
+                            if (methodID != Guid.Empty) {
+                                c.Method = methodID;
+                                CommandMapping.Add(c.CommandString, c);
+                            } else
+                                Core.Log("Command '" + commandKey + "' not valid. Method name is wrong.", LogType.ERROR);
+                        }
                     }
                 }
                 catch (FormatException) {
@@ -223,7 +229,7 @@ namespace Raindrop.Suibhne {
                     if (CommandMapping.ContainsKey(command)) {
                         CommandMap mappedCommand = CommandMapping[command];
                         ExtensionMap ext = Extensions[CommandMapping[command].Extension];
-                        Core.Log("Recieved command '" + command + "'. Telling extension " + ext.Name + " to handle it.", LogType.EXTENSIONS);
+                        Core.Log("Recieved command '" + command + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
                         ext.HandleCommandRecieved(conn, mappedCommand.Method, message);
                     } else {
                         response.type = Api.Irc.Reference.MessageType.ChannelAction;
@@ -310,7 +316,7 @@ namespace Raindrop.Suibhne {
                 switch (code) {
 
                     case Extension.ResponseCodes.Activation:
-                        Console.WriteLine(origin);
+                        Core.Log("Activating extension: " + Extensions[origin].Name, LogType.EXTENSIONS);
 
                         if (suite.Socket == null) {
                             suite.Socket = sock;
