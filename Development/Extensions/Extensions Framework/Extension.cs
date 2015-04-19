@@ -17,68 +17,6 @@ namespace Raindrop.Suibhne.Extensions {
     /// </summary>
     public abstract class Extension {
 
-        public enum ResponseCodes : byte {
-            /// <summary>
-            /// Request for extension name, runtype, and permissions.
-            /// </summary>
-            Activation = 1,
-
-            Details = 2,
-
-            Permissions = 3,
-
-            /// <summary>
-            /// Called when bot or extension requests a reactivation
-            /// of extension.
-            /// </summary>
-            Restart = 4,
-
-            /// <summary>
-            /// Called when a bot requests an extension be disabled 
-            /// at runtime.
-            /// </summary>
-            Remove = 5,
-
-            Command = 6,
-
-            /// <summary>
-            /// Request for connection details.
-            /// </summary>
-            ConnectionDetails = 10,
-
-            /// <summary>
-            /// Connection initialized and starting up.
-            /// Includes a connection ID for tracking.
-            /// </summary>
-            ConnectionStart = 11,
-
-            /// <summary>
-            /// Connection finished connecting.
-            /// Includes a connection ID for tracking.
-            /// </summary>
-            ConnectionComplete = 12,
-
-            /// <summary>
-            /// Connection starting disconnect.
-            /// Includes a connection ID for tracking.
-            /// </summary>
-            ConnectionEnding = 13,
-
-            /// <summary>
-            /// Connection finished disconnecting.
-            /// Includes a connection ID for tracking.
-            /// </summary>
-            ConnectionStopped = 14,
-
-            Message = 20
-        };
-
-        public enum Permissions : byte {
-            HandleConnection,
-            HandleUserEvent,
-            HandleCommand
-        }
-
         public String Name { get; protected set; }
         public Guid Identifier;
 
@@ -213,7 +151,7 @@ namespace Raindrop.Suibhne.Extensions {
                 Connected = true;
                 conn.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, conn);
 
-                SendBytes(ResponseCodes.Activation, new byte[0]);
+                SendBytes(Responses.Activation, new byte[0]);
 
             }
 
@@ -258,24 +196,18 @@ namespace Raindrop.Suibhne.Extensions {
                 if (data.Length > 17)
                     additionalData = Encoding.UTF8.GetString(data, 17, data.Length - 17);
 
-                Console.WriteLine((ResponseCodes)data[0]);
-                switch ((ResponseCodes)data[0]) {
-                    case ResponseCodes.Activation:
-                        // Allocate space to keep GUID as bytes in, for processing
-                        Array.Copy(data, 17, guidBytes, 0, 16);
-
-                        // Store Identifier for later use
-                        this.Identifier = new Guid(guidBytes);
-
+                Console.WriteLine((Responses)data[0]);
+                switch ((Responses)data[0]) {
+                    case Responses.Activation:
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
-                        SendBytes(ResponseCodes.Details, nameAsBytes);
+                        SendBytes(Responses.Details, nameAsBytes);
 
                         // TODO: Handle command validation here
 
                         break;
 
-                    case ResponseCodes.Details:
+                    case Responses.Details:
                         string response =
                             "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " +
                             Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal +
@@ -286,13 +218,11 @@ namespace Raindrop.Suibhne.Extensions {
                         String messageSender = messageParts[1];
 
                         byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, messageLocation, this.Name.Replace(" ", "_"), response);
-                        SendBytes(ResponseCodes.Message, rawMessage);
+                        SendBytes(Responses.Message, rawMessage);
 
                         break;
 
-                    case ResponseCodes.Command:
-
-                        // TODO: Fix the command recieve method to handle recieved data from bot system (maybe on that side?)
+                    case Responses.Command:
                         if (data.Length > 33) {
                             guidBytes = new byte[16];
                             Array.Copy(data, 17, guidBytes, 0, 16);
@@ -310,12 +240,36 @@ namespace Raindrop.Suibhne.Extensions {
                         }
                         break;
 
-                    case ResponseCodes.Message:
+                    case Responses.Help:
+                        if (data.Length > 33) {
+                            guidBytes = new byte[16];
+                            Array.Copy(data, 17, guidBytes, 0, 16);
+                            Guid commandID = new Guid(guidBytes);
+
+                            byte[] commandInfoBytes = new byte[data.Length - 33];
+                            Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
+                            String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
+                            if (Commands.ContainsKey(commandID)) {
+                                string[] cdata = commandInfo.Split(new char[] { ' ' }, 3);
+                                MethodInfo method = Commands[commandID].Method;
+
+                                Object[] attrs = method.GetCustomAttributes(typeof(HelpAttribute), false);
+                                foreach (Object attr in attrs) {
+                                    if (attr.GetType() == typeof(HelpAttribute)) {
+                                        HelpAttribute handler = (HelpAttribute)attr;
+                                        SendMessage(origin, Reference.MessageType.ChannelMessage, cdata[0], handler.HelpText);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    case Responses.Message:
                         HandleIncomingMessage(data);
                         break;
 
 
-                    case ResponseCodes.Remove:
+                    case Responses.Remove:
                         conn.Shutdown(SocketShutdown.Both);
                         conn.Close();
                         Connected = false;
@@ -335,7 +289,7 @@ namespace Raindrop.Suibhne.Extensions {
         /// </summary>
         /// <param name="code"></param>
         /// <param name="data"></param>
-        public virtual void SendBytes(ResponseCodes code, byte[] data) {
+        public virtual void SendBytes(Responses code, byte[] data) {
             byte[] dataToSend = new byte[17 + data.Length];
             dataToSend[0] = (byte)code;
             Array.Copy(Identifier.ToByteArray(), 0, dataToSend, 1, 16);
@@ -349,7 +303,7 @@ namespace Raindrop.Suibhne.Extensions {
             byte[] messageAsBytes = Encoding.UTF8.GetBytes(location + " " + sender + " " + message);
             byte[] rawMessage = new byte[34 + messageAsBytes.Length];
 
-            rawMessage[0] = (byte)ResponseCodes.Message;
+            rawMessage[0] = (byte)Responses.Message;
 
             Array.Copy(origin.ToByteArray(), 0, rawMessage, 1, 16);
             Array.Copy(destination.ToByteArray(), 0, rawMessage, 17, 16);

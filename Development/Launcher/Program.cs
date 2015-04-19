@@ -9,6 +9,7 @@ using Raindrop.Api.Irc;
 using Raindrop.Suibhne;
 
 using Nini.Config;
+using Raindrop.Suibhne.Extensions;
 
 namespace Launcher {
     class Program {

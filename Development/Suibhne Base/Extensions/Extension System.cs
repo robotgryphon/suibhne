@@ -13,9 +13,9 @@ using System.Net.Sockets;
 using Raindrop.Api.Irc;
 using System.Net;
 using System.Text;
-using Raindrop.Suibhne.Extensions;
+using Raindrop.Suibhne;
 
-namespace Raindrop.Suibhne {
+namespace Raindrop.Suibhne.Extensions {
 
     /// <summary>
     /// The extension registry connects an IrcBot and a set of extension suites together.
@@ -31,12 +31,9 @@ namespace Raindrop.Suibhne {
         protected Dictionary<Guid, ExtensionMap> Extensions;
 
         protected Dictionary<String, CommandMap> CommandMapping;
-
-        public Socket Connection;
-
-        protected byte[] Buffer;
-
         protected DateTime StartTime;
+
+        protected ExtensionServer Server;
 
         public ExtensionSystem(String extensionConfig) {
             this.bots = new Dictionary<Guid, IrcBot>();
@@ -44,15 +41,15 @@ namespace Raindrop.Suibhne {
 
             this.CommandMapping = new Dictionary<String, CommandMap>();
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
-            this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            this.Buffer = new byte[1024];
+            
 
             this.StartTime = DateTime.Now;
 
             InitializeExtensions(extensionConfig);
 
-            StartServer();
+            Server = new ExtensionServer();
+            Server.OnDataRecieved += HandleIncomingData;
+            Server.Start();
         }
 
         #region Registry
@@ -152,7 +149,7 @@ namespace Raindrop.Suibhne {
                                                     if (exts.Length > 0) {
                                                         byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
                                                         byte[] request = new byte[17 + originBytes.Length];
-                                                        request[0] = (byte)Extension.ResponseCodes.Details;
+                                                        request[0] = (byte) Responses.Details;
                                                         Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
                                                         Array.Copy(originBytes, 0, request, 18, 16);
 
@@ -225,6 +222,22 @@ namespace Raindrop.Suibhne {
                     #endregion
                     break;
 
+                case "help":
+                    if (subCommand != "") {
+                        // Map command to id
+                        if (CommandMapping.ContainsKey(subCommand)) {
+                            CommandMap mappedCommand = CommandMapping[subCommand];
+                            ExtensionMap ext = Extensions[mappedCommand.Extension];
+                            Core.Log("Recieved help command for command '" + command + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
+                            ext.HandleHelpCommandRecieved(conn, mappedCommand.Method, message);
+                        } else {
+                            response.type = Api.Irc.Reference.MessageType.ChannelAction;
+                            response.message = "does not have information on that command.";
+                            conn.SendMessage(response);
+                        }
+                    }
+                    break;
+
                 default:
                     if (CommandMapping.ContainsKey(command)) {
                         CommandMap mappedCommand = CommandMapping[command];
@@ -241,61 +254,8 @@ namespace Raindrop.Suibhne {
         }
         #endregion
 
-
-        #region Server
-        internal void StartServer() {
-            Core.Log("Setting up server..", LogType.EXTENSIONS);
-
-            Connection.Bind(new IPEndPoint(IPAddress.Any, 6700));
-            Connection.Listen(5);
-
-            Connection.BeginAccept(new AsyncCallback(AcceptConnection), null);
-            Core.Log("Server setup complete. Extensions system ready.", LogType.EXTENSIONS);
-            Console.WriteLine();
-        }
-
-        #region Socket Handling Callbacks
-        protected void AcceptConnection(IAsyncResult result) {
-            try {
-                Socket s = Connection.EndAccept(result);
-                Core.Log("Connected extension.", LogType.EXTENSIONS);
-                s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
-                Connection.BeginAccept(AcceptConnection, null);
-            }
-
-            catch (ObjectDisposedException) {
-                // Socket exposed, this is on bot shutdown usually
-            }
-
-            catch (Exception) { }
-        }
-
-        protected void RecieveDataCallback(IAsyncResult result) {
-            Socket recievedOn = (Socket)result.AsyncState;
-            try {
-                int recievedAmount = recievedOn.EndReceive(result);
-
-                if (recievedAmount > 0) {
-                    byte[] btemp = new byte[recievedAmount];
-                    Array.Copy(Buffer, btemp, recievedAmount);
-
-                    HandleIncomingData(recievedOn, btemp);
-
-                    recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
-                } else {
-                    recievedOn.Shutdown(SocketShutdown.Both);
-                    RemoveBySocket(recievedOn, "Extension shut down.");
-                }
-            }
-
-            catch (SocketException) {
-                RemoveBySocket(recievedOn, "Extension crashed.");
-            }
-        }
-        #endregion
-
         protected void HandleIncomingData(Socket sock, byte[] data) {
-            Extension.ResponseCodes code = (Extension.ResponseCodes)data[0];
+            Responses code = (Responses)data[0];
             byte[] guidBytes = new byte[16];
             Array.Copy(data, 1, guidBytes, 0, 16);
 
@@ -315,7 +275,7 @@ namespace Raindrop.Suibhne {
                 #region Handle Code Response
                 switch (code) {
 
-                    case Extension.ResponseCodes.Activation:
+                    case Responses.Activation:
                         Core.Log("Activating extension: " + Extensions[origin].Name, LogType.EXTENSIONS);
 
                         if (suite.Socket == null) {
@@ -327,18 +287,18 @@ namespace Raindrop.Suibhne {
                         Extensions[origin] = suite;
                         break;
 
-                    case Extension.ResponseCodes.Details:
+                    case Responses.Details:
                         Console.WriteLine("Recieving extension details");
                         String suiteName = Encoding.UTF8.GetString(extraData);
                         suite.Name = suiteName;
                         break;
 
-                    case Extension.ResponseCodes.Remove:
+                    case Responses.Remove:
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
                         return;
 
-                    case Extension.ResponseCodes.Message:
+                    case Responses.Message:
                         Message msg = new Message("", new User(), "");
                         Guid destination;
                         byte type = 1;
@@ -378,33 +338,22 @@ namespace Raindrop.Suibhne {
             }
         }
 
-        protected void RemoveBySocket(Socket s, string reason = "") {
-            foreach (KeyValuePair<Guid, ExtensionMap> extension in Extensions) {
-                if (extension.Value.Socket == s) {
-                    Extensions.Remove(extension.Key);
-                    Core.Log("Extension '" + extension.Value.Name + "' removed: " + reason, LogType.EXTENSIONS);
-                    return;
-                }
-            }
-        }
-
         internal void Shutdown() {
             foreach (KeyValuePair<Guid, ExtensionMap> ext in Extensions) {
-                ext.Value.Send(new byte[] { (byte)Extension.ResponseCodes.Remove });
+                ext.Value.Send(new byte[] { (byte) Responses.Remove });
                 ext.Value.Socket.Shutdown(SocketShutdown.Both);
             }
 
             Extensions.Clear();
-            Connection.Close();
+            Server.Stop();
         }
 
-        // TODO: Start tracking which ExtensionDirectories are enabled on which server
+        // TODO: Start tracking which Extensions are enabled on which server
 
         internal ExtensionMap[] GetServerExtensions(Guid id) {
             return new ExtensionMap[0];
 
         }
-        #endregion
 
     }
 }

@@ -20,23 +20,35 @@ namespace Raindrop.Suibhne {
             Socket.Send(data);
         }
 
+        public byte[] PrepareStandardMessage(IrcBot conn, Guid method, Message msg) {
+            String commandArgs = msg.message.Substring(msg.message.IndexOf(" ") + 1);
+
+            byte[] commandArgsBytes = Encoding.UTF8.GetBytes(commandArgs);
+            byte[] messageOriginBytes = Encoding.UTF8.GetBytes(msg.location + " " + msg.sender.nickname + " ");
+
+            byte[] data = new byte[33 + commandArgsBytes.Length + messageOriginBytes.Length];
+            data[0] = (byte)Responses.Message;
+            Array.Copy(conn.Identifier.ToByteArray(), 0, data, 1, 16);
+            Array.Copy(method.ToByteArray(), 0, data, 17, 16);
+            Array.Copy(messageOriginBytes, 0, data, 33, messageOriginBytes.Length);
+            Array.Copy(commandArgsBytes, 0, data, 33 + messageOriginBytes.Length, commandArgsBytes.Length);
+
+            return data;
+        }
+
+        public void HandleHelpCommandRecieved(IrcBot conn, Guid method, Message msg) {
+            if (Ready) {
+                byte[] data = PrepareStandardMessage(conn, method, msg);
+                data[0] = (byte)Responses.Help;
+                Send(data);
+            }
+        }
+
         public void HandleCommandRecieved(IrcBot conn, Guid method, Message msg) {
             if (Ready) {
-                String commandArgs = msg.message.Substring(msg.message.IndexOf(" ") + 1);
-                Core.Log(commandArgs, LogType.EXTENSIONS);
-
-                byte[] commandArgsBytes = Encoding.UTF8.GetBytes(commandArgs);
-                byte[] messageOriginBytes = Encoding.UTF8.GetBytes(msg.location + " " + msg.sender.nickname + " ");
-
-                byte[] data = new byte[33 + commandArgsBytes.Length + messageOriginBytes.Length];
-                data[0] = (byte)Extension.ResponseCodes.Command;
-                Array.Copy(conn.Identifier.ToByteArray(), 0, data, 1, 16);
-                Array.Copy(method.ToByteArray(), 0, data, 17, 16);
-                Array.Copy(messageOriginBytes, 0, data, 33, messageOriginBytes.Length);
-                Array.Copy(commandArgsBytes, 0, data, 33 + messageOriginBytes.Length, commandArgsBytes.Length);
-
+                byte[] data = PrepareStandardMessage(conn, method, msg);
+                data[0] = (byte)Responses.Command;
                 Send(data);
-
             }
         }
     }
