@@ -5,12 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-using Ostenvighx.Api.Irc;
+
 using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Networks.Base;
 
 using Nini.Config;
 using Ostenvighx.Suibhne.Extensions;
 
+// TODO: Create Parrot extension to test regex/extension handling
 namespace Launcher {
     class Program {
         static void Main(string[] args) {
@@ -40,7 +42,7 @@ namespace Launcher {
 
         static void CreateNetworks(ExtensionSystem registry, String[] servers) {
             foreach (String networkDirectory in servers) {
-                IrcBot network = new IrcBot(networkDirectory, registry);
+                NetworkBot network = new NetworkBot(networkDirectory, registry);
                 network.Connect();
             }
         }

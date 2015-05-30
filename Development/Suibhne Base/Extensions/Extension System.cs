@@ -10,10 +10,10 @@ using Nini.Config;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
-using Ostenvighx.Api.Irc;
 using System.Net;
 using System.Text;
 using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Networks.Base;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -27,7 +27,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public Guid Identifier;
         public Dictionary<Guid, Object> Registry;
-        protected Dictionary<Guid, IrcBot> bots;
+        protected Dictionary<Guid, NetworkBot> bots;
 
         protected Dictionary<Guid, ExtensionMap> Extensions;
 
@@ -39,7 +39,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public ExtensionSystem(String extensionConfig) {
             this.Registry = new Dictionary<Guid, object>();
-            this.bots = new Dictionary<Guid, IrcBot>();
+            this.bots = new Dictionary<Guid, NetworkBot>();
             this.Identifier = Guid.NewGuid();
 
             this.CommandMapping = new Dictionary<String, CommandMap>();
@@ -55,7 +55,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         #region Registry
-        public void AddBot(IrcBot bot) {
+        public void AddBot(NetworkBot bot) {
             if (!this.bots.ContainsKey(bot.Identifier))
                 bots.Add(bot.Identifier, bot);
         }
@@ -116,7 +116,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        public void HandleCommand(IrcBot conn, Message message) {
+        public void HandleCommand(NetworkBot conn, Message message) {
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
             String subCommand = "";
@@ -124,14 +124,14 @@ namespace Ostenvighx.Suibhne.Extensions {
                 subCommand = messageParts[1].ToLower();
 
             Message response = new Message(message.locationID, conn.Me, "Response");
-            response.type = Api.Irc.Reference.MessageType.ChannelMessage;
+            response.type = Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
 
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "sys":
                     #region System Commands
                     if (messageParts.Length > 1 && subCommand != "") {
-                        if (conn.IsBotOperator(message.sender.nickname)) {
+                        if (conn.IsBotOperator(message.sender.DisplayName)) {
                             switch (subCommand) {
                                 case "exts":
                                     #region Extensions System Handling
@@ -175,45 +175,41 @@ namespace Ostenvighx.Suibhne.Extensions {
                                     break;
 
                                 case "version":
-                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                                     response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
                                     conn.SendMessage(response);
-                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
-                                    break;
-
-
-                                case "raw":
-                                    string rawCommand = message.message.Split(new char[] { ' ' }, 3)[2];
-                                    conn.SendRaw(rawCommand);
-
+                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                                     break;
 
                                 case "uptime":
                                     TimeSpan diff = DateTime.Now - StartTime;
-                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelAction;
-                                    response.message = "has been up for " +
-                                        (diff.Days > 0 ? Formatter.GetColoredText(diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
-                                        (diff.Hours > 0 ? Formatter.GetColoredText(diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
-                                        (diff.Minutes > 0 ? Formatter.GetColoredText(diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") +
-                                        (diff.Seconds > 0 ? Formatter.GetColoredText(diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
+                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                                    //response.message = "has been up for " +
+                                    //    (diff.Days > 0 ? diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
+                                    //    (diff.Hours > 0 ? diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
+                                    //    (diff.Minutes > 0 ? diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") +
+                                    //    (diff.Seconds > 0 ? diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
+
+                                    // TODO: Use network static Formatter
+                                    response.message = "has been up for " + diff.ToString();
 
                                     conn.SendMessage(response);
-                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                                     break;
 
                                 default:
-                                    response.type = Api.Irc.Reference.MessageType.ChannelAction;
-                                    response.message = "does not know what you are asking for. " + Formatter.GetColoredText("[Invalid subcommand]", Formatter.Colors.Orange);
+                                    response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                                    response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
                                     conn.SendMessage(response);
-                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                                     break;
                             }
                         } else {
-                            response.message = Formatter.GetColoredText("Error: ", Formatter.Colors.Red) + "You must be a bot operator to run the system command.";
+                            response.message = "Error: " + "You must be a bot operator to run the system command.";
                             conn.SendMessage(response);
                         }
                     } else {
-                        response.message = Formatter.GetColoredText("Error: ", Formatter.Colors.Red) + "System command takes at least a single parameter. Try raw, version, or exts.";
+                        response.message = "Error: " + "System command takes at least a single parameter. Try raw, version, or exts.";
                         conn.SendMessage(response);
                     }
                     #endregion
@@ -228,7 +224,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                             Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
                             ext.HandleHelpCommandRecieved(conn, mappedCommand.Method, message);
                         } else {
-                            response.type = Api.Irc.Reference.MessageType.ChannelAction;
+                            response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                             response.message = "does not have information on that command.";
                             conn.SendMessage(response);
                         }
@@ -242,7 +238,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Core.Log("Recieved command '" + command + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
                         ext.HandleCommandRecieved(conn, mappedCommand.Method, message);
                     } else {
-                        response.type = Api.Irc.Reference.MessageType.ChannelAction;
+                        response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                         response.message = "is not sure what to do with this information. [INVALID COMMAND]";
                         conn.SendMessage(response);
                     }
@@ -306,19 +302,19 @@ namespace Ostenvighx.Suibhne.Extensions {
                             out origin,
                             out destination,
                             out type,
-                            out msg.sender.nickname,
+                            out msg.sender.DisplayName,
                             out msg.message);
 
-                        msg.type = (Ostenvighx.Api.Irc.Reference.MessageType)type;
+                        msg.type = (Ostenvighx.Suibhne.Networks.Base.Reference.MessageType)type;
                         msg.locationID = destination;
 
                         try {
-                            IrcBot bot = bots[Core.NetworkLocationMap[destination]];
+                            NetworkBot bot = bots[Core.NetworkLocationMap[destination]];
                             bot.SendMessage(msg);
                         }
 
                         catch (KeyNotFoundException) {
-                            // Server invalid or changed between requests
+                            // Network invalid or changed between requests
                         }
 
                         break;
@@ -353,7 +349,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         /// <summary>
         /// Gets a list of all active extensions on a particular server.
         /// </summary>
-        /// <param name="id">Connection to check</param>
+        /// <param name="id">IrcNetwork to check</param>
         /// <returns></returns>
         [InfoNode("listserv")]
         public ExtensionMap[] GetExtensions(Guid serverID) {
