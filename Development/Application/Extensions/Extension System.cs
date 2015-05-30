@@ -181,6 +181,13 @@ namespace Ostenvighx.Suibhne.Extensions {
                                     response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                                     break;
 
+                                case "conninfo":
+                                    // Get info about connection and system
+                                    Assembly a = conn.GetType().Assembly;
+                                    response.message = a.GetName().Name;
+                                    conn.SendMessage(response);
+                                    break;
+
                                 case "uptime":
                                     TimeSpan diff = DateTime.Now - StartTime;
                                     response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;

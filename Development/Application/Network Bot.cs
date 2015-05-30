@@ -9,7 +9,6 @@ using System.Reflection;
 namespace Ostenvighx.Suibhne {
     public class NetworkBot {
 
-        private ServerConfig _config;
         protected ExtensionSystem _extensions;
         protected Network _network;
 
@@ -32,7 +31,6 @@ namespace Ostenvighx.Suibhne {
 
         public NetworkBot(String configDir, ExtensionSystem exts){
             this.Identifier = Guid.NewGuid();
-            this._config = ServerConfig.LoadFromFile(configDir + "/connection.ini");
             this._extensions = exts;
             this.Operators = new List<string>();
 
@@ -46,34 +44,27 @@ namespace Ostenvighx.Suibhne {
                 // Fun happens here. Reflection to create a new network from an assembly.
                 // Oh god, what have I done...
                 String networkBase = Directory.GetParent(configDir).Parent.FullName + @"\NetworkTypes\";
-                string[] files = Directory.GetFiles(networkBase + networkType + "/", "network.dll");
+                string[] files = Directory.GetFiles(networkBase + "/", networkType + ".dll");
                 
                 // First file should be network dll
                 Assembly networkAssembly = Assembly.LoadFrom(files[0]);
-
-                Core.Log("Loaded network connector: " + networkAssembly.GetName().Name);
                 Type[] types = networkAssembly.GetTypes();
                 foreach (Type t in types) {
                     if (t.IsSubclassOf(typeof(Network))) {
-                        Core.Log("Found network child: " + t.Name);
                         this._network = (Network)Activator.CreateInstance(t);
                         _network.Setup(configDir + "/connection.ini");
-
-                        Core.Log(_network.Server.locationName);
+                        _network.OnMessageRecieved += this.HandleMessageRecieved;
+                        _network.OnConnectionComplete += (conn) => {
+                            AutoJoinLocations(configDir);
+                        };
                     }
                 }
 
-                foreach (String op in _config.Operators) Operators.Add(op.ToLower());
+                String ops = config.Configs["Server"].GetString("Operators", "");
+
+                foreach (String op in ops.Split(new char[]{','}))
+                    Operators.Add(op.Trim().ToLower());
             }
-            
-
-            
-
-            //this.OnMessageRecieved += HandleMessageRecieved;
-            //this.OnConnectionComplete += (conn) => {
-            //    Core.Log("Connection complete on server " + Configuration.Hostname, LogType.GENERAL);
-            //    AutoJoinLocations(configDir);
-            //};
 
             exts.AddBot(this);
         }

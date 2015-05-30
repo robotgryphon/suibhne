@@ -11,11 +11,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
     public struct Reference {
 
         #region _conn Delegates
-        /// <summary>
-        /// An Networks.Irc _conn event is one that is typically fired off when the connection is started or stopped.
-        /// This is fairly well covered with ConnectionComplete and Disconnect events.
-        /// </summary>
-        public delegate void IrcConnectionEvent(IrcNetwork conn);
+        
 
         /// <summary>
         /// Location events are called when things such as channels and queries are being worked on.
@@ -38,13 +34,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// or outgoing data. There are probably more focused delegates to use!
         /// </summary>
         public delegate void IrcDataEvent(IrcNetwork conn, String data);
-
-        /// <summary>
-        /// An IRC Message event is fired off when some incoming or outgoing form of message
-        /// is being handled by the connection. These types of messages include locationID messages,
-        /// queries, various actions, and notices.
-        /// </summary>
-        public delegate void IrcMessageEvent(IrcNetwork conn, Message message);
         #endregion
     }
 }

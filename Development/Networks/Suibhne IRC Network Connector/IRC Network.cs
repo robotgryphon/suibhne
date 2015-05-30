@@ -49,18 +49,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// </summary>
         private Dictionary<String, List<Base.User>> TempUsersContainer;
 
-        #region _conn Events
-        /// <summary>
-        /// Occurs when on connection complete.
-        /// </summary>
-        public event Reference.IrcConnectionEvent OnConnectionComplete;
-
-        /// <summary>
-        /// Occurs when a connection is terminated.
-        /// </summary>
-        public event Reference.IrcConnectionEvent OnDisconnectComplete;
-        #endregion
-
         #region Data Events
         /// <summary>
         /// Fired when any incomind data is recieved. This is the absolute lowest-level
@@ -134,12 +122,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.Listened.Add(Guid.NewGuid(), Server);
 
             this.port = 6667;
-
-            this.OnConnectionComplete += HandleFinishConnection;
-
         }
-
-        
 
         /// <summary>
         /// Create a new Networks.Irc _conn object.
@@ -153,12 +136,10 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="authPass">Password to use for nickserv.</param>
         public IrcNetwork(String host, int port, String nickname, String username, String realname = "", String password = "", String authPass = "")
             : this() {
-            this.Me = new Base.User();
-            Me.Username = username;
-            Me.LastDisplayName = authPass;
-            Me.DisplayName = nickname;
-
+            this.Me = new Base.User(username, authPass, nickname);
             this.Server = new Base.Location(host, password, Base.Reference.LocationType.Network);
+            this.Listened.Add(Guid.NewGuid(), Server);
+
             this.port = port;
         }
 
@@ -185,6 +166,26 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.port = config.GetInt("port", 6667);
         }
 
+        public override void Setup(String configFile) {
+            IniConfigSource configLoaded = new IniConfigSource(configFile);
+            configLoaded.CaseSensitive = false;
+            IniConfig config = (IniConfig) configLoaded.Configs["Server"];
+
+            this.Me = new Base.User(
+                config.GetString("username", "user"),
+                config.GetString("authpassword", ""),
+                config.GetString("nickname", "IrcUser"));
+
+            this.Server = new Base.Location(
+                config.GetString("host", "localhost"),
+                config.GetString("password", ""),
+                Base.Reference.LocationType.Network);
+
+            this.Listened.Add(Guid.NewGuid(), Server);
+
+            this.port = config.GetInt("port", 6667);
+        }
+
         protected virtual void HandleFinishConnection(IrcNetwork conn) {
 
             if (Me.LastDisplayName != "") {
@@ -192,8 +193,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 message.target = new Base.User("NickServ");
                 SendMessage(message);
             }
-
-            this.OnConnectionComplete -= HandleFinishConnection;
         }
 
         /// <summary>
@@ -368,14 +367,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 case "376":
                     // End MOTD
                     Status = Base.Reference.ConnectionStatus.Connected;
-                    if (this.OnConnectionComplete != null)
-                        OnConnectionComplete(this);
+                    HandleConnectionComplete(this);
                     break;
 
                 case "422":
                     Status = Base.Reference.ConnectionStatus.Connected;
-                    if (this.OnConnectionComplete != null)
-                        OnConnectionComplete(this);
+                    HandleConnectionComplete(this);
                     break;
 
                 case "433":
@@ -411,9 +408,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 case "privmsg":
                 case "notice":
                     Base.Message msg = Message.Parse(this, line);
-
-                    //if (this.OnMessageRecieved != null)
-                    //    this.OnMessageRecieved(this, msg);
+                    HandleMessageRecieved(this, msg);                        
                     break;
             }
         }
@@ -607,9 +602,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         public override void Disconnect(String reason = "Leaving") {
             SendRaw("QUIT :" + reason);
             Status = Base.Reference.ConnectionStatus.Disconnected;
-
-            if (this.OnDisconnectComplete != null)
-                OnDisconnectComplete(this);
+            HandleDisconnectComplete(this);
         }
 
     }

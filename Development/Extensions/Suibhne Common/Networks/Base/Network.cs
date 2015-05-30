@@ -29,6 +29,16 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public event Events.NetworkMessageEvent OnMessageSent;
 
         /// <summary>
+        /// Occurs when a connection is complete and data is ready to be served.
+        /// </summary>
+        public event Events.NetworkConnectionEvent OnConnectionComplete;
+
+        /// <summary>
+        /// Occurs when a connection is completely terminated.
+        /// </summary>
+        public event Events.NetworkConnectionEvent OnDisconnectComplete;
+
+        /// <summary>
         /// Includes known information about the bot as an Networks.Base User.
         /// Use DisplayName and similar information here.
         /// </summary>
@@ -53,5 +63,22 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public abstract Guid JoinLocation(Location l);
 
         public abstract void LeaveLocation(Guid g);
+
+        #region Network Events
+        protected virtual void HandleConnectionComplete(Network n) {
+            if (n.OnConnectionComplete != null)
+                n.OnConnectionComplete(n);
+        }
+
+        protected virtual void HandleDisconnectComplete(Network n) {
+            if (n.OnDisconnectComplete != null)
+                n.OnDisconnectComplete(n);
+        }
+        
+        protected virtual void HandleMessageRecieved(Network n, Message m) {
+            if (n.OnMessageRecieved != null)
+                n.OnMessageRecieved(n, m);
+        }
+        #endregion
     }
 }
