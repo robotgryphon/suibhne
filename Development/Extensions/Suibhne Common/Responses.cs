@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
     public enum Responses : byte {
         /// <summary>
         /// Request for extension name, runtype, and permissions.

@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
     public class ExtensionServer {
 
         protected Socket Connection;
@@ -56,18 +56,20 @@ namespace Raindrop.Suibhne.Extensions {
             try {
                 int recievedAmount = recievedOn.EndReceive(result);
 
-                if (recievedAmount > 0) {
-                    byte[] btemp = new byte[recievedAmount];
-                    Array.Copy(Buffer, btemp, recievedAmount);
-
-                    if (this.OnDataRecieved != null)
-                        OnDataRecieved(recievedOn, btemp);
-
-                    recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
-                } else {
+                if (recievedAmount <= 0) {
+                    // TODO: HandleSocketDisconnect();
                     recievedOn.Shutdown(SocketShutdown.Both);
-                    // RemoveBySocket(recievedOn, "Extension shut down.");
+                    return;
                 }
+
+                byte[] btemp = new byte[recievedAmount];
+                Array.Copy(Buffer, btemp, recievedAmount);
+
+                // TODO: Make this more specific. Use OnExtensionDataRecieved. Extend that further.
+                if (this.OnDataRecieved != null)
+                    OnDataRecieved(recievedOn, btemp);
+
+                recievedOn.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
             }
 
             catch (SocketException) {

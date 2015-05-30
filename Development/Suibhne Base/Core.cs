@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Ostenvighx.Api.Irc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Raindrop.Suibhne {
+namespace Ostenvighx.Suibhne {
 
     public enum LogType : byte {
         GENERAL,
@@ -14,6 +15,8 @@ namespace Raindrop.Suibhne {
     }
 
     class Core {
+
+        public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 

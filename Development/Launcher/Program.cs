@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-using Raindrop.Api.Irc;
-using Raindrop.Suibhne;
+using Ostenvighx.Api.Irc;
+using Ostenvighx.Suibhne;
 
 using Nini.Config;
-using Raindrop.Suibhne.Extensions;
+using Ostenvighx.Suibhne.Extensions;
 
 namespace Launcher {
     class Program {
@@ -20,15 +20,15 @@ namespace Launcher {
             try {
                 IniConfigSource systemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
 
-                String serverRootDirectory = systemConfig.Configs["Suibhne"].GetString("ServerRootDirectory", Environment.CurrentDirectory + "/Configuration/Servers/");
-                String[] serverDirectories = Directory.GetDirectories(serverRootDirectory);
+                String networkRootDirectory = systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
+                String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
 
-                CreateServers(registry, serverDirectories);
+                CreateNetworks(registry, networkDirectories);
                 
             }
 
             catch (FileNotFoundException fnfe) {
-                Console.WriteLine("Server configuration file not found: " + fnfe.Message);
+                Console.WriteLine("Network configuration file not found: " + fnfe.Message);
             }
 
             catch (Exception e) {
@@ -38,10 +38,10 @@ namespace Launcher {
             Console.ReadLine();
         }
 
-        static void CreateServers(ExtensionSystem registry, String[] servers) {
-            foreach (String serverDirectory in servers) {
-                IrcBot server = new IrcBot(serverDirectory, registry);
-                server.Connect();
+        static void CreateNetworks(ExtensionSystem registry, String[] servers) {
+            foreach (String networkDirectory in servers) {
+                IrcBot network = new IrcBot(networkDirectory, registry);
+                network.Connect();
             }
         }
     }

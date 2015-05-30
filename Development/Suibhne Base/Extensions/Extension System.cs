@@ -10,13 +10,14 @@ using Nini.Config;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
-using Raindrop.Api.Irc;
+using Ostenvighx.Api.Irc;
 using System.Net;
 using System.Text;
-using Raindrop.Suibhne;
+using Ostenvighx.Suibhne;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
 
+    [InfoNode("extensions")]
     /// <summary>
     /// The extension registry connects an IrcBot and a set of extension suites together.
     /// It goes through the ExtensionDirectories directory defined in the bot configuration and
@@ -25,23 +26,24 @@ namespace Raindrop.Suibhne.Extensions {
     public class ExtensionSystem {
 
         public Guid Identifier;
-
+        public Dictionary<Guid, Object> Registry;
         protected Dictionary<Guid, IrcBot> bots;
 
         protected Dictionary<Guid, ExtensionMap> Extensions;
 
         protected Dictionary<String, CommandMap> CommandMapping;
+
         protected DateTime StartTime;
 
         protected ExtensionServer Server;
 
         public ExtensionSystem(String extensionConfig) {
+            this.Registry = new Dictionary<Guid, object>();
             this.bots = new Dictionary<Guid, IrcBot>();
             this.Identifier = Guid.NewGuid();
 
             this.CommandMapping = new Dictionary<String, CommandMap>();
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
-            
 
             this.StartTime = DateTime.Now;
 
@@ -57,6 +59,8 @@ namespace Raindrop.Suibhne.Extensions {
             if (!this.bots.ContainsKey(bot.Identifier))
                 bots.Add(bot.Identifier, bot);
         }
+
+        
 
         protected void InitializeExtensions(String config) {
             if (File.Exists(config)) {
@@ -97,7 +101,7 @@ namespace Raindrop.Suibhne.Extensions {
                         ExtensionMap em = Extension_Loader.LoadExtension(extensionDirectory);
                         if (em.Identifier != Guid.Empty) {
                             c.Extension = em.Identifier;
-                            Guid methodID = Extension_Loader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd+1).Trim());
+                            Guid methodID = Extension_Loader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd + 1).Trim());
                             if (methodID != Guid.Empty) {
                                 c.Method = methodID;
                                 CommandMapping.Add(c.CommandString, c);
@@ -119,7 +123,7 @@ namespace Raindrop.Suibhne.Extensions {
             if (messageParts.Length > 1)
                 subCommand = messageParts[1].ToLower();
 
-            Message response = new Message(message.location, conn.Me, "Response");
+            Message response = new Message(message.locationID, conn.Me, "Response");
             response.type = Api.Irc.Reference.MessageType.ChannelMessage;
 
             // TODO: Create system commands extension and remove this from here. Clean this method up.
@@ -144,18 +148,11 @@ namespace Raindrop.Suibhne.Extensions {
                                                     response.message = "Gathering data for global extension list. May take a minute.";
                                                     conn.SendMessage(response);
 
-                                                    ExtensionMap[] exts = GetServerExtensions(conn.Identifier);
+                                                    String[] exts = GetExtensions();
 
                                                     if (exts.Length > 0) {
-                                                        byte[] originBytes = Encoding.UTF8.GetBytes(message.sender.nickname + " " + message.location);
-                                                        byte[] request = new byte[17 + originBytes.Length];
-                                                        request[0] = (byte) Responses.Details;
-                                                        Array.Copy(conn.Identifier.ToByteArray(), 0, request, 1, 16);
-                                                        Array.Copy(originBytes, 0, request, 18, 16);
-
-                                                        foreach (ExtensionMap ext in exts) {
-                                                            ext.Send(request);
-                                                        }
+                                                        response.message = String.Join(", ", exts);
+                                                        conn.SendMessage(response);
                                                     } else {
                                                         response.message = "No extensions loaded on server.";
                                                         conn.SendMessage(response);
@@ -178,10 +175,10 @@ namespace Raindrop.Suibhne.Extensions {
                                     break;
 
                                 case "version":
-                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelAction;
                                     response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
                                     conn.SendMessage(response);
-                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
                                     break;
 
 
@@ -193,7 +190,7 @@ namespace Raindrop.Suibhne.Extensions {
 
                                 case "uptime":
                                     TimeSpan diff = DateTime.Now - StartTime;
-                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelAction;
+                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelAction;
                                     response.message = "has been up for " +
                                         (diff.Days > 0 ? Formatter.GetColoredText(diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
                                         (diff.Hours > 0 ? Formatter.GetColoredText(diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
@@ -201,14 +198,14 @@ namespace Raindrop.Suibhne.Extensions {
                                         (diff.Seconds > 0 ? Formatter.GetColoredText(diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
 
                                     conn.SendMessage(response);
-                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
                                     break;
 
                                 default:
                                     response.type = Api.Irc.Reference.MessageType.ChannelAction;
                                     response.message = "does not know what you are asking for. " + Formatter.GetColoredText("[Invalid subcommand]", Formatter.Colors.Orange);
                                     conn.SendMessage(response);
-                                    response.type = Raindrop.Api.Irc.Reference.MessageType.ChannelMessage;
+                                    response.type = Ostenvighx.Api.Irc.Reference.MessageType.ChannelMessage;
                                     break;
                             }
                         } else {
@@ -228,7 +225,7 @@ namespace Raindrop.Suibhne.Extensions {
                         if (CommandMapping.ContainsKey(subCommand)) {
                             CommandMap mappedCommand = CommandMapping[subCommand];
                             ExtensionMap ext = Extensions[mappedCommand.Extension];
-                            Core.Log("Recieved help command for command '" + command + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
+                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
                             ext.HandleHelpCommandRecieved(conn, mappedCommand.Method, message);
                         } else {
                             response.type = Api.Irc.Reference.MessageType.ChannelAction;
@@ -271,7 +268,7 @@ namespace Raindrop.Suibhne.Extensions {
 
                 ExtensionMap suite = Extensions[origin];
 
-                
+
                 #region Handle Code Response
                 switch (code) {
 
@@ -299,23 +296,24 @@ namespace Raindrop.Suibhne.Extensions {
                         return;
 
                     case Responses.Message:
-                        Message msg = new Message("", new User(), "");
+                        Message msg = new Message(Guid.Empty, new User(), "");
                         Guid destination;
                         byte type = 1;
 
+                        // TODO: Need to create global location registry
                         Extension.ParseMessage(
                             data,
                             out origin,
                             out destination,
                             out type,
-                            out msg.location,
                             out msg.sender.nickname,
                             out msg.message);
 
-                        msg.type = (Raindrop.Api.Irc.Reference.MessageType)type;
+                        msg.type = (Ostenvighx.Api.Irc.Reference.MessageType)type;
+                        msg.locationID = destination;
 
                         try {
-                            IrcBot bot = bots[destination];
+                            IrcBot bot = bots[Core.NetworkLocationMap[destination]];
                             bot.SendMessage(msg);
                         }
 
@@ -338,21 +336,28 @@ namespace Raindrop.Suibhne.Extensions {
             }
         }
 
-        internal void Shutdown() {
-            foreach (KeyValuePair<Guid, ExtensionMap> ext in Extensions) {
-                ext.Value.Send(new byte[] { (byte) Responses.Remove });
-                ext.Value.Socket.Shutdown(SocketShutdown.Both);
+        /// <summary>
+        /// Gets a list of all active extensions.
+        /// </summary>
+        /// <returns></returns>
+        [InfoNode("list")]
+        public String[] GetExtensions() {
+            List<String> maps = new List<String>();
+            foreach (ExtensionMap map in Extensions.Values) {
+                maps.Add(map.Name + ": " + map.Identifier);
             }
-
-            Extensions.Clear();
-            Server.Stop();
+            return maps.ToArray();
         }
 
         // TODO: Start tracking which Extensions are enabled on which server
-
-        internal ExtensionMap[] GetServerExtensions(Guid id) {
+        /// <summary>
+        /// Gets a list of all active extensions on a particular server.
+        /// </summary>
+        /// <param name="id">Connection to check</param>
+        /// <returns></returns>
+        [InfoNode("listserv")]
+        public ExtensionMap[] GetExtensions(Guid serverID) {
             return new ExtensionMap[0];
-
         }
 
     }

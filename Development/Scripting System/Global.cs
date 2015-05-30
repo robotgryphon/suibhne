@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace System_Commands {
-    class Program {
-        static void Main(string[] args) {
-        }
+namespace Scripting_System {
+    class Global {
+
+        public static Dictionary<String, NodeMap> Nodes;
+
     }
 }

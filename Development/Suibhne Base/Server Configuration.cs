@@ -1,4 +1,4 @@
-﻿using Raindrop.Api.Irc;
+﻿using Ostenvighx.Api.Irc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 
 using Nini.Config;
 
-namespace Raindrop.Suibhne {
+namespace Ostenvighx.Suibhne {
     public struct ServerConfig {
 
         public String Hostname;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
     public struct Reference {
 
         /// <summary>
@@ -53,6 +53,6 @@ namespace Raindrop.Suibhne.Extensions {
         public static String Normal = "\u000f";
         public static String ColorPrefix = "\u0003";
 
-        public static Regex MessageResponseParser = new Regex(@"^(?<location>[^\s]+)\s(?<sender>[^\s]+)\s(?<message>.*)$");
+        public static Regex MessageResponseParser = new Regex(@"^(?<sender>[^\s]+)\s(?<message>.*)$");
     }
 }

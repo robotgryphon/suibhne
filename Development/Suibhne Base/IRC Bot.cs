@@ -1,12 +1,12 @@
 ﻿using System;
-using Raindrop.Suibhne.Extensions;
-using Raindrop.Api.Irc;
+using Ostenvighx.Suibhne.Extensions;
+using Ostenvighx.Api.Irc;
 using System.Collections.Generic;
 using System.IO;
 using Nini.Config;
 
-namespace Raindrop.Suibhne {
-    public class IrcBot : Raindrop.Api.Irc.Connection {
+namespace Ostenvighx.Suibhne {
+    public class IrcBot : Ostenvighx.Api.Irc.Connection {
 
         private ServerConfig Configuration;
 
@@ -53,7 +53,8 @@ namespace Raindrop.Suibhne {
                     IniConfigSource locConfig = new IniConfigSource(location);
                     Location loc = new Location(locConfig.Configs["Location"].GetString("Name", "#Location"), Api.Irc.Reference.LocationType.Channel);
 
-                    JoinChannel(loc);
+                    Guid id = JoinLocation(loc);
+                    Core.NetworkLocationMap.Add(id, Identifier);
                 }
 
                 catch (Exception e) {

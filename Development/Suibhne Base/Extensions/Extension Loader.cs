@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
     class Extension_Loader {
 
         public static Guid GetMethodIdentifier(String extDir, String methodName) {
@@ -13,7 +13,7 @@ namespace Raindrop.Suibhne.Extensions {
                 FileStream file = File.OpenRead(extDir + @"\extension");
 
                 BinaryReader br = new BinaryReader(file);
-                br.ReadString();
+                br.ReadString(); br.ReadBytes(16);
                 short methods = br.ReadInt16();
                 for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
                     String mname = br.ReadString();
@@ -49,33 +49,14 @@ namespace Raindrop.Suibhne.Extensions {
                 
                 BinaryReader br = new BinaryReader(file);
                 extension.Name = br.ReadString();
+                extension.Identifier = new Guid(br.ReadBytes(16));
+
+
                 file.Close();
                 file.Dispose();
                 file = null;
             } else {
                 Core.Log("Could not load extension; Extension information files not found.", LogType.ERROR);
-            }
-
-            if (File.Exists(extDir + @"\install")) {
-                // Read install file and register extension
-                FileStream file = File.OpenRead(extDir + @"\install");
-
-                try {
-                    byte[] guidBytes = new byte[16];
-                    file.Read(guidBytes, 0, 16);
-                    Guid ext = new Guid(guidBytes);
-                    extension.Identifier = ext;
-                }
-
-                catch (Exception e) {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: install file not valid. Need to reinstall.");
-                    Console.ResetColor();
-                }
-
-                file.Close();
-                file.Dispose();
-                file = null;
             }
 
             return extension;
@@ -98,7 +79,7 @@ namespace Raindrop.Suibhne.Extensions {
                             extensionsList.Add(ext);
                         }
 
-                        catch (Exception e) {
+                        catch (Exception) {
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Error: install file not valid. Need to reinstall.");
                             Console.ResetColor();

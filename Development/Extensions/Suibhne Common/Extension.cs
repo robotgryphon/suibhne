@@ -9,7 +9,7 @@ using System.Threading;
 using Nini.Config;
 using System.Reflection;
 
-namespace Raindrop.Suibhne.Extensions {
+namespace Ostenvighx.Suibhne.Extensions {
 
     /// <summary>
     /// An extension suite holds a filename to an extension executable, the IDs of the extensions in
@@ -41,7 +41,7 @@ namespace Raindrop.Suibhne.Extensions {
             protected set;
         }
 
-        public delegate void CommandHandler(Extension e, Guid origin, string sender, string location, string args);
+        public delegate void CommandHandler(Extension e, Guid origin, string sender, string args);
 
         protected Dictionary<Guid, CommandHandler> Commands;
 
@@ -51,23 +51,31 @@ namespace Raindrop.Suibhne.Extensions {
             this.Version = "0.0.1";
             this.buffer = new byte[2048];
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.Connected = false;
+            this.Connected = false;           
 
+            // TODO: Verify registration of commands in routing table here
+            this.Commands = new Dictionary<Guid, CommandHandler>();
+        }
+
+        public void Start() {
+            LoadConfig();
+            MapCommandMethods();
+            Connect();
+        }
+
+        public void LoadConfig() {
             IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
 
-            if (File.Exists(Environment.CurrentDirectory + @"\install")) {
+            if (File.Exists(Environment.CurrentDirectory + @"\extension")) {
 
-                FileStream file = File.OpenRead(Environment.CurrentDirectory + @"\install");
+                BinaryReader file = new BinaryReader(File.OpenRead(Environment.CurrentDirectory + @"\extension"));
 
                 try {
-                    byte[] guidBytes = new byte[16];
-                    file.Read(guidBytes, 0, 16);
-                    Guid ext = new Guid(guidBytes);
-
-                    this.Identifier = ext;
+                    file.ReadString(); // Get past extension name - not used here.
+                    this.Identifier = new Guid(file.ReadBytes(16));
                 }
 
-                catch (Exception e) {
+                catch (Exception) {
 
                 }
 
@@ -78,13 +86,7 @@ namespace Raindrop.Suibhne.Extensions {
                 // Terminate, extension not installed properly
 
             }
-
-            // TODO: Verify registration of commands in routing table here
-            this.Commands = new Dictionary<Guid, CommandHandler>();
-
-            MapCommandMethods();
         }
-
 
         private void MapCommandMethods() {
             // Get all possible command handler methods and create a mapping dictionary
@@ -113,7 +115,9 @@ namespace Raindrop.Suibhne.Extensions {
 
                 BinaryReader br = new BinaryReader(file);
 
-                br.ReadString();
+                br.ReadString();        // Get past extension name
+                br.ReadBytes(16);       // Get past extension identifier
+
                 short methods = br.ReadInt16();
                 for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
                     String methodName = br.ReadString();
@@ -217,7 +221,7 @@ namespace Raindrop.Suibhne.Extensions {
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, messageLocation, this.Name.Replace(" ", "_"), response);
+                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, this.Name.Replace(" ", "_"), response);
                         SendBytes(Responses.Message, rawMessage);
 
                         break;
@@ -232,8 +236,8 @@ namespace Raindrop.Suibhne.Extensions {
                             Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
                             String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
                             if (Commands.ContainsKey(commandID)) {
-                                string[] cdata = commandInfo.Split(new char[] { ' ' }, 3);
-                                Commands[commandID].Invoke(this, origin, cdata[1], cdata[0], cdata[2]);
+                                string[] cdata = commandInfo.Split(new char[] { ' ' }, 2);
+                                Commands[commandID].Invoke(this, origin, cdata[0], cdata[1]);
                             }
                         } else {
                             Console.WriteLine("Invalid command string. Need identifier, at least.");
@@ -257,7 +261,7 @@ namespace Raindrop.Suibhne.Extensions {
                                 foreach (Object attr in attrs) {
                                     if (attr.GetType() == typeof(HelpAttribute)) {
                                         HelpAttribute handler = (HelpAttribute)attr;
-                                        SendMessage(origin, Reference.MessageType.ChannelMessage, cdata[0], handler.HelpText);
+                                        SendMessage(origin, Reference.MessageType.ChannelMessage, handler.HelpText);
                                     }
                                 }
                             }
@@ -299,8 +303,8 @@ namespace Raindrop.Suibhne.Extensions {
             conn.Send(dataToSend);
         }
 
-        public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String location, String sender, String message) {
-            byte[] messageAsBytes = Encoding.UTF8.GetBytes(location + " " + sender + " " + message);
+        public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String sender, String message) {
+            byte[] messageAsBytes = Encoding.UTF8.GetBytes(sender + " " + message);
             byte[] rawMessage = new byte[34 + messageAsBytes.Length];
 
             rawMessage[0] = (byte)Responses.Message;
@@ -314,7 +318,7 @@ namespace Raindrop.Suibhne.Extensions {
             return rawMessage;
         }
 
-        public static void ParseMessage(byte[] data, out Guid origin, out Guid destination, out byte type, out String location, out String sender, out String message) {
+        public static void ParseMessage(byte[] data, out Guid origin, out Guid destination, out byte type, out String sender, out String message) {
             byte[] guidBytes = new byte[16];
 
             Array.Copy(data, 1, guidBytes, 0, 16);
@@ -333,11 +337,9 @@ namespace Raindrop.Suibhne.Extensions {
 
             Match messageMatch = Reference.MessageResponseParser.Match(messageString);
             if (messageMatch.Success) {
-                location = messageMatch.Groups["location"].Value;
                 sender = messageMatch.Groups["sender"].Value;
                 message = messageMatch.Groups["message"].Value;
             } else {
-                location = "#channel";
                 sender = "Unknown";
                 message = "Message";
             }
@@ -349,14 +351,13 @@ namespace Raindrop.Suibhne.Extensions {
 
             Guid destination = this.Identifier;
             byte type = 1;
-            String location, nickname, message;
+            String nickname, message;
             Guid origin;
             ParseMessage(
                 data,
                 out origin,
                 out destination,
                 out type,
-                out location,
                 out nickname,
                 out message);
 
@@ -366,8 +367,8 @@ namespace Raindrop.Suibhne.Extensions {
             Console.WriteLine("Recieved message from " + nickname + ": " + message);
         }
 
-        public void SendMessage(Guid destination, Reference.MessageType type, String location, String message) {
-            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, location, this.Name.Replace(' ', '_'), message);
+        public void SendMessage(Guid destination, Reference.MessageType type, String message) {
+            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.Name.Replace(' ', '_'), message);
             conn.Send(rawMessage);
         }
 
