@@ -43,7 +43,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 }
 
                 // If message origin is the bot's current Username, add 2 to type to signal Private type.
-                if (msg.locationID == conn.GetLocationIdByName(conn.Server.locationName)) {
+                if (msg.locationID == Guid.Empty && bits[2].ToLower() == conn.Me.DisplayName.ToLower()) {
                     msg.type += 2;
                     msg.locationID = conn.UserIdentifier;
                     msg.target = msg.sender;

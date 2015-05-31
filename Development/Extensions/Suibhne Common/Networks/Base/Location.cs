@@ -5,25 +5,31 @@ using System.Text;
 
 namespace Ostenvighx.Suibhne.Networks.Base {
     public class Location {
+
+        public Guid Parent {
+            get;
+            protected set;
+        }
+
         /// <summary>
         /// A lowercased form of the location in question. A locationID name or user DisplayName.
         /// </summary>
-        public String locationName;
+        public String Name;
 
         /// <summary>
         /// The password required to initially connect to the location.
         /// </summary>
-        public String password;
+        public String Password;
 
         /// <summary>
         /// Gets the type of location this is.
         /// </summary>
-        public Reference.LocationType type;
+        public Reference.LocationType Type;
 
         public static Location Unknown {
             get {
                 Location e = new Location("Unknown");
-                e.type = Reference.LocationType.Unknown;
+                e.Type = Reference.LocationType.Unknown;
                 return e;
             }
 
@@ -56,9 +62,10 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// <param name="password">Password to access the location. Used mostly for channels.</param>
         /// <param name="type">Type of location.</param>
         public Location(String locationName, String password, Reference.LocationType type) {
-            this.locationName = locationName;
-            this.password = password;
-            this.type = type;
+            this.Parent = Guid.Empty;
+            this.Name = locationName;
+            this.Password = password;
+            this.Type = type;
         }
 
         /// <summary>
@@ -77,7 +84,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// <returns>True if locationName is equal to the object's locationName. obj must also be of type Location.</returns>
         public override bool Equals(object obj) {
             if (obj.GetType() == typeof(Location)) {
-                return this.locationName.ToLower() == ((Location)obj).locationName.ToLower();
+                return this.Name.ToLower() == ((Location)obj).Name.ToLower();
             }
 
             return false;

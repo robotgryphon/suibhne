@@ -22,7 +22,9 @@ namespace Launcher {
             try {
                 IniConfigSource systemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
 
-                String networkRootDirectory = systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
+                String configRoot = systemConfig.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+
+                String networkRootDirectory = configRoot + systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
                 String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
 
                 CreateNetworks(registry, networkDirectories);

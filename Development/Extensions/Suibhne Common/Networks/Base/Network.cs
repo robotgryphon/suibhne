@@ -51,12 +51,46 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// <value>The server hostname.</value>
         public Base.Location Server { get; protected set; }
 
+        /// <summary>
+        /// A list of all the listened locations.
+        /// This list contains joined channels.
+        /// </summary>
+        protected Dictionary<Guid, Location> Listened;
+
         public abstract void Setup(string configFile);
 
         #region Connection Methods
         public abstract void Connect();
         public abstract void Disconnect(String reason);
         #endregion
+
+        /// <summary>
+        /// Get a reference to an Location object by name. Useful for locationID lookups.
+        /// </summary>
+        /// <param name="locationName">Location to attempt lookup on.</param>
+        /// <returns>Reference to the Location for a given locationName.</returns>
+        public Guid GetLocationIdByName(String locationName) {
+            Guid returned = Guid.Empty;
+            foreach (KeyValuePair<Guid, Base.Location> location in Listened) {
+                if (location.Value.Name.Equals(locationName.ToLower()))
+                    return location.Key;
+            }
+
+            return returned;
+        }
+
+        /// <summary>
+        /// Get a reference to an Location object by name. Useful for locationID lookups.
+        /// </summary>
+        /// <param name="locationName">Location to attempt lookup on.</param>
+        /// <returns>Reference to the Location for a given locationName.</returns>
+        public Base.Location GetLocationByName(String locationName) {
+            Guid locationID = GetLocationIdByName(locationName);
+            if (locationID != Guid.Empty)
+                return Listened[locationID];
+
+            return Base.Location.Unknown;
+        }
 
         public abstract void SendMessage(Message m);
 

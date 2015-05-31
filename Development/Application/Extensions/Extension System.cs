@@ -125,6 +125,9 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Message response = new Message(message.locationID, conn.Me, "Response");
             response.type = Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+            if (message.type != Networks.Base.Reference.MessageType.PublicAction || message.type != Networks.Base.Reference.MessageType.PublicMessage) {
+                response.target = message.target;
+            }
 
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
@@ -183,22 +186,45 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                                 case "conninfo":
                                     // Get info about connection and system
-                                    Assembly a = conn.GetType().Assembly;
-                                    response.message = a.GetName().Name;
-                                    conn.SendMessage(response);
+                                    if (messageParts.Length != 3) {
+                                        response.message = "Invalid Parameters. Format: !sys conninfo [connectionType]";
+                                        conn.SendMessage(response);
+                                        break;
+                                    }
+
+                                    try {
+                                        string connType = messageParts[2];
+                                        response.message = "Connection type recieved: " + connType;
+                                        IniConfigSource configFile = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
+                                        String configDir = configFile.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/").Trim();
+
+                                        if (File.Exists(configDir + "NetworkTypes/" + connType + ".dll")) {
+                                            Assembly networkTypeAssembly = Assembly.LoadFrom(configDir + "NetworkTypes/" + connType + ".dll");
+                                            response.message = "Assembly information: " + 
+                                                ((AssemblyTitleAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title + 
+                                                " written by " + 
+                                                ((AssemblyCompanyAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company + 
+                                                " (v" + networkTypeAssembly.GetName().Version + ")";
+
+                                            conn.SendMessage(response);
+                                        }
+                                        
+                                    }
+
+                                    catch(Exception e){
+                                        response.message = "There was an error processing the command. (" + e.GetType().Name + ")";
+                                        conn.SendMessage(response);
+                                    }
                                     break;
 
                                 case "uptime":
                                     TimeSpan diff = DateTime.Now - StartTime;
                                     response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                    //response.message = "has been up for " +
-                                    //    (diff.Days > 0 ? diff.Days + " days", Formatter.Colors.Pink) + ", " : "") +
-                                    //    (diff.Hours > 0 ? diff.Hours + " hours", Formatter.Colors.Orange) + ", " : "") +
-                                    //    (diff.Minutes > 0 ? diff.Minutes + " minutes", Formatter.Colors.Green) + ", " : "") +
-                                    //    (diff.Seconds > 0 ? diff.Seconds + " seconds", Formatter.Colors.Blue) : "") + ". [Up since " + StartTime.ToString() + "]";
-
-                                    // TODO: Use network static Formatter
-                                    response.message = "has been up for " + diff.ToString();
+                                    response.message = "has been up for " +
+                                        (diff.Days > 0 ? diff.Days + " days" : "") +
+                                        (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
+                                        (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
+                                        (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + StartTime.ToString() + "]";
 
                                     conn.SendMessage(response);
                                     response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;

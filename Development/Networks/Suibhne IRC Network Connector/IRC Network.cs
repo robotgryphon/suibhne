@@ -39,12 +39,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         public Guid UserIdentifier { get; protected set; }
 
         /// <summary>
-        /// A list of all the listened locations.
-        /// This list contains joined channels.
-        /// </summary>
-        protected Dictionary<Guid, Base.Location> Listened;
-
-        /// <summary>
         /// A container used for temporarily storing users from a NAMES list.
         /// </summary>
         private Dictionary<String, List<Base.User>> TempUsersContainer;
@@ -221,7 +215,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Status = Base.Reference.ConnectionStatus.Connecting;
                 try {
 
-                    _conn.BeginConnect(Server.locationName, 6667, new AsyncCallback(ConnectionCompleteCallback), _conn);
+                    _conn.BeginConnect(Server.Name, 6667, new AsyncCallback(ConnectionCompleteCallback), _conn);
                 }
 
                 catch (Exception e) {
@@ -408,37 +402,9 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 case "privmsg":
                 case "notice":
                     Base.Message msg = Message.Parse(this, line);
-                    HandleMessageRecieved(this, msg);                        
+                    HandleMessageRecieved(this, msg);
                     break;
             }
-        }
-
-        /// <summary>
-        /// Get a reference to an Location object by name. Useful for locationID lookups.
-        /// </summary>
-        /// <param name="locationName">Location to attempt lookup on.</param>
-        /// <returns>Reference to the Location for a given locationName.</returns>
-        public Guid GetLocationIdByName(String locationName) {
-            Guid returned = Guid.Empty;
-            foreach (KeyValuePair<Guid, Base.Location> location in Listened) {
-                if (location.Value.locationName.Equals(locationName.ToLower()))
-                    return location.Key;
-            }
-
-            return returned;
-        }
-
-        /// <summary>
-        /// Get a reference to an Location object by name. Useful for locationID lookups.
-        /// </summary>
-        /// <param name="locationName">Location to attempt lookup on.</param>
-        /// <returns>Reference to the Location for a given locationName.</returns>
-        public Base.Location GetLocationByName(String locationName) {
-            Guid locationID = GetLocationIdByName(locationName);
-            if (locationID != Guid.Empty)
-                return Listened[locationID];
-
-            return Base.Location.Unknown;
         }
 
         /// <summary>
@@ -448,15 +414,15 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="locationID">Public (as an Location) to join.</param>
         public override Guid JoinLocation(Networks.Base.Location location) {
             if (Status == Base.Reference.ConnectionStatus.Connected) {
-                if (location.locationName != null) {
-                    Guid loc = GetLocationIdByName(location.locationName);
+                if (location.Name != null) {
+                    Guid loc = GetLocationIdByName(location.Name);
 
                     // Guid.Empty means location not found - Aka not being listened on yet
                     if (loc == Guid.Empty) {
-                        if (location.password != "") {
-                            SendRaw("JOIN " + location.locationName + " " + location.password);
+                        if (location.Password != "") {
+                            SendRaw("JOIN " + location.Name + " " + location.Password);
                         } else {
-                            SendRaw("JOIN " + location.locationName);
+                            SendRaw("JOIN " + location.Name);
                         }
 
                         Guid newLocationID = Guid.NewGuid();
@@ -492,7 +458,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                             OnListeningEnd(this, locationID);
                         }
 
-                        SendRaw("PART " + Listened[locationID].locationName + " :" + reason);
+                        SendRaw("PART " + Listened[locationID].Name + " :" + reason);
                         this.Listened.Remove(locationID);
                     } else {
                         throw new Exception("Location not found or already exited.");
@@ -527,7 +493,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     if (message.locationID == UserIdentifier)
                         location = message.target.DisplayName;
                     else
-                        location = Listened[message.locationID].locationName;
+                        location = Listened[message.locationID].Name;
 
                     switch (message.type) {
                         case Base.Reference.MessageType.PublicMessage:
