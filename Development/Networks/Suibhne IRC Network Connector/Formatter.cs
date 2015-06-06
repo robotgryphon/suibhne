@@ -165,16 +165,5 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             return (bold ? Bold : "") + (italic ? Italic : "") + (underline ? Underline : "") + text + Normal;
         }
 
-        // TODO: Add StripFormatting method
-        /// <summary>
-        /// Takes a string and rips all the formatting off it, 
-        /// returning just the text.
-        /// </summary>
-        /// <param name="text">The text to strip off the formatting.</param>
-        /// <returns></returns>
-        private static string StripFormatting(String text) {
-            throw new NotImplementedException();
-        }
-
     }
 }

@@ -165,28 +165,21 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             configLoaded.CaseSensitive = false;
             IniConfig config = (IniConfig) configLoaded.Configs["Server"];
 
+            Console.WriteLine(config.Get("host"));
+
             this.Me = new Base.User(
                 config.GetString("username", "user"),
                 config.GetString("authpassword", ""),
                 config.GetString("nickname", "IrcUser"));
 
             this.Server = new Base.Location(
-                config.GetString("host", "localhost"),
+                config.GetString("hostname", "localhost"),
                 config.GetString("password", ""),
                 Base.Reference.LocationType.Network);
 
             this.Listened.Add(Guid.NewGuid(), Server);
 
             this.port = config.GetInt("port", 6667);
-        }
-
-        protected virtual void HandleFinishConnection(IrcNetwork conn) {
-
-            if (Me.LastDisplayName != "") {
-                Base.Message message = new Base.Message(UserIdentifier, Me, "IDENTIFY " + Me.LastDisplayName);
-                message.target = new Base.User("NickServ");
-                SendMessage(message);
-            }
         }
 
         /// <summary>
@@ -303,6 +296,15 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             }
         }
 
+        protected override void HandleConnectionComplete(Base.Network n) {
+            if (Me.LastDisplayName != "") {
+                Base.Message message = new Base.Message(UserIdentifier, Me, "IDENTIFY " + Me.LastDisplayName);
+                message.target = new Base.User("NickServ");
+                SendMessage(message);
+            }
+
+            base.HandleConnectionComplete(n);
+        }
         /// <summary>
         /// Method to handle incoming data, line by line.
         /// Actual parsing is done here, not in DataRecievedCallback.

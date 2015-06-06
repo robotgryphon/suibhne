@@ -17,22 +17,7 @@ namespace Ostenvighx.Suibhne.Extensions {
     /// </summary>
     public abstract class Extension {
 
-        public String Name { get; protected set; }
         public Guid Identifier;
-
-        /// <summary>
-        /// The names of the extension suite authors.
-        /// </summary>
-        /// <value>The authors of the extension suite.</value>
-        public String[] Authors { get; protected set; }
-
-        /// <summary>
-        /// The version number of the extension suite.
-        /// This should typically be done in Major.Minor.Patch format. (Such as 1.0.3)
-        /// Default is 0.0.1.
-        /// </summary>
-        /// <value>The version of the extension suite.</value>
-        public String Version { get; protected set; }
 
         protected Socket conn;
         protected byte[] buffer;
@@ -46,9 +31,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         protected Dictionary<Guid, CommandHandler> Commands;
 
         public Extension() {
-            this.Name = "Extension";
-            this.Authors = new String[] { "Unknown Author" };
-            this.Version = "0.0.1";
             this.buffer = new byte[2048];
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.Connected = false;           
@@ -102,6 +84,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Console.WriteLine("Got command handler: " + handler.Name + " (maps to " + method.Name + ")");
 
                         // TODO: Add in validation here for valid CommandHandler delegate
+                        method.GetParameters();
                         CommandHandler methodDelegate = (CommandHandler)Delegate.CreateDelegate(typeof(CommandHandler), null, method);
 
                         methodMap.Add(handler.Name, methodDelegate);
@@ -131,6 +114,18 @@ namespace Ostenvighx.Suibhne.Extensions {
                 }
 
             }
+        }
+
+        public virtual string GetExtensionName() {
+            return ((AssemblyTitleAttribute)this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute), true)[0]).Title.ToString();
+        }
+
+        public virtual string GetExtensionAuthor() {
+            return ((AssemblyCompanyAttribute)this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCompanyAttribute), true)[0]).Company.ToString();
+        }
+
+        public virtual string GetExtensionVersion() {
+            return this.GetType().Assembly.GetName().Version.ToString();
         }
 
         public virtual void Connect() {
@@ -204,7 +199,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 switch ((Responses)data[0]) {
                     case Responses.Activation:
                         // Connect suite name into bytes for response, then prepare response
-                        byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
+                        byte[] nameAsBytes = Encoding.UTF8.GetBytes(GetExtensionName());
                         SendBytes(Responses.Details, nameAsBytes);
 
                         // TODO: Handle command validation here
@@ -214,14 +209,14 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case Responses.Details:
                         string response =
                             "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " +
-                            Name + Reference.ColorPrefix + "02 (v. " + Version + ")" + Reference.Normal +
-                            " developed by " + Reference.ColorPrefix + "03" + string.Join(", ", Authors);
+                            GetExtensionName() + Reference.ColorPrefix + "02 (v. " + GetExtensionVersion() + ")" + Reference.Normal +
+                            " developed by " + Reference.ColorPrefix + "03" + string.Join(", ", GetExtensionAuthor());
 
                         String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, this.Name.Replace(" ", "_"), response);
+                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, this.GetExtensionName().Replace(" ", "_"), response);
                         SendBytes(Responses.Message, rawMessage);
 
                         break;
@@ -368,7 +363,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public void SendMessage(Guid destination, Reference.MessageType type, String message) {
-            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.Name.Replace(' ', '_'), message);
+            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.GetExtensionName().Replace(' ', '_'), message);
             conn.Send(rawMessage);
         }
 

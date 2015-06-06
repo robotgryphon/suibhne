@@ -25,13 +25,6 @@ namespace Ostenvighx.Suibhne.Dice {
 
         private static Regex DieFormat = new Regex(@"(?<dice>\d+)d(?<sides>\d+)(?<mod>[\+\-]\d+)?", RegexOptions.None);
 
-        public DiceExtension()
-            : base() {
-            this.Name = "Dice Roller";
-            this.Authors = new string[] { "Ted Senft" };
-            this.Version = "1.0.0";
-        }
-
         /// <summary>
         /// Calculates the value of a die roll in standard format.
         /// </summary>
@@ -55,7 +48,7 @@ namespace Ostenvighx.Suibhne.Dice {
                     int numSides = int.Parse(numSidesString);
                     int mod = 0;
 
-                    result.values = new int[numSides];
+                    result.values = new int[numDice];
 
                     if (modString != "")
                         mod = int.Parse(modString.TrimStart(new char[] { '+', '-' }));
@@ -65,12 +58,14 @@ namespace Ostenvighx.Suibhne.Dice {
                             if (mod < 5000000) {
                                 Random randomizer = new Random();
                                 for (int i = 0; i < numDice; i++) {
-                                    result.values[i] = randomizer.Next(1, numSides);
-                                    if (modString.StartsWith("-")) mod = -mod;
-                                    result.values[i] += mod;
+                                    result.values[i] = randomizer.Next(1, numSides+1);
+                                    
 
                                     result.total += result.values[i];
                                 }
+
+                                if (modString.StartsWith("-")) mod = -mod;
+                                result.total += mod;
                             }
                         }
                     }
@@ -90,6 +85,10 @@ namespace Ostenvighx.Suibhne.Dice {
         public void DoDiceRoll(Extension ext, Guid connID, String sender, String message) {
             message = message.Trim();
 
+            List<DieRollResult> rolls = new List<DieRollResult>();
+
+            long total = 0;
+
             // If we have no arguments
             if (message == "") {
                 ext.SendMessage(connID, Reference.MessageType.ChannelMessage, "Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.");
@@ -99,16 +98,13 @@ namespace Ostenvighx.Suibhne.Dice {
             string[] commandParts = message.Split(new char[] { ' ' });
             if (commandParts.Length >= 1 && commandParts.Length <= 10) {
 
-                List<long> rolls = new List<long>();
-
                 for (int die = 1; die < commandParts.Length + 1; die++) {
                     DieRollResult result = GetDiceValue(commandParts[die - 1]);
-                    rolls.Add(result.total);
-                    result.total = 0;
+                    total += (result.total);
+                    rolls.Add(result);
                 }
 
-                long total = rolls.Sum();
-
+                
                 String response = Reference.Bold + Reference.ColorPrefix + "06rolls a few dice, and the results are: " + Reference.Normal + total + "!";
 
                 ext.SendMessage(connID, Reference.MessageType.ChannelMessage, response);

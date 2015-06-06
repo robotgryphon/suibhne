@@ -31,8 +31,6 @@ local.properties
 *.csproj
 *.config
 
-Properties/
-
 # Build results
 
 [Dd]ebug/
@@ -44,6 +42,9 @@ build/
 
 *.mdw
 *.dgml
+
+*/Properties/*
+!*/Properties/AssemblyInfo.cs
 
 Libraries/
 Notes/

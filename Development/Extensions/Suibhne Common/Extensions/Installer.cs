@@ -49,7 +49,7 @@ namespace Ostenvighx.Suibhne.Common {
         private static void TestGenerateInstallFile(Extension e, Dictionary<String, MethodInfo> CommandHandlers) {
            
             // Write out extension name to file
-            Console.Write(e.Name);
+            Console.Write(e.GetExtensionName());
 
             // Immediately after extension name is identifier
             Console.Write(Guid.NewGuid().ToByteArray());
@@ -73,7 +73,7 @@ namespace Ostenvighx.Suibhne.Common {
             BinaryWriter bw = new BinaryWriter(file);
 
             // Write out extension name to file
-            bw.Write(e.Name);
+            bw.Write(e.GetExtensionName());
             bw.Flush();
 
             // Immediately after extension name is identifier
