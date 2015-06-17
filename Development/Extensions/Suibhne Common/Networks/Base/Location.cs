@@ -76,6 +76,9 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             return base.GetHashCode();
         }
 
+        public override string ToString() {
+            return this.Name + " (" + Type + ")";
+        }
         /// <summary>
         /// Determines if the location is equal to another.
         /// This is true if the lowercased location name is the same.

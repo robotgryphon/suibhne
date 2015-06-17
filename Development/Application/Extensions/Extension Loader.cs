@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 
 namespace Ostenvighx.Suibhne.Extensions {
-    class Extension_Loader {
+    class ExtensionLoader {
 
         public static Guid GetMethodIdentifier(String extDir, String methodName) {
             if (File.Exists(extDir + @"\extension")) {
@@ -40,9 +40,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         public static ExtensionMap LoadExtension(String extDir) {
             ExtensionMap extension = new ExtensionMap();
             extension.Ready = false;
-
-            Core.Log(extDir + @"\extension");
-
             if (File.Exists(extDir + @"\extension")) {
 
                 FileStream file = File.OpenRead(extDir + @"\extension");

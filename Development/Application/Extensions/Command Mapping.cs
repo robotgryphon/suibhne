@@ -10,6 +10,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         public String CommandString;
         public Guid Extension;
         public Guid Method;
+        public byte AccessLevel;
 
     }
 }

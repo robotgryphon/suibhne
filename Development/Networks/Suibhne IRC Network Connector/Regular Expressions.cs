@@ -22,16 +22,16 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// This is in the format of DisplayName![~]Username@userhost.
         /// Fields are usernick, Username, and userhost. For full match, use userfull.
         /// </summary>
-        public static String SENDER_REGEX_RAW = @"(?<sender>(?<nickname>" + NICKNAME_REGEX_RAW + @")(?<username>(?:!)([^@]*))?(?<hostname>[\w.:]+)?)";
+        public static String SENDER_REGEX_RAW = @"(?<sender>(?<nickname>" + NICKNAME_REGEX_RAW + @")(?:!)?(?<username>([^@]*))??@(?<hostname>[\w.\-:]+)?)";
 
         /// <summary>
         /// Matches a given origin location on a server. This is a locationID, Username, etc.
         /// </summary>
-        public static String LOCATION_REGEX = @"(?<location>\#?.+)";
+        public static String LOCATION_REGEX = @"(?<location>\#?[\w]+)";
 
         /// <summary>
         /// Quick wrap for Username host parsing.
-        /// See USERHOST_REGEX for details.
+        /// See SENDER_REGEX_RAW for details.
         /// </summary>
         public static Regex USER_REGEX = new Regex(SENDER_REGEX_RAW);
 

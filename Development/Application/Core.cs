@@ -40,7 +40,7 @@ namespace Ostenvighx.Suibhne {
                     break;
 
                 case LogType.EXTENSIONS:
-                    Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                    Console.ForegroundColor = ConsoleColor.Magenta;
                     break;
 
                 default:

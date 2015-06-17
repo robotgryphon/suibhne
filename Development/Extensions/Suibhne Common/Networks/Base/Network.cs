@@ -55,7 +55,12 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// A list of all the listened locations.
         /// This list contains joined channels.
         /// </summary>
-        protected Dictionary<Guid, Location> Listened;
+        public Dictionary<Guid, Location> Listened {
+            get;
+            protected set;
+        }
+
+        public Dictionary<String, Dictionary<Guid, byte>> OpAccessLevels;
 
         public abstract void Setup(string configFile);
 

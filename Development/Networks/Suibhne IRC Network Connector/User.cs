@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Ostenvighx.Suibhne.Networks.Irc {
@@ -13,7 +14,13 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <summary>
         /// An array containing all valid operator prefixes.
         /// </summary>
-        public static char[] OpChars = new char[] { '+', '%', '@', '&', '~' };
+        public static char[] OpChars = new char[] { 
+            '+',    // 110
+            '%',    // 120
+            '@',    // 130
+            '&',    // 140
+            '~'     // 150
+        };
 
         /// <summary>
         /// Try to parse user information out of a full hostmask.
@@ -38,6 +45,38 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             }
 
             return user;
+        }
+
+        public static byte GetAccessLevel(String modes) {
+            byte level = 0;
+            foreach(char modeChar in modes.ToCharArray()){
+                if(modeChar == 'r' && level < 100) level = 100;
+                
+                if(OpChars.Contains<char>(modeChar))
+                    switch(modeChar){
+                        case '+':
+                            if(level < 110) level = 110;
+                            break;
+
+                        case '%':
+                            if(level < 120) level = 120;
+                            break;
+
+                        case '@':
+                            if(level < 130) level = 130;
+                            break;
+
+                        case '&':
+                            if(level < 140) level = 140;
+                            break;
+
+                        case '~':
+                            if(level < 150) level = 150;
+                            break;
+                    }   
+            }
+            
+            return level;
         }
     }
 }

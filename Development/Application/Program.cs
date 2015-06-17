@@ -44,6 +44,9 @@ namespace Launcher {
 
         static void CreateNetworks(ExtensionSystem registry, String[] servers) {
             foreach (String networkDirectory in servers) {
+                if (File.Exists(networkDirectory + "/disabled"))
+                    continue;
+
                 NetworkBot network = new NetworkBot(networkDirectory, registry);
                 network.Connect();
             }

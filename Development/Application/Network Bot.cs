@@ -19,11 +19,6 @@ namespace Ostenvighx.Suibhne {
 
         public Guid Identifier { get; protected set; }
 
-        public List<string> Operators {
-            get;
-            protected set;
-        }
-
         #region Event Handlers
         public delegate void IrcCommandEvent(NetworkBot connection, Message message);
         public event IrcCommandEvent OnCommandRecieved;
@@ -32,7 +27,6 @@ namespace Ostenvighx.Suibhne {
         public NetworkBot(String configDir, ExtensionSystem exts){
             this.Identifier = Guid.NewGuid();
             this._extensions = exts;
-            this.Operators = new List<string>();
 
             IniConfigSource config = new IniConfigSource(configDir + "/connection.ini");
             config.CaseSensitive = false;
@@ -55,15 +49,18 @@ namespace Ostenvighx.Suibhne {
                         _network.Setup(configDir + "/connection.ini");
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
                         _network.OnConnectionComplete += (conn) => {
+                            _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
                             AutoJoinLocations(configDir);
                         };
                     }
                 }
 
-                String ops = config.Configs["Server"].GetString("Operators", "");
+                _network.OpAccessLevels = new Dictionary<string, Dictionary<Guid, byte>>();
+                foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
+                    _network.OpAccessLevels.Add(opIdentifier, new Dictionary<Guid,byte>());
+                    _network.OpAccessLevels[opIdentifier][Identifier] = (byte) config.Configs["Operators"].GetInt(opIdentifier);
 
-                foreach (String op in ops.Split(new char[]{','}))
-                    Operators.Add(op.Trim().ToLower());
+                }
             }
 
             exts.AddBot(this);
@@ -90,10 +87,6 @@ namespace Ostenvighx.Suibhne {
                     Core.Log("Location loading failed: " + e.Message, LogType.ERROR);
                 }
             }
-        }
-
-        public Boolean IsBotOperator(String user) {
-            return this.Operators.Contains(user.ToLower());
         }
 
         protected void HandleCommand(Message message) {

@@ -36,18 +36,26 @@ namespace Ostenvighx.Suibhne.Extensions {
         protected DateTime StartTime;
 
         protected ExtensionServer Server;
+        
+        private String ConfigFilename;
+        private DateTime ConfigLastUpdate;
 
         public ExtensionSystem(String extensionConfig) {
             this.Registry = new Dictionary<Guid, object>();
             this.bots = new Dictionary<Guid, NetworkBot>();
             this.Identifier = Guid.NewGuid();
+            this.ConfigFilename = extensionConfig;
+            if (File.Exists(this.ConfigFilename)) {
+                // Get some basic info about config file
+                this.ConfigLastUpdate = File.GetLastWriteTime(ConfigFilename);
+            }
 
             this.CommandMapping = new Dictionary<String, CommandMap>();
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
 
             this.StartTime = DateTime.Now;
 
-            InitializeExtensions(extensionConfig);
+            InitializeExtensions();
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
@@ -62,49 +70,59 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         
 
-        protected void InitializeExtensions(String config) {
-            if (File.Exists(config)) {
-                IniConfigSource MainExtensionConfiguration = new IniConfigSource(config);
-
-                Core.Log("Routing last updated: " + MainExtensionConfiguration.Configs["Extensions"].GetString("updated"), LogType.EXTENSIONS);
-
-                // Get ExtensionDirectories available via directory name
-                String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
-
-                ExtensionMap[] exts = Extension_Loader.LoadExtensions(ExtensionsRootDirectory);
-                foreach (ExtensionMap extension in exts) {
-                    Extensions.Add(extension.Identifier, extension);
-                }
-
-                Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
-
-                MapCommands(MainExtensionConfiguration);
-            } else {
+        protected void InitializeExtensions() {
+            if (!File.Exists(this.ConfigFilename))
                 throw new FileNotFoundException("Config file not valid.");
+
+
+            IniConfigSource MainExtensionConfiguration = new IniConfigSource(this.ConfigFilename);
+
+            Core.Log("Extension file last updated: " + File.GetLastWriteTime(this.ConfigFilename), LogType.EXTENSIONS);
+
+            // Get ExtensionDirectories available via directory name
+            String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
+
+            ExtensionMap[] exts = ExtensionLoader.LoadExtensions(ExtensionsRootDirectory);
+            foreach (ExtensionMap extension in exts) {
+                Extensions.Add(extension.Identifier, extension);
             }
+
+            Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
+
+            MapCommands();
         }
 
-        private void MapCommands(IniConfigSource config) {
+        private int MapCommands() {
+            int mappedCommands = 0;
+            if (!File.Exists(this.ConfigFilename))
+                return 0;
+
+            IniConfigSource MainExtensionConfiguration = new IniConfigSource(this.ConfigFilename);
+
             CommandMapping.Clear();
-            String[] commands = config.Configs["Routing"].GetKeys();
+            String[] commands = MainExtensionConfiguration.Configs["Routing"].GetKeys();
             foreach (String commandKey in commands) {
-                String commandMap = config.Configs["Routing"].GetString(commandKey);
+                String commandMap = MainExtensionConfiguration.Configs["Routing"].GetString(commandKey);
                 try {
                     CommandMap c = new CommandMap();
                     c.CommandString = commandKey.ToLower();
-                    String ExtensionsRootDirectory = config.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
+                    String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
+                    c.AccessLevel = (byte) MainExtensionConfiguration.Configs["Access"].GetInt(c.CommandString, 1);
+
                     String extensionDirectory = ExtensionsRootDirectory + commandMap.Substring(0, nameEnd);
                     if (Directory.Exists(extensionDirectory)) {
-                        ExtensionMap em = Extension_Loader.LoadExtension(extensionDirectory);
+                        ExtensionMap em = ExtensionLoader.LoadExtension(extensionDirectory);
                         if (em.Identifier != Guid.Empty) {
                             c.Extension = em.Identifier;
-                            Guid methodID = Extension_Loader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd + 1).Trim());
+                            Guid methodID = ExtensionLoader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd + 1).Trim());
                             if (methodID != Guid.Empty) {
                                 c.Method = methodID;
                                 CommandMapping.Add(c.CommandString, c);
+                                mappedCommands++;
+
                             } else
                                 Core.Log("Command '" + commandKey + "' not valid. Method name is wrong.", LogType.ERROR);
                         }
@@ -114,6 +132,20 @@ namespace Ostenvighx.Suibhne.Extensions {
                     Core.Log("Failed to register command '{0}': Invalid mapping format.", LogType.EXTENSIONS);
                 }
             }
+
+            CommandMap sys = new CommandMap();
+            sys.CommandString = "system";
+            sys.Method = Guid.Empty;
+            sys.Extension = Guid.Empty;
+
+            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["Access"].GetInt("sys", 250);
+            CommandMapping.Add("sys", sys);
+
+            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["Access"].GetInt("system", 250);
+            CommandMapping.Add("system", sys);
+
+            CommandMapping.Add("oplevel", new CommandMap() { AccessLevel = 1 });
+            return mappedCommands + 2;
         }
 
         public void HandleCommand(NetworkBot conn, Message message) {
@@ -129,120 +161,172 @@ namespace Ostenvighx.Suibhne.Extensions {
                 response.target = message.target;
             }
 
+            if (!CommandMapping.ContainsKey(command))
+                return;
+
+            CommandMap cmd = CommandMapping[command];
+            if (!(cmd.AccessLevel <= message.sender.AuthLevel)) {
+                response.message = "You do not have permission to run this command.";
+                conn.SendMessage(response);
+                return;
+            }
+
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
+                case "oplevel":
+                    response.message = "You have an access level of " + message.sender.AuthLevel + ", " + message.sender.DisplayName + ".";
+                    conn.SendMessage(response);
+                    break;
+
                 case "sys":
+                case "system":
                     #region System Commands
                     if (messageParts.Length > 1 && subCommand != "") {
-                        if (conn.IsBotOperator(message.sender.DisplayName)) {
-                            switch (subCommand) {
-                                case "exts":
-                                    #region Extensions System Handling
-                                    switch (messageParts.Length) {
-                                        case 2:
-                                            response.message = "Invalid Parameters. Format: !sys exts [command]";
-                                            conn.SendMessage(response);
-                                            break;
+                        switch (subCommand) {
+                            case "exts":
+                            case "extensions":
+                                #region Extensions System Handling
+                                switch (messageParts.Length) {
+                                    case 3:
+                                        #region Tier 3
+                                        subCommand = messageParts[2];
+                                        switch (subCommand.ToLower()) {
+                                            case "list":
+                                                String[] exts = GetExtensions();
 
-                                        case 3:
-                                            subCommand = messageParts[2];
-                                            switch (subCommand.ToLower()) {
-                                                case "list":
-                                                    response.message = "Gathering data for global extension list. May take a minute.";
+                                                if (exts.Length > 0) {
+                                                    response.message = String.Join(", ", exts);
                                                     conn.SendMessage(response);
-
-                                                    String[] exts = GetExtensions();
-
-                                                    if (exts.Length > 0) {
-                                                        response.message = String.Join(", ", exts);
-                                                        conn.SendMessage(response);
-                                                    } else {
-                                                        response.message = "No extensions loaded on server.";
-                                                        conn.SendMessage(response);
-                                                    }
-                                                    break;
-
-                                                default:
-                                                    response.message = "Unknown command.";
+                                                } else {
+                                                    response.message = "No extensions loaded.";
                                                     conn.SendMessage(response);
-                                                    break;
-                                            }
+                                                }
+                                                break;
 
-                                            break;
+                                            default:
+                                                response.message = "Unknown command. Available commands: {list, enable [ext], disable [ext], reload [type]}";
+                                                conn.SendMessage(response);
+                                                break;
+                                        }
 
-                                        case 4:
-                                            // TODO: Manage extension system [enable, disable, remap commands, etc]
-                                            break;
-                                    }
-                                    #endregion
-                                    break;
+                                        #endregion
+                                        break;
 
-                                case "version":
-                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                    response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                                    conn.SendMessage(response);
-                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                    break;
+                                    case 4:
+                                        #region Tier 4
+                                        subCommand = messageParts[2];
+                                        switch (subCommand.ToLower()) {
+                                            case "enable":
+                                                // Used for enabling an extension that was disabled during loading
+                                                break;
 
-                                case "conninfo":
-                                    // Get info about connection and system
-                                    if (messageParts.Length != 3) {
-                                        response.message = "Invalid Parameters. Format: !sys conninfo [connectionType]";
+                                            case "disable":
+                                                // Used to disable a currently active extension
+                                                break;
+
+                                            case "reload":
+                                                switch (messageParts[3]) {
+                                                    case "commands":
+                                                        if (File.Exists(this.ConfigFilename)) {
+                                                            DateTime lastUpdate = File.GetLastWriteTime(ConfigFilename);
+                                                            if (lastUpdate > ConfigLastUpdate) {
+                                                                int numRemapped = MapCommands();
+                                                                response.message = "Successfully remapped " + numRemapped + " conmmands to " + Extensions.Count  + " extensions.";
+                                                                conn.SendMessage(response);
+                                                            } else {
+                                                                response.message = "Your extension config is up-to-date. No need to remap commands.";
+                                                                conn.SendMessage(response);
+                                                            }
+                                                        }
+                                                        break;
+
+                                                    case "extensions":
+                                                        // WIP
+                                                        break;
+
+                                                }
+                                                break;
+                                                
+
+                                            default:
+                                                response.message = "Unknown command. Available commands: {enable, disable, reload}";
+                                                conn.SendMessage(response);
+                                                break;
+
+                                        }
+                                        #endregion
+                                        break;
+
+                                    default:
+                                        response.message = "Subcommand required. Available commands: {list, enable [ext], disable [ext], reload [type]}";
                                         conn.SendMessage(response);
                                         break;
-                                    }
+                                }
+                                #endregion
+                                break;
 
-                                    try {
-                                        string connType = messageParts[2];
-                                        response.message = "Connection type recieved: " + connType;
-                                        IniConfigSource configFile = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
-                                        String configDir = configFile.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/").Trim();
+                            case "version":
+                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                                response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                                conn.SendMessage(response);
+                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+                                break;
 
-                                        if (File.Exists(configDir + "NetworkTypes/" + connType + ".dll")) {
-                                            Assembly networkTypeAssembly = Assembly.LoadFrom(configDir + "NetworkTypes/" + connType + ".dll");
-                                            response.message = "Assembly information: " + 
-                                                ((AssemblyTitleAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title + 
-                                                " written by " + 
-                                                ((AssemblyCompanyAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company + 
-                                                " (v" + networkTypeAssembly.GetName().Version + ")";
+                            case "conninfo":
+                                // Get info about connection and system
+                                if (messageParts.Length != 3) {
+                                    response.message = "Invalid Parameters. Format: !sys conninfo [connectionType]";
+                                    conn.SendMessage(response);
+                                    break;
+                                }
 
-                                            conn.SendMessage(response);
-                                        }
-                                        
-                                    }
+                                try {
+                                    string connType = messageParts[2];
+                                    response.message = "Connection type recieved: " + connType;
+                                    IniConfigSource configFile = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
+                                    String configDir = configFile.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/").Trim();
 
-                                    catch(Exception e){
-                                        response.message = "There was an error processing the command. (" + e.GetType().Name + ")";
+                                    if (File.Exists(configDir + "NetworkTypes/" + connType + ".dll")) {
+                                        Assembly networkTypeAssembly = Assembly.LoadFrom(configDir + "NetworkTypes/" + connType + ".dll");
+                                        response.message = "Assembly information: " + 
+                                            ((AssemblyTitleAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title + 
+                                            " written by " + 
+                                            ((AssemblyCompanyAttribute) networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company + 
+                                            " (v" + networkTypeAssembly.GetName().Version + ")";
+
                                         conn.SendMessage(response);
                                     }
-                                    break;
+                                        
+                                }
 
-                                case "uptime":
-                                    TimeSpan diff = DateTime.Now - StartTime;
-                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                    response.message = "has been up for " +
-                                        (diff.Days > 0 ? diff.Days + " days" : "") +
-                                        (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
-                                        (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
-                                        (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + StartTime.ToString() + "]";
-
+                                catch(Exception e){
+                                    response.message = "There was an error processing the command. (" + e.GetType().Name + ")";
                                     conn.SendMessage(response);
-                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                    break;
+                                }
+                                break;
 
-                                default:
-                                    response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                    response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
-                                    conn.SendMessage(response);
-                                    response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                    break;
-                            }
-                        } else {
-                            response.message = "Error: " + "You must be a bot operator to run the system command.";
-                            conn.SendMessage(response);
+                            case "uptime":
+                                TimeSpan diff = DateTime.Now - StartTime;
+                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                                response.message = "has been up for " +
+                                    (diff.Days > 0 ? diff.Days + " days" : "") +
+                                    (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
+                                    (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
+                                    (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + StartTime.ToString() + "]";
+
+                                conn.SendMessage(response);
+                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+                                break;
+
+                            default:
+                                response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                                response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
+                                conn.SendMessage(response);
+                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+                                break;
                         }
                     } else {
-                        response.message = "Error: " + "System command takes at least a single parameter. Try raw, version, or exts.";
+                        response.message = "Available system commands: {exts/extensions, version, conninfo, uptime}";
                         conn.SendMessage(response);
                     }
                     #endregion

@@ -82,7 +82,7 @@ namespace Ostenvighx.Suibhne.Dice {
         }
 
         [CommandHandler("rollDice"), Help("Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.")]
-        public void DoDiceRoll(Extension ext, Guid connID, String sender, String message) {
+        public void DoDiceRoll(Extension ext, Guid origin, String sender, String message) {
             message = message.Trim();
 
             List<DieRollResult> rolls = new List<DieRollResult>();
@@ -91,7 +91,7 @@ namespace Ostenvighx.Suibhne.Dice {
 
             // If we have no arguments
             if (message == "") {
-                ext.SendMessage(connID, Reference.MessageType.ChannelMessage, "Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.");
+                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, "Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.");
                 return;
             }
 
@@ -107,9 +107,9 @@ namespace Ostenvighx.Suibhne.Dice {
                 
                 String response = Reference.Bold + Reference.ColorPrefix + "06rolls a few dice, and the results are: " + Reference.Normal + total + "!";
 
-                ext.SendMessage(connID, Reference.MessageType.ChannelMessage, response);
+                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, response);
             } else {
-                ext.SendMessage(connID, Reference.MessageType.ChannelMessage, "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
+                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
             }
         }
 

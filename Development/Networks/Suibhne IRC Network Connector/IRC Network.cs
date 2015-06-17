@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// </summary>
         protected byte[] GlobalBuffer;
         #endregion
-        
+
         /// <summary>
         /// Used to group all users together in one "location".
         /// If the location is equal to this, then it's a private message. 
@@ -38,10 +39,10 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// </summary>
         public Guid UserIdentifier { get; protected set; }
 
-        /// <summary>
-        /// A container used for temporarily storing users from a NAMES list.
-        /// </summary>
-        private Dictionary<String, List<Base.User>> TempUsersContainer;
+        protected Guid NetworkIdentifier {
+            get { return GetLocationIdByName("<network>"); }
+            private set { }
+        }
 
         #region Data Events
         /// <summary>
@@ -106,14 +107,11 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.Status = Base.Reference.ConnectionStatus.Disconnected;
 
             this._conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            this.TempUsersContainer = new Dictionary<string, List<Base.User>>();
             this.UserIdentifier = Guid.NewGuid();
             this.Listened.Add(UserIdentifier, new Base.Location("<user>"));
 
             this.Me = new Base.User();
             this.Server = new Base.Location("localhost", Networks.Base.Reference.LocationType.Network);
-            this.Listened.Add(Guid.NewGuid(), Server);
 
             this.port = 6667;
         }
@@ -132,7 +130,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             : this() {
             this.Me = new Base.User(username, authPass, nickname);
             this.Server = new Base.Location(host, password, Base.Reference.LocationType.Network);
-            this.Listened.Add(Guid.NewGuid(), Server);
 
             this.port = port;
         }
@@ -144,29 +141,20 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         public IrcNetwork(IConfig config)
             : this() {
 
-            // Initialize Me variable with "known" information.
-            this.Me = new Base.User(
-                config.GetString("username", "user"),
-                config.GetString("authpassword", ""),
-                config.GetString("nickname", "IrcUser"));
+                this.OpAccessLevels = new Dictionary<string, Dictionary<Guid, byte>>();
 
-            this.Server = new Base.Location(
-                config.GetString("host", "localhost"),
-                config.GetString("password", ""),
-                Base.Reference.LocationType.Network);
-
-            this.Listened.Add(Guid.NewGuid(), Server);
-
-            this.port = config.GetInt("port", 6667);
+                DoNetworkSetup(config);
         }
 
         public override void Setup(String configFile) {
             IniConfigSource configLoaded = new IniConfigSource(configFile);
             configLoaded.CaseSensitive = false;
-            IniConfig config = (IniConfig) configLoaded.Configs["Server"];
+            IniConfig config = (IniConfig)configLoaded.Configs["Server"];
 
-            Console.WriteLine(config.Get("host"));
+            DoNetworkSetup(config);            
+        }
 
+        private void DoNetworkSetup(IConfig config) {
             this.Me = new Base.User(
                 config.GetString("username", "user"),
                 config.GetString("authpassword", ""),
@@ -176,8 +164,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 config.GetString("hostname", "localhost"),
                 config.GetString("password", ""),
                 Base.Reference.LocationType.Network);
-
-            this.Listened.Add(Guid.NewGuid(), Server);
 
             this.port = config.GetInt("port", 6667);
         }
@@ -316,96 +302,120 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             }
 
             String[] dataChunks = line.Split(new char[] { ' ' });
-            switch (dataChunks[1].ToLower()) {
+            try {
+                switch (dataChunks[1].ToLower()) {
 
-                #region Numeric Codes
-                case "001":
-                    // Network welcome message
-                    // Network.locationName = dataChunks[0].TrimStart(new char[] { ':' });
-                    break;
+                    #region Numeric Codes
+                    case "001":
+                        // Network welcome message
+                        // Network.locationName = dataChunks[0].TrimStart(new char[] { ':' });
+                        break;
 
-                case "353":
-                case "366":
-                    #region Names response
-                    String chan = "#channel";
-                    switch (dataChunks[1].ToLower()) {
+                    case "352":
+                        // who response
+                        ParseWhoResponse(line);
+                        break;
 
-                        case "353":
-                            chan = line.Split(new char[] { ' ' })[4].Trim().ToLower();
+                    case "353":
+                    case "366":
+                        #region Names response
+                        String chan = "#channel";
+                        switch (dataChunks[1].ToLower()) {
 
-                            String[] namesList = line.Split(new String[] { "353" }, StringSplitOptions.None)[1].Split(new char[] { ':' }, 2)[1].Trim().Split(new char[] { ' ' });
+                            case "353":
+                                chan = line.Split(new char[] { ' ' })[4].Trim().ToLower();
+                                // "irc.ostenvighx.co 353 Suibhne = #suibhne :Suibhne Ted @Delenas"
+                                String[] namesList = line.Split(new String[] { " :" }, StringSplitOptions.None)[1].Trim().Split(new char[] { ' ' });
 
-                            if (!TempUsersContainer.ContainsKey(chan))
-                                TempUsersContainer.Add(chan, new List<Base.User>());
+                                // Do something with names here maybe
+                                break;
 
-                            foreach (String user in namesList)
-                                TempUsersContainer[chan].Add(new Base.User(user));
-                            break;
+                            case "366":
+                                chan = line.Split(new char[] { ' ' })[3].Trim().ToLower();
+                                break;
+                        }
 
-                        case "366":
-                            chan = line.Split(new char[] { ' ' })[3].Trim().ToLower();
-                            if (TempUsersContainer.ContainsKey(chan)) {
+                        #endregion
+                        break;
 
-                                // Return this?
-                                // TempUsersContainer[chan].ToArray()
-                                TempUsersContainer.Remove(chan);
-                            }
-                            break;
-                    }
+                    case "372":
+                        // Message of the day
+                        break;
+
+                    case "376":
+                        // End MOTD
+                        Status = Base.Reference.ConnectionStatus.Connected;
+                        HandleConnectionComplete(this);
+                        break;
+
+                    case "422":
+                        Status = Base.Reference.ConnectionStatus.Connected;
+                        HandleConnectionComplete(this);
+                        break;
+
+                    case "433":
+                        // Nickname in use - do not log because going to identify with LastDisplayName value
+                        ChangeNickname(Me.DisplayName + "-", false);
+                        break;
 
                     #endregion
-                    break;
 
-                case "372":
-                    // Message of the day
-                    break;
+                    case "nick":
+                        HandleNicknameChange(line);
+                        break;
 
-                case "376":
-                    // End MOTD
-                    Status = Base.Reference.ConnectionStatus.Connected;
-                    HandleConnectionComplete(this);
-                    break;
+                    case "join":
 
-                case "422":
-                    Status = Base.Reference.ConnectionStatus.Connected;
-                    HandleConnectionComplete(this);
-                    break;
+                        // TODO: Handle user events
+                        Base.User joiner = User.Parse(dataChunks[0]);
+                        //if (this.OnUserJoin != null)
+                        //    OnUserJoin(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
+                        break;
 
-                case "433":
-                    // Nickname in use - do not log because going to identify with LastDisplayName value
-                    ChangeNickname(Me.DisplayName + "-", false);
-                    break;
+                    case "part":
+                        Base.User parter = User.Parse(dataChunks[0]);
+                        //if (this.OnUserPart != null)
+                        //    OnUserPart(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
+                        break;
 
-                #endregion
+                    case "quit":
+                        Base.User quitter = User.Parse(dataChunks[0]);
+                        //if (this.OnUserQuit != null)
+                        //    OnUserQuit(this, GetLocationIdByName(Server.locationName), quitter);
+                        break;
 
-                case "nick":
-                    HandleNicknameChange(line);
-                    break;
+                    case "mode":
+                        HandleModeChange(line);
+                        break;
 
-                case "join":
 
-                    Base.User joiner = User.Parse(dataChunks[0]);
-                    //if (this.OnUserJoin != null)
-                    //    OnUserJoin(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
-                    break;
+                    case "privmsg":
+                    case "notice":
+                        Base.Message msg = Message.Parse(this, line);
+                        String hostmask = "";
+                        string userhost = line.Split(new char[] { ' ' })[0];
+                        Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
+                        if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
 
-                case "part":
-                    Base.User parter = User.Parse(dataChunks[0]);
-                    //if (this.OnUserPart != null)
-                    //    OnUserPart(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
-                    break;
+                        if (hostmask != "" && OpAccessLevels.ContainsKey(hostmask)) {
+                            Dictionary<Guid, byte> accessLevels = OpAccessLevels[hostmask];
+                            if (accessLevels.ContainsKey(NetworkIdentifier))
+                                msg.sender.AuthLevel = accessLevels[NetworkIdentifier];
+                            else if (accessLevels.ContainsKey(msg.locationID))
+                                msg.sender.AuthLevel = accessLevels[msg.locationID];
+                        }
 
-                case "quit":
-                    Base.User quitter = User.Parse(dataChunks[0]);
-                    //if (this.OnUserQuit != null)
-                    //    OnUserQuit(this, GetLocationIdByName(Server.locationName), quitter);
-                    break;
+                        HandleMessageRecieved(this, msg);
+                        break;
 
-                case "privmsg":
-                case "notice":
-                    Base.Message msg = Message.Parse(this, line);
-                    HandleMessageRecieved(this, msg);
-                    break;
+                    default:
+                        Console.WriteLine(line);
+                        break;
+                }
+            }
+
+            catch (Exception e) {
+                Console.WriteLine(e);
             }
         }
 
@@ -429,6 +439,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                         Guid newLocationID = Guid.NewGuid();
                         Listened.Add(newLocationID, location);
+
+                        SendRaw("WHO " + location.Name);
 
                         if (this.OnListeningStart != null) {
                             OnListeningStart(this, newLocationID);
@@ -538,7 +550,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             Base.User changer = User.Parse(dataChunks[0]);
             changer.LastDisplayName = changer.DisplayName;
             changer.DisplayName = dataChunks[2].TrimStart(':');
-
+                
             if (changer.LastDisplayName == Me.DisplayName) {
                 Base.User me = new Base.User(Me.Username, Me.DisplayName, changer.DisplayName);
                 Me = me;
@@ -573,6 +585,65 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             HandleDisconnectComplete(this);
         }
 
+        private void ParseWhoResponse(String line) {
+            String[] bits = line.Split(new char[] { ' ' });
+            Guid locationGuid = GetLocationIdByName(bits[3]);
+            User u = new User();
+            u.Username = bits[4].TrimStart(new char[]{'~'});
+            u.DisplayName = bits[7];
+
+            String modesRaw = bits[8];
+            byte level = User.GetAccessLevel(modesRaw);
+            
+            /// 3>> :foxtaur.furnet.org 352 Delenas #ostenvighx ~Delenas fur-3EB9DC59.hsd1.pa.comcast.net foxtaur.furnet.org Delenas Hr~ :0 Delenas Freshtt
+            if (!OpAccessLevels.ContainsKey(bits[5]))
+                OpAccessLevels.Add(bits[5], new Dictionary<Guid, byte>());
+
+            // Add the access level for a specific location. If multiple hostmasks are found identical, this gives the highest level priority.
+            // This may cause issues if multiple people are sharing an IP.
+            if (!OpAccessLevels[bits[5]].ContainsKey(locationGuid))
+                OpAccessLevels[bits[5]].Add(locationGuid, level);
+            else
+                if (OpAccessLevels[bits[5]][locationGuid] < level)
+                    OpAccessLevels[bits[5]][locationGuid] = level;
+
+            if (OpAccessLevels[bits[5]][locationGuid] == 0)
+                OpAccessLevels[bits[5]][locationGuid] = 1;
+        }
+
+        private void HandleModeChange(String line) {
+            Match match = Regex.Match(line, RegularExpressions.SENDER_REGEX_RAW + @" MODE " + RegularExpressions.LOCATION_REGEX + @" " + @"(?<data>.*)", RegexOptions.ExplicitCapture);
+            if (!match.Success)
+                return;
+
+            string captured = match.Groups["data"].Value;
+            string modeList = captured.Substring(0, captured.IndexOf(' '));
+            string[] nickList = captured.Substring(captured.IndexOf(' ') + 1).Split(new char[] { ' ' });
+
+            char modeType = '+'; int charPos = 0;
+            List<ModeCharacterParsePoint> modes = new List<ModeCharacterParsePoint>();
+            foreach (char modeChar in modeList.ToCharArray()) {
+
+                // Handle which type of mode this is doing
+                if (modeChar == '-' || modeChar == '+')
+                    modeType = modeChar;
+                else {
+                    ModeCharacterParsePoint newModeChar = new ModeCharacterParsePoint();
+                    newModeChar.is_add = modeType == '+';
+                    newModeChar.modeChar = modeChar;
+                    newModeChar.position = charPos;
+                    newModeChar.nickname = nickList[charPos];
+                    modes.Add(newModeChar);
+
+                    charPos++;
+                }
+            }
+
+            foreach (ModeCharacterParsePoint mcp in modes) {
+                // Update user access level in location
+
+            }
+        }
     }
 }
 

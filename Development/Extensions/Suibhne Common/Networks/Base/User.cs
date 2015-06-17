@@ -3,12 +3,18 @@ using System.Text.RegularExpressions;
 
 namespace Ostenvighx.Suibhne.Networks.Base {
 
-    /// <summary>
-    /// An Irc User is a user connected to an IRC Network.
-    /// This class contains information on their known nicknames,
-    /// host mask, and Username.
-    /// </summary>
     public class User {
+
+        public enum AccessLevel : byte {
+            Unassigned = 0,
+            Basic = 1,
+            
+            Authenticated = 100,
+
+            BotAdmin = 250
+        }
+
+        public byte AuthLevel;
 
         /// <summary>
         /// The user's Username. This is usually the first bit of their hostmask.
@@ -38,6 +44,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             :this(nickname, nickname, nickname) { }
 
         public User(String username, String last_displayname, String current_displayname) {
+            this.AuthLevel = (byte) User.AccessLevel.Basic;
             this.Username = username;
             this.LastDisplayName = last_displayname;
             this.DisplayName = current_displayname;
@@ -51,6 +58,14 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public override string ToString() {
             return this.DisplayName;
         }
+
+        public override bool Equals(object obj) {
+            if (obj.GetType() == typeof(User)) {
+                return ((User)obj).Username == this.Username;
+            }
+
+            return false;
+        } 
     }
 }
 
