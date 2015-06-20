@@ -14,7 +14,8 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             BotAdmin = 250
         }
 
-        public byte AuthLevel;
+        public byte NetworkAuthLevel;
+        public byte LocalAuthLevel;
 
         /// <summary>
         /// The user's Username. This is usually the first bit of their hostmask.
@@ -44,7 +45,8 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             :this(nickname, nickname, nickname) { }
 
         public User(String username, String last_displayname, String current_displayname) {
-            this.AuthLevel = (byte) User.AccessLevel.Basic;
+            this.NetworkAuthLevel = (byte)User.AccessLevel.Basic; 
+            this.LocalAuthLevel = (byte)User.AccessLevel.Basic;
             this.Username = username;
             this.LastDisplayName = last_displayname;
             this.DisplayName = current_displayname;

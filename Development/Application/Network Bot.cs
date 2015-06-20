@@ -47,18 +47,17 @@ namespace Ostenvighx.Suibhne {
                     if (t.IsSubclassOf(typeof(Network))) {
                         this._network = (Network)Activator.CreateInstance(t);
                         _network.Setup(configDir + "/connection.ini");
+                        _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
+
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
                         _network.OnConnectionComplete += (conn) => {
-                            _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
                             AutoJoinLocations(configDir);
                         };
                     }
                 }
 
-                _network.OpAccessLevels = new Dictionary<string, Dictionary<Guid, byte>>();
                 foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
-                    _network.OpAccessLevels.Add(opIdentifier, new Dictionary<Guid,byte>());
-                    _network.OpAccessLevels[opIdentifier][Identifier] = (byte) config.Configs["Operators"].GetInt(opIdentifier);
+                    _network.Listened[Identifier].AccessLevels.Add(opIdentifier, (byte) config.Configs["Operators"].GetInt(opIdentifier));
 
                 }
             }

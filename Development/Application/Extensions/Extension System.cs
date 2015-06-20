@@ -165,7 +165,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 return;
 
             CommandMap cmd = CommandMapping[command];
-            if (!(cmd.AccessLevel <= message.sender.AuthLevel)) {
+            if (!(cmd.AccessLevel <= message.sender.NetworkAuthLevel)) {
                 response.message = "You do not have permission to run this command.";
                 conn.SendMessage(response);
                 return;
@@ -174,7 +174,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "oplevel":
-                    response.message = "You have an access level of " + message.sender.AuthLevel + ", " + message.sender.DisplayName + ".";
+                    response.message = "You have an access level of " + message.sender.NetworkAuthLevel + ", " + message.sender.DisplayName + ". Your LOCAL access level is " + message.sender.LocalAuthLevel + ".";
                     conn.SendMessage(response);
                     break;
 

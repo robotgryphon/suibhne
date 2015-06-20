@@ -96,6 +96,11 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         #endregion
 
         /// <summary>
+        /// Used during MODE parsing. Key is user hostmask. Value-key is user nickname, value-value is access level.
+        /// </summary>
+        private Dictionary<String, Dictionary<string, byte>> TempUserAccessLevels;
+
+        /// <summary>
         /// Create a new Networks.Irc _conn object using the default Networks.Irc Configuration.
         /// The default Networks.Irc Configuration attempts to connect to a local server (on the host machine).
         /// </summary>
@@ -114,6 +119,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.Server = new Base.Location("localhost", Networks.Base.Reference.LocationType.Network);
 
             this.port = 6667;
+
+            this.TempUserAccessLevels = new Dictionary<string, Dictionary<string, byte>>();
         }
 
         /// <summary>
@@ -140,9 +147,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="config">Configuration to use to connect to the server.</param>
         public IrcNetwork(IConfig config)
             : this() {
-
-                this.OpAccessLevels = new Dictionary<string, Dictionary<Guid, byte>>();
-
                 DoNetworkSetup(config);
         }
 
@@ -311,6 +315,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         // Network.locationName = dataChunks[0].TrimStart(new char[] { ':' });
                         break;
 
+                    case "315":
+                        // End of WHO response
+                        ParseWhoList(line);
+                        break;
+
+
                     case "352":
                         // who response
                         ParseWhoResponse(line);
@@ -397,12 +407,23 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
                         if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
 
-                        if (hostmask != "" && OpAccessLevels.ContainsKey(hostmask)) {
-                            Dictionary<Guid, byte> accessLevels = OpAccessLevels[hostmask];
-                            if (accessLevels.ContainsKey(NetworkIdentifier))
-                                msg.sender.AuthLevel = accessLevels[NetworkIdentifier];
-                            else if (accessLevels.ContainsKey(msg.locationID))
-                                msg.sender.AuthLevel = accessLevels[msg.locationID];
+                        if (Listened.ContainsKey(msg.locationID)) {
+                            Base.Location loc = Listened[msg.locationID];
+
+                            if (loc.AccessLevels.ContainsKey("*@" + hostmask))
+                                msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels["*@" + hostmask];
+
+                            if (loc.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
+                                msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
+
+                            Base.Location serv = Listened[NetworkIdentifier];
+                            if (serv.AccessLevels.ContainsKey("*@" + hostmask))
+                                msg.sender.NetworkAuthLevel = serv.AccessLevels["*@" + hostmask];
+
+                            if (serv.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
+                                msg.sender.NetworkAuthLevel = serv.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
+
+                            // TODO: Re-do auth levels for user here. Include both server and location level for further processing.
                         }
 
                         HandleMessageRecieved(this, msg);
@@ -438,6 +459,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         }
 
                         Guid newLocationID = Guid.NewGuid();
+                        location.Parent = this.NetworkIdentifier;
                         Listened.Add(newLocationID, location);
 
                         SendRaw("WHO " + location.Name);
@@ -586,29 +608,32 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         }
 
         private void ParseWhoResponse(String line) {
+
+            /// :foxtaur.furnet.org 352 Delenas #ostenvighx ~Delenas fur-3EB9DC59.hsd1.pa.comcast.net foxtaur.furnet.org Delenas Hr~ :0 Delenas Freshtt
+            /// 
             String[] bits = line.Split(new char[] { ' ' });
             Guid locationGuid = GetLocationIdByName(bits[3]);
             User u = new User();
             u.Username = bits[4].TrimStart(new char[]{'~'});
             u.DisplayName = bits[7];
 
+            String userHost = bits[5];
             String modesRaw = bits[8];
-            byte level = User.GetAccessLevel(modesRaw);
             
-            /// 3>> :foxtaur.furnet.org 352 Delenas #ostenvighx ~Delenas fur-3EB9DC59.hsd1.pa.comcast.net foxtaur.furnet.org Delenas Hr~ :0 Delenas Freshtt
-            if (!OpAccessLevels.ContainsKey(bits[5]))
-                OpAccessLevels.Add(bits[5], new Dictionary<Guid, byte>());
+            byte level = User.GetAccessLevel(modesRaw);
+            if (level == 0) level = 1;
 
-            // Add the access level for a specific location. If multiple hostmasks are found identical, this gives the highest level priority.
-            // This may cause issues if multiple people are sharing an IP.
-            if (!OpAccessLevels[bits[5]].ContainsKey(locationGuid))
-                OpAccessLevels[bits[5]].Add(locationGuid, level);
-            else
-                if (OpAccessLevels[bits[5]][locationGuid] < level)
-                    OpAccessLevels[bits[5]][locationGuid] = level;
+            // Get the location we're working on- if we joined the channel, we have this, but we best make sure
+            Guid location = GetLocationIdByName(bits[3]);
+            if (location == Guid.Empty)
+                return;
 
-            if (OpAccessLevels[bits[5]][locationGuid] == 0)
-                OpAccessLevels[bits[5]][locationGuid] = 1;
+            // Make sure we have a valid list for the hostmask
+            if (!TempUserAccessLevels.ContainsKey(userHost))
+                TempUserAccessLevels.Add(userHost, new Dictionary<string, byte>());
+
+            TempUserAccessLevels[bits[5]].Add(bits[7], level);
+            
         }
 
         private void HandleModeChange(String line) {
@@ -616,33 +641,31 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (!match.Success)
                 return;
 
-            string captured = match.Groups["data"].Value;
-            string modeList = captured.Substring(0, captured.IndexOf(' '));
-            string[] nickList = captured.Substring(captured.IndexOf(' ') + 1).Split(new char[] { ' ' });
+            SendRaw("WHO " + match.Groups["location"].Value);
+        }
 
-            char modeType = '+'; int charPos = 0;
-            List<ModeCharacterParsePoint> modes = new List<ModeCharacterParsePoint>();
-            foreach (char modeChar in modeList.ToCharArray()) {
 
-                // Handle which type of mode this is doing
-                if (modeChar == '-' || modeChar == '+')
-                    modeType = modeChar;
-                else {
-                    ModeCharacterParsePoint newModeChar = new ModeCharacterParsePoint();
-                    newModeChar.is_add = modeType == '+';
-                    newModeChar.modeChar = modeChar;
-                    newModeChar.position = charPos;
-                    newModeChar.nickname = nickList[charPos];
-                    modes.Add(newModeChar);
+        /// <summary>
+        /// Goes through the temporary who feedback and gets all the hostmasks, translating them into ban strings for the final access list
+        /// </summary>
+        private void ParseWhoList(String line) {
+            String[] lineBits = line.Split(new char[] { ' ' });
+            Guid locationID = GetLocationIdByName(lineBits[3]);
+            Base.Location location = Listened[locationID];
+            location.AccessLevels.Clear();
 
-                    charPos++;
+            foreach(KeyValuePair<string, Dictionary<string, byte>> hostmaskItem in TempUserAccessLevels){
+                if (hostmaskItem.Value.Count > 1) {
+                    // Remap keys
+                    foreach (KeyValuePair<string, byte> user in hostmaskItem.Value) {
+                        location.AccessLevels.Add(user.Key + "@" + hostmaskItem.Key, user.Value);
+                    }
+                } else {
+                    location.AccessLevels.Add("*@" + hostmaskItem.Key, hostmaskItem.Value.Values.ElementAt(0));
                 }
             }
 
-            foreach (ModeCharacterParsePoint mcp in modes) {
-                // Update user access level in location
-
-            }
+            TempUserAccessLevels.Clear();
         }
     }
 }

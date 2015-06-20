@@ -60,8 +60,6 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             protected set;
         }
 
-        public Dictionary<String, Dictionary<Guid, byte>> OpAccessLevels;
-
         public abstract void Setup(string configFile);
 
         #region Connection Methods

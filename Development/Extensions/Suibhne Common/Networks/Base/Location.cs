@@ -6,10 +6,7 @@ using System.Text;
 namespace Ostenvighx.Suibhne.Networks.Base {
     public class Location {
 
-        public Guid Parent {
-            get;
-            protected set;
-        }
+        public Guid Parent;
 
         /// <summary>
         /// A lowercased form of the location in question. A locationID name or user DisplayName.
@@ -35,6 +32,8 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
             private set { }
         }
+
+        public Dictionary<String, byte> AccessLevels;
 
         /// <summary>
         /// Make a new instance of an Irc Location object.
@@ -66,6 +65,8 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             this.Name = locationName;
             this.Password = password;
             this.Type = type;
+
+            this.AccessLevels = new Dictionary<string, byte>();
         }
 
         /// <summary>
@@ -79,6 +80,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public override string ToString() {
             return this.Name + " (" + Type + ")";
         }
+
         /// <summary>
         /// Determines if the location is equal to another.
         /// This is true if the lowercased location name is the same.
