@@ -67,34 +67,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         public event Reference.IrcLocationEvent OnListeningEnd;
         #endregion
 
-        #region User Events
-        /// <summary>
-        /// Called when a user joins a locationID the connection is listening on.
-        /// </summary>
-        public event Reference.IrcUserEvent OnUserJoin;
-
-        /// <summary>
-        /// Called when a user parts a locationID the connection is listening on.
-        /// </summary>
-        public event Reference.IrcUserEvent OnUserPart;
-
-        /// <summary>
-        /// Called when a user quits the server the connection is at.
-        /// </summary>
-        public event Reference.IrcUserEvent OnUserQuit;
-
-        /// <summary>
-        /// Called when a user changes their DisplayName on the server.
-        /// </summary>
-        public event Reference.IrcUserEvent OnUserNickChange;
-
-        /// <summary>
-        /// Called when the connection's DisplayName changes, through a 433 code or manually.
-        /// </summary>
-        public event Reference.IrcUserEvent OnBotNickChange;
-
-        #endregion
-
         /// <summary>
         /// Used during MODE parsing. Key is user hostmask. Value-key is user nickname, value-value is access level.
         /// </summary>
@@ -184,9 +156,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Base.User tmpMe = new Base.User(Me.Username, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
 
-                //if (this.OnBotNickChange != null) {
-                //    OnBotNickChange(this, GetLocationIdByName(Server.locationName), Me);
-                // }
+                HandleUserDisplayNameChange(Listened[NetworkIdentifier], Me);
             }
         }
 
@@ -211,7 +181,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// Callback handler for when a connection is completed to the server.
         /// </summary>
         /// <param name="ar">Result.</param>
-        protected void ConnectionCompleteCallback(IAsyncResult ar) {
+        internal void ConnectionCompleteCallback(IAsyncResult ar) {
             try {
                 Socket client = (Socket)ar.AsyncState;
                 client.EndConnect(ar);
@@ -236,7 +206,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// Data recieved callback.
         /// </summary>
         /// <param name="ar"></param>
-        protected void DataRecievedCallback(IAsyncResult ar) {
+        internal void DataRecievedCallback(IAsyncResult ar) {
 
             Socket recievedOn = (Socket)ar.AsyncState;
             try {
@@ -375,23 +345,27 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         break;
 
                     case "join":
-
-                        // TODO: Handle user events
                         Base.User joiner = User.Parse(dataChunks[0]);
-                        //if (this.OnUserJoin != null)
-                        //    OnUserJoin(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
+                        HandleUserJoin(GetLocationByName(dataChunks[2].TrimStart(':')), joiner);
                         break;
 
                     case "part":
                         Base.User parter = User.Parse(dataChunks[0]);
-                        //if (this.OnUserPart != null)
-                        //    OnUserPart(this, GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
+                        HandleUserLeave(GetLocationByName(dataChunks[2].TrimStart(':')), parter);
                         break;
 
                     case "quit":
                         Base.User quitter = User.Parse(dataChunks[0]);
-                        //if (this.OnUserQuit != null)
-                        //    OnUserQuit(this, GetLocationIdByName(Server.locationName), quitter);
+                        HandleUserQuit(Listened[NetworkIdentifier], quitter);
+
+                        foreach (Base.Location listened in Listened.Values) {
+                            string hostmask = dataChunks[0].Substring(line.IndexOf("@") + 1);
+                            if(listened.AccessLevels.ContainsKey("*@" + hostmask))
+                                listened.AccessLevels.Remove("*@" + hostmask);
+
+                            if (listened.AccessLevels.ContainsKey(quitter.DisplayName + "@" + hostmask))
+                                listened.AccessLevels.Remove(quitter.DisplayName + "@" + hostmask);
+                        }
                         break;
 
                     case "mode":
@@ -401,32 +375,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                     case "privmsg":
                     case "notice":
-                        Base.Message msg = Message.Parse(this, line);
-                        String hostmask = "";
-                        string userhost = line.Split(new char[] { ' ' })[0];
-                        Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
-                        if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
-
-                        if (Listened.ContainsKey(msg.locationID)) {
-                            Base.Location loc = Listened[msg.locationID];
-
-                            if (loc.AccessLevels.ContainsKey("*@" + hostmask))
-                                msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels["*@" + hostmask];
-
-                            if (loc.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
-                                msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
-
-                            Base.Location serv = Listened[NetworkIdentifier];
-                            if (serv.AccessLevels.ContainsKey("*@" + hostmask))
-                                msg.sender.NetworkAuthLevel = serv.AccessLevels["*@" + hostmask];
-
-                            if (serv.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
-                                msg.sender.NetworkAuthLevel = serv.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
-
-                            // TODO: Re-do auth levels for user here. Include both server and location level for further processing.
-                        }
-
-                        HandleMessageRecieved(this, msg);
+                        HandleIncomingMessage(line);
                         break;
 
                     default:
@@ -438,6 +387,35 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             catch (Exception e) {
                 Console.WriteLine(e);
             }
+        }
+
+        protected void HandleIncomingMessage(String line) {
+            Base.Message msg = Message.Parse(this, line);
+
+            String hostmask = "";
+            string userhost = line.Split(new char[] { ' ' })[0];
+            Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
+            if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
+
+            if (Listened.ContainsKey(msg.locationID)) {
+                Base.Location loc = Listened[msg.locationID];
+
+                if (loc.AccessLevels.ContainsKey("*@" + hostmask))
+                    msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels["*@" + hostmask];
+
+                if (loc.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
+                    msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
+
+                Base.Location serv = Listened[NetworkIdentifier];
+                if (serv.AccessLevels.ContainsKey("*@" + hostmask))
+                    msg.sender.NetworkAuthLevel = serv.AccessLevels["*@" + hostmask];
+
+                if (serv.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
+                    msg.sender.NetworkAuthLevel = serv.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
+            }
+
+            HandleMessageRecieved(msg);
+
         }
 
         /// <summary>
@@ -552,14 +530,22 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                             break;
                     }
 
-                    // TODO: Fix events
-                    //if (this.OnMessageSent != null)
-                    //    OnMessageSent(this, message);
+                    HandleMessageRecieved(message);
                 } else {
                     // Have not joined location
                     Console.WriteLine("Location not available: " + message.locationID);
                 }
             }
+        }
+
+        protected override void HandleUserJoin(Base.Location l, Base.User u) {
+            base.HandleUserJoin(l, u);
+            SendRaw("WHO " + l.Name);
+        }
+
+        protected override void HandleUserLeave(Base.Location l, Base.User u) {
+            base.HandleUserLeave(l, u);
+            SendRaw("WHO " + l.Name);
         }
 
         /// <summary>
@@ -576,13 +562,20 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (changer.LastDisplayName == Me.DisplayName) {
                 Base.User me = new Base.User(Me.Username, Me.DisplayName, changer.DisplayName);
                 Me = me;
-                // TODO: Fix Events
-                //if (this.OnBotNickChange != null)
-                //    OnBotNickChange(this, GetLocationIdByName(Server.locationName), changer);
-            } else {
-                //if (this.OnUserNickChange != null) {
-                //    OnUserNickChange(this, GetLocationIdByName(Server.locationName), changer);
-                //}
+            }
+
+            HandleUserDisplayNameChange(Listened[NetworkIdentifier], changer);
+
+            foreach (Base.Location location in Listened.Values) {
+                foreach (String host in location.AccessLevels.Keys) {
+                    if (host.StartsWith(changer.LastDisplayName)) {
+                        byte accessLevel = location.AccessLevels[host];
+                        location.AccessLevels.Remove(host);
+                        location.AccessLevels.Add(changer.DisplayName + "@" + host.Substring(host.IndexOf("@") + 1), accessLevel);
+
+                        break;
+                    }
+                }
             }
         }
 

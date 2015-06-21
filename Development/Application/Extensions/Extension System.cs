@@ -145,7 +145,8 @@ namespace Ostenvighx.Suibhne.Extensions {
             CommandMapping.Add("system", sys);
 
             CommandMapping.Add("oplevel", new CommandMap() { AccessLevel = 1 });
-            return mappedCommands + 2;
+            CommandMapping.Add("commands", new CommandMap() { AccessLevel = 1 });
+            return mappedCommands + 4;
         }
 
         public void HandleCommand(NetworkBot conn, Message message) {
@@ -161,10 +162,15 @@ namespace Ostenvighx.Suibhne.Extensions {
                 response.target = message.target;
             }
 
-            if (!CommandMapping.ContainsKey(command))
+            if (!CommandMapping.ContainsKey(command)) {
+                response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                response.message = "is not sure what to do with this information. [INVALID COMMAND]";
+                conn.SendMessage(response);
                 return;
+            }
 
             CommandMap cmd = CommandMapping[command];
+            ExtensionMap extension = Extensions[CommandMapping[command].Extension];
             if (!(cmd.AccessLevel <= message.sender.NetworkAuthLevel)) {
                 response.message = "You do not have permission to run this command.";
                 conn.SendMessage(response);
@@ -173,6 +179,14 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
+                case "commands":
+                    response.type = Networks.Base.Reference.MessageType.PublicAction;
+                    response.message = "has these commands registered: ";
+                    response.message += String.Join(", ", CommandMapping.Keys);
+                    conn.SendMessage(response);
+                    response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                    break;
+
                 case "oplevel":
                     response.message = "You have an access level of " + message.sender.NetworkAuthLevel + ", " + message.sender.DisplayName + ". Your LOCAL access level is " + message.sender.LocalAuthLevel + ".";
                     conn.SendMessage(response);
@@ -349,16 +363,14 @@ namespace Ostenvighx.Suibhne.Extensions {
                     break;
 
                 default:
-                    if (CommandMapping.ContainsKey(command)) {
-                        CommandMap mappedCommand = CommandMapping[command];
-                        ExtensionMap ext = Extensions[CommandMapping[command].Extension];
-                        Core.Log("Recieved command '" + command + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
-                        ext.HandleCommandRecieved(conn, mappedCommand.Method, message);
-                    } else {
-                        response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                        response.message = "is not sure what to do with this information. [INVALID COMMAND]";
+                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [methodID: " + cmd.Method + "]", LogType.EXTENSIONS);
+                    if (!extension.Ready) {
+                        response.message = "I have {" + command + "} registered as a command, but it looks like the extension isn't ready yet. Try again later.";
                         conn.SendMessage(response);
+                    } else {
+                        extension.HandleCommandRecieved(conn, cmd.Method, message);
                     }
+
                     break;
             }
         }
@@ -413,7 +425,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Guid destination;
                         byte type = 1;
 
-                        // TODO: Need to create global location registry
                         Extension.ParseMessage(
                             data,
                             out origin,

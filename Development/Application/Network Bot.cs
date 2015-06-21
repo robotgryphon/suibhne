@@ -96,7 +96,7 @@ namespace Ostenvighx.Suibhne {
             _extensions.HandleCommand(this, message);
         }
 
-        protected void HandleMessageRecieved(Network conn, Message message) {
+        protected void HandleMessageRecieved(Message message) {
             Core.Log(message.ToString(), LogType.INCOMING);
             if (message.message.StartsWith("!"))
                 HandleCommand(message);

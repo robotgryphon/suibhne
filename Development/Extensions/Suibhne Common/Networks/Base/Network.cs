@@ -20,13 +20,13 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// A MessageRecieved event is fired off when an Message is recieved on the server.
         /// This includes notices, queries, actions, and regular locationID messages.
         /// </summary>
-        public event Events.NetworkMessageEvent OnMessageRecieved;
+        public event Events.MessageEvent OnMessageRecieved;
 
         /// <summary>
         /// A MessageSent event is fired off when an Message is sent to the server.
         /// This includes notices, queries, actions, and regular locationID messages.
         /// </summary>
-        public event Events.NetworkMessageEvent OnMessageSent;
+        public event Events.MessageEvent OnMessageSent;
 
         /// <summary>
         /// Occurs when a connection is complete and data is ready to be served.
@@ -38,6 +38,33 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// </summary>
         public event Events.NetworkConnectionEvent OnDisconnectComplete;
 
+        #region User Events
+        /// <summary>
+        /// Called when a user joins a locationID the connection is listening on.
+        /// </summary>
+        public event Events.UserEvent OnUserJoin;
+
+        /// <summary>
+        /// Called when a user parts a locationID the connection is listening on.
+        /// </summary>
+        public event Events.UserEvent OnUserLeave;
+
+        /// <summary>
+        /// Called when a user quits the server the connection is at.
+        /// </summary>
+        public event Events.UserEvent OnUserQuit;
+
+        /// <summary>
+        /// Called when a user changes their DisplayName on the server.
+        /// </summary>
+        public event Events.UserEvent OnUserDisplayNameChange;
+
+        /// <summary>
+        /// Called when the connection's DisplayName changes, through a 433 code or manually.
+        /// </summary>
+        public event Events.UserEvent OnBotNickChange;
+
+        #endregion
         /// <summary>
         /// Includes known information about the bot as an Networks.Base User.
         /// Use DisplayName and similar information here.
@@ -101,6 +128,28 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
         public abstract void LeaveLocation(Guid g);
 
+        #region User Events
+        protected virtual void HandleUserJoin(Location l, User u) {
+            if (this.OnUserJoin != null)
+                OnUserJoin(l, u);
+        }
+
+        protected virtual void HandleUserLeave(Location l, User u) {
+            if (this.OnUserLeave != null)
+                OnUserLeave(l, u);
+        }
+
+        protected virtual void HandleUserQuit(Location l, User u) {
+            if (this.OnUserQuit != null)
+                OnUserQuit(l, u);
+        }
+
+        protected virtual void HandleUserDisplayNameChange(Location l, User u) {
+            if (this.OnUserDisplayNameChange != null)
+                OnUserDisplayNameChange(l, u);
+        }
+        #endregion
+
         #region Network Events
         protected virtual void HandleConnectionComplete(Network n) {
             if (n.OnConnectionComplete != null)
@@ -112,9 +161,9 @@ namespace Ostenvighx.Suibhne.Networks.Base {
                 n.OnDisconnectComplete(n);
         }
         
-        protected virtual void HandleMessageRecieved(Network n, Message m) {
-            if (n.OnMessageRecieved != null)
-                n.OnMessageRecieved(n, m);
+        protected virtual void HandleMessageRecieved(Message m) {
+            if (OnMessageRecieved != null)
+                OnMessageRecieved(m);
         }
         #endregion
     }

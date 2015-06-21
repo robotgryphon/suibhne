@@ -65,7 +65,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                 byte[] btemp = new byte[recievedAmount];
                 Array.Copy(Buffer, btemp, recievedAmount);
 
-                // TODO: Make this more specific. Use OnExtensionDataRecieved. Extend that further.
                 if (this.OnDataRecieved != null)
                     OnDataRecieved(recievedOn, btemp);
 
