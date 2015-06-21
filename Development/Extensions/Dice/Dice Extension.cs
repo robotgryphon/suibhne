@@ -91,7 +91,7 @@ namespace Ostenvighx.Suibhne.Dice {
 
             // If we have no arguments
             if (message == "") {
-                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, "Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.");
+                ext.SendMessage(origin, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, "Roll up to ten dice, separated by spaces. Format is standard, XdY+Z. Modifier (+Z) can be negative or excluded.");
                 return;
             }
 
@@ -105,11 +105,11 @@ namespace Ostenvighx.Suibhne.Dice {
                 }
 
                 
-                String response = Reference.Bold + Reference.ColorPrefix + "06rolls a few dice, and the results are: " + Reference.Normal + total + "!";
+                String response = "rolls a few dice, and the results are: " + total + "!";
 
-                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, response);
+                ext.SendMessage(origin, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, response);
             } else {
-                ext.SendMessage(origin, Reference.MessageType.ChannelMessage, "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
+                ext.SendMessage(origin, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, "Up to ten dice can be rolled. (You had " + (commandParts.Length - 1) + "). Format is 1d20(+1), up to ten dice (put a space between the dice notations).");
             }
         }
 

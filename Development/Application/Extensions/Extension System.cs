@@ -146,6 +146,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             CommandMapping.Add("oplevel", new CommandMap() { AccessLevel = 1 });
             CommandMapping.Add("commands", new CommandMap() { AccessLevel = 1 });
+            CommandMapping.Add("help", new CommandMap() { AccessLevel = 1 });
             return mappedCommands + 4;
         }
 
@@ -170,7 +171,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             CommandMap cmd = CommandMapping[command];
-            ExtensionMap extension = Extensions[CommandMapping[command].Extension];
             if (!(cmd.AccessLevel <= message.sender.NetworkAuthLevel)) {
                 response.message = "You do not have permission to run this command.";
                 conn.SendMessage(response);
@@ -363,6 +363,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                     break;
 
                 default:
+                    ExtensionMap extension = Extensions[CommandMapping[command].Extension];
+
                     Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [methodID: " + cmd.Method + "]", LogType.EXTENSIONS);
                     if (!extension.Ready) {
                         response.message = "I have {" + command + "} registered as a command, but it looks like the extension isn't ready yet. Try again later.";

@@ -208,15 +208,15 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                     case Responses.Details:
                         string response =
-                            "[" + Reference.ColorPrefix + "05" + Identifier + Reference.Normal + "] " +
-                            GetExtensionName() + Reference.ColorPrefix + "02 (v. " + GetExtensionVersion() + ")" + Reference.Normal +
-                            " developed by " + Reference.ColorPrefix + "03" + string.Join(", ", GetExtensionAuthor());
+                            "[" + Identifier + "] " +
+                            GetExtensionName() + " (v. " + GetExtensionVersion() + ")" +
+                            " developed by " + string.Join(", ", GetExtensionAuthor());
 
                         String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte)Reference.MessageType.ChannelMessage, this.GetExtensionName().Replace(" ", "_"), response);
+                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte) Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, this.GetExtensionName().Replace(" ", "_"), response);
                         SendBytes(Responses.Message, rawMessage);
 
                         break;
@@ -256,7 +256,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 foreach (Object attr in attrs) {
                                     if (attr.GetType() == typeof(HelpAttribute)) {
                                         HelpAttribute handler = (HelpAttribute)attr;
-                                        SendMessage(origin, Reference.MessageType.ChannelMessage, handler.HelpText);
+                                        SendMessage(origin, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, handler.HelpText);
                                     }
                                 }
                             }
@@ -362,7 +362,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Console.WriteLine("Recieved message from " + nickname + ": " + message);
         }
 
-        public void SendMessage(Guid destination, Reference.MessageType type, String message) {
+        public void SendMessage(Guid destination, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType type, String message) {
             byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.GetExtensionName().Replace(' ', '_'), message);
             conn.Send(rawMessage);
         }
