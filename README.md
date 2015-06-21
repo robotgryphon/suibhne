@@ -1,6 +1,10 @@
 # Versioning and Changelog #
+## Version 2.5: Indev
+#### Planned changes
+* Scripting system- ability to create script files in various locations of the config directory that run when events are driven. For example, creating a `UserJoin.script` file inside `Config/Network/Location` could run a script that occurs whenever a user joins `Location` on `Network`.
 
-## Version 2.4
+
+## Version 2.4: The overhaul update
 #### Extension changes
 * Extension command mapping changing to be loaded from file system instead of over sockets.
 * Extension permanence. An extension will always use the same identifier once it's installed.
@@ -21,28 +25,25 @@ Networks are now working through connectors. This lets the bot handle different 
 This lets extension developers keep their code in a uniform manner, and release connector-specific extensions if necessary. The dice extension used as an example extension here is a good example of the code- it doesn't NEED to know how all the connectors send messages. It just knows to pass a message along- the connectors handle the rest.
 
 
-## Version 2.1: The Logical Update
-* Separating code into logical chunks, conforming to changes with Raindrop API
-
 ## Version 2.2: The Extension Update
 ### Version 2.2.1
-* Initial extension system.
-* Based on DLL assembly loading. Extensions hooked directly into the connection events during runtime.
+Initial extension system. Based on DLL assembly loading. Extensions hooked directly into the connection events during runtime.
 
 ### Version 2.2.2
 * Extensions now separated into a client-server system. 
 * Extensions register EVERYTHING through sockets and response code bytes.
-## Version 2.0: The Language Update
-* Initial move to C#/NET language.
-* Basic connection created.
-* Everything ever hardcoded.
 
 ### Version 2.2.3
 * Extensions changed to create a routing system with GUIDs. All routing has an origin and destination guid.
 
 
+## Version 2.1: The Logical Update
+### Version 2.1.0
+#### Code changes
+Separating code into logical chunks, conforming to changes with Base API.
 
 
-
-
-
+## Version 2.0: The Language Update
+* Initial move to C#/NET language.
+* Basic connection created.
+* Everything ever hardcoded.
