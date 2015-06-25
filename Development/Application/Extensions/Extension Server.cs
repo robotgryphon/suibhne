@@ -11,11 +11,8 @@ namespace Ostenvighx.Suibhne.Extensions {
         protected Socket Connection;
         protected byte[] Buffer;
 
-        public delegate void DataEvent(Socket sock, byte[] data);
-        public event DataEvent OnDataRecieved;
-
-        public delegate void ExtensionDataEvent(ExtensionMap ext, byte[] data);
-        public event ExtensionDataEvent OnExtDataRecieved;
+        public event Events.ExtensionSocketEvent OnSocketCrash;
+        public event Events.ExtensionSocketDataEvent OnDataRecieved;
 
         public ExtensionServer() {
             this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -72,7 +69,8 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             catch (SocketException) {
-                // RemoveBySocket(recievedOn, "Extension crashed.");
+                if (this.OnSocketCrash != null)
+                    OnSocketCrash(recievedOn);
             }
         }
 

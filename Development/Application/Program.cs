@@ -4,27 +4,59 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-
+using System.Reflection;
 
 using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Networks.Base;
 
 using Nini.Config;
-using Ostenvighx.Suibhne.Extensions;
 
 // TODO: Create Parrot extension to test regex/extension handling
 namespace Launcher {
     class Program {
         static void Main(string[] args) {
 
-            ExtensionSystem registry = new ExtensionSystem(Environment.CurrentDirectory + "/extensions.ini");
+            Core.SystemConfigFilename = Environment.CurrentDirectory + "/suibhne.ini";
+            Core.ExtensionConfigFilename = Environment.CurrentDirectory + "/extensions.ini";
+
+            ExtensionSystem registry = new ExtensionSystem();
+
+            ScriptAttribute sa;
+            foreach (Type type in Assembly.GetAssembly(typeof(ExtensionSystem)).GetTypes()) {
+                if (type.GetCustomAttribute(typeof(ScriptAttribute)) != null) {
+                    sa = (ScriptAttribute) type.GetCustomAttribute(typeof(ScriptAttribute));
+                    Core.Log(">>> Found a node for '" + sa.key + "' on type '" + type.FullName + "'.");
+
+                    Core.VariableNodes.Add(sa.key, type);
+                    String rootTypeKey = sa.key;
+
+                    foreach (MethodInfo mi in type.GetMethods()) {
+                        if (mi.GetCustomAttribute(typeof(ScriptAttribute)) != null) {
+                            sa = (ScriptAttribute)mi.GetCustomAttribute(typeof(ScriptAttribute));
+                            Core.Log(">>> Found a node for '" + sa.key + "' on type '" + type.FullName + ":" + mi.Name + "'.");
+
+                            Core.VariableNodes.Add(rootTypeKey + "." + sa.key, mi);
+                        }
+                    }
+
+                    foreach (FieldInfo pi in type.GetFields()) {
+                        if (pi.GetCustomAttribute(typeof(ScriptAttribute)) != null) {
+                            sa = (ScriptAttribute) pi.GetCustomAttribute(typeof(ScriptAttribute));
+                            Core.Log(">>> Found a node for '" + sa.key + "' on type '" + type.FullName + ":" + pi.Name + "'.");
+
+                            Core.VariableNodes.Add(rootTypeKey + "." + sa.key, pi);
+                        }
+                    }
+                }
+            }
 
             try {
-                IniConfigSource systemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
+                IniConfigSource systemConfig = new IniConfigSource(Core.SystemConfigFilename);
 
-                String configRoot = systemConfig.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                Core.ConfigurationRootDirectory = systemConfig.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
 
-                String networkRootDirectory = configRoot + systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
+                String networkRootDirectory = Core.ConfigurationRootDirectory + systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
                 String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
 
                 CreateNetworks(registry, networkDirectories);

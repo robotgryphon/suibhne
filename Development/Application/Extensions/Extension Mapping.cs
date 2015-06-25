@@ -7,7 +7,7 @@ using System.Text;
 using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Networks.Base;
 
-namespace Ostenvighx.Suibhne {
+namespace Ostenvighx.Suibhne.Extensions {
     
     public struct ExtensionMap {
 

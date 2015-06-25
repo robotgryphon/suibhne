@@ -26,9 +26,14 @@ namespace Ostenvighx.Suibhne.Extensions {
             protected set;
         }
 
+        
         public delegate void CommandHandler(Extension e, Guid origin, string sender, string args);
+        public delegate void ExtensionEvent(Extension e);
 
         protected Dictionary<Guid, CommandHandler> Commands;
+
+        public event ExtensionEvent OnServerDisconnect;
+        public event ExtensionEvent OnExtensionExit;
 
         public Extension() {
             this.buffer = new byte[2048];
@@ -157,6 +162,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             catch (SocketException se) {
                 Console.WriteLine("Socket failed. Extension not started.");
                 Console.WriteLine(se);
+
+                if (this.OnExtensionExit != null)
+                    OnExtensionExit(this);
             }
         }
 
@@ -173,6 +181,15 @@ namespace Ostenvighx.Suibhne.Extensions {
                     HandleIncomingData(btemp);
 
                     recievedOn.BeginReceive(this.buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
+                }
+
+                catch (SocketException se) {
+                    // Handle socket suddenly shutting down. This is usually when main application quits for some reason.
+                    if (this.OnServerDisconnect != null) {
+                        OnServerDisconnect(this);
+                        this.conn.Close();
+                        this.conn.Dispose();
+                    }
                 }
 
                 catch (Exception e) {

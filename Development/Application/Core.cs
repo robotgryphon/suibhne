@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Ostenvighx.Suibhne {
@@ -13,9 +15,14 @@ namespace Ostenvighx.Suibhne {
         INCOMING
     }
 
-    class Core {
+    internal class Core {
 
         public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
+        public static Dictionary<String, MemberInfo> VariableNodes = new Dictionary<string, MemberInfo>();
+
+        public static String ConfigurationRootDirectory;
+        public static String SystemConfigFilename;
+        public static String ExtensionConfigFilename;
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 
