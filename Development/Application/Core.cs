@@ -22,7 +22,6 @@ namespace Ostenvighx.Suibhne {
 
         public static String ConfigurationRootDirectory;
         public static String SystemConfigFilename;
-        public static String ExtensionConfigFilename;
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 

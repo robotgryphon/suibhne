@@ -31,24 +31,24 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public int MapCommands() {
             int mappedCommands = 0;
-            if (!File.Exists(Core.ExtensionConfigFilename))
+            if (!File.Exists(Core.SystemConfigFilename))
                 return 0;
 
-            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.ExtensionConfigFilename);
+            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.SystemConfigFilename);
 
             WipeCommandMap();
 
-            String[] commands = MainExtensionConfiguration.Configs["Routing"].GetKeys();
+            String[] commands = MainExtensionConfiguration.Configs["Commands"].GetKeys();
             foreach (String commandKey in commands) {
-                String commandMap = MainExtensionConfiguration.Configs["Routing"].GetString(commandKey);
+                String commandMap = MainExtensionConfiguration.Configs["Commands"].GetString(commandKey);
                 try {
                     CommandMap c = new CommandMap();
                     c.CommandString = commandKey.ToLower();
-                    String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
+                    String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Directories"].GetString("ExtensionsBinDirectory", Environment.CurrentDirectory + "/Extensions/");
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
-                    c.AccessLevel = (byte)MainExtensionConfiguration.Configs["Access"].GetInt(c.CommandString, 1);
+                    c.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt(c.CommandString, 1);
 
                     String extensionDirectory = ExtensionsRootDirectory + commandMap.Substring(0, nameEnd);
                     if (Directory.Exists(extensionDirectory)) {
@@ -76,10 +76,10 @@ namespace Ostenvighx.Suibhne.Extensions {
             sys.Method = Guid.Empty;
             sys.Extension = Guid.Empty;
 
-            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["Access"].GetInt("sys", 250);
+            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt("sys", 250);
             RegisterCommand("sys", sys);
 
-            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["Access"].GetInt("system", 250);
+            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt("system", 250);
             RegisterCommand("system", sys);
 
             RegisterCommand("test", new CommandMap() { AccessLevel = 250 });
@@ -151,8 +151,20 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 case "commands":
                     response.type = Networks.Base.Reference.MessageType.PublicAction;
-                    response.message = "has these commands registered: ";
-                    response.message += String.Join(", ", CommandMapping.Keys);
+                    response.message = "has these commands available: ";
+                    List<String> available = new List<string>();
+                    foreach (KeyValuePair<String, CommandMap> cm in CommandMapping) {
+                        if (extensionSystem.Extensions.ContainsKey(cm.Value.Extension)) {
+                            if (extensionSystem.Extensions[cm.Value.Extension].Ready)
+                                available.Add(cm.Key);
+                        } else {
+                            // Command is hard-coded into here
+                            available.Add(cm.Key + ((cm.Value.AccessLevel > 1) ? (" (" + cm.Value.AccessLevel.ToString() + ")") : ""));
+                        }
+                    }
+
+                    response.message += String.Join(", ", available.ToArray());
+
                     conn.SendMessage(response);
                     response.type = Networks.Base.Reference.MessageType.PublicMessage;
                     break;
@@ -216,8 +228,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                                             case "reload":
                                                 switch (messageParts[3]) {
                                                     case "commands":
-                                                        if (File.Exists(Core.ExtensionConfigFilename)) {
-                                                            DateTime lastUpdate = File.GetLastWriteTime(Core.ExtensionConfigFilename);
+                                                        if (File.Exists(Core.SystemConfigFilename)) {
+                                                            DateTime lastUpdate = File.GetLastWriteTime(Core.SystemConfigFilename);
                                                             if (lastUpdate > extensionSystem.ConfigLastUpdate) {
                                                                 int numRemapped = MapCommands();
                                                                 response.message = "Successfully remapped " + numRemapped + " conmmands to " + extensionSystem.Extensions.Count + " extensions.";

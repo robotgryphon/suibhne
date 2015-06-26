@@ -18,11 +18,11 @@ namespace Math_Extension {
             } else {
                 MathExtension ext = new MathExtension();
                 ext.Start();
+                ext.OnExtensionExit += (e) => { Application.Exit(); };
+                ext.OnServerDisconnect += (e) => { Application.Exit(); };
 
                 while (!ext.Connected) { Thread.Sleep(1000); }
-                while (ext.Connected) {
-                    Thread.Sleep(1000);
-                }
+                Application.Run();
             }
         }
     }

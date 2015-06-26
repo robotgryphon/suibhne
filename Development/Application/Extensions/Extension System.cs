@@ -59,9 +59,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             this.bots = new Dictionary<Guid, NetworkBot>();
             this.Commands = new CommandManager();
 
-            if (File.Exists(Core.ExtensionConfigFilename)) {
+            if (File.Exists(Core.SystemConfigFilename)) {
                 // Get some basic info about config file
-                this.ConfigLastUpdate = File.GetLastWriteTime(Core.ExtensionConfigFilename);
+                this.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfigFilename);
             }
 
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
@@ -103,16 +103,16 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         protected void InitializeExtensions() {
-            if (!File.Exists(Core.ExtensionConfigFilename))
+            if (!File.Exists(Core.SystemConfigFilename))
                 throw new FileNotFoundException("Config file not valid.");
 
 
-            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.ExtensionConfigFilename);
+            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.SystemConfigFilename);
 
-            Core.Log("Extension file last updated: " + File.GetLastWriteTime(Core.ExtensionConfigFilename), LogType.EXTENSIONS);
+            Core.Log("Extension file last updated: " + File.GetLastWriteTime(Core.SystemConfigFilename), LogType.EXTENSIONS);
 
             // Get ExtensionDirectories available via directory name
-            String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Extensions"].GetString("extensionDir", Environment.CurrentDirectory + "/Extensions/");
+            String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Directories"].GetString("ExtensionsBinDirectory", Environment.CurrentDirectory + "/Extensions/");
 
             ExtensionMap[] exts = ExtensionLoader.LoadExtensions(ExtensionsRootDirectory);
             foreach (ExtensionMap extension in exts) {

@@ -18,7 +18,6 @@ namespace Launcher {
         static void Main(string[] args) {
 
             Core.SystemConfigFilename = Environment.CurrentDirectory + "/suibhne.ini";
-            Core.ExtensionConfigFilename = Environment.CurrentDirectory + "/extensions.ini";
 
             ScriptAttribute sa;
             foreach (Type type in Assembly.GetAssembly(typeof(ExtensionSystem)).GetTypes()) {
@@ -52,9 +51,9 @@ namespace Launcher {
             try {
                 IniConfigSource systemConfig = new IniConfigSource(Core.SystemConfigFilename);
 
-                Core.ConfigurationRootDirectory = systemConfig.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                Core.ConfigurationRootDirectory = systemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
 
-                String networkRootDirectory = Core.ConfigurationRootDirectory + systemConfig.Configs["Suibhne"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
+                String networkRootDirectory = Core.ConfigurationRootDirectory + systemConfig.Configs["Directories"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
                 String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
 
                 CreateNetworks(ExtensionSystem.Instance, networkDirectories);
