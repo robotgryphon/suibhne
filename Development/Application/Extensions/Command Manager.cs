@@ -137,6 +137,11 @@ namespace Ostenvighx.Suibhne.Extensions {
                                     Core.Log("Field lookup initiated: " + nodeObject.Name);
                                     response.message += nodeObject.DeclaringType.GetField(nodeObject.Name).GetValue(ExtensionSystem.Instance).ToString();
                                 }
+
+                                if (nodeObject.DeclaringType == typeof(Core)) {
+                                    Core.Log("Field lookup initiated: " + nodeObject.Name);
+                                    response.message += nodeObject.DeclaringType.GetField(nodeObject.Name).GetValue(null).ToString();
+                                }
                                 break;
 
                             case MemberTypes.TypeInfo:
@@ -307,13 +312,13 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 break;
 
                             case "uptime":
-                                TimeSpan diff = DateTime.Now - extensionSystem.StartTime;
+                                TimeSpan diff = DateTime.Now - Core.StartTime;
                                 response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                                 response.message = "has been up for " +
                                     (diff.Days > 0 ? diff.Days + " days" : "") +
                                     (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
                                     (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
-                                    (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + extensionSystem.StartTime.ToString() + "]";
+                                    (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + Core.StartTime.ToString() + "]";
 
                                 conn.SendMessage(response);
                                 response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;

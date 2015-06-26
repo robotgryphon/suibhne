@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ostenvighx.Suibhne.Extensions;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,13 +16,17 @@ namespace Ostenvighx.Suibhne {
         INCOMING
     }
 
-    internal class Core {
+    [Script("core")]
+    public class Core {
 
         public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
         public static Dictionary<String, MemberInfo> VariableNodes = new Dictionary<string, MemberInfo>();
 
         public static String ConfigurationRootDirectory;
         public static String SystemConfigFilename;
+
+        [Script("startTime")]
+        public static DateTime StartTime = DateTime.Now;
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 

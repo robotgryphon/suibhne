@@ -44,9 +44,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         internal Dictionary<Guid, ExtensionMap> Extensions;
 
-        [Script("startTime")]
-        public DateTime StartTime;
-
         protected ExtensionServer Server;
         protected CommandManager Commands;
 
@@ -65,8 +62,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
-
-            this.StartTime = DateTime.Now;
 
             InitializeExtensions();
 
