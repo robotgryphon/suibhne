@@ -10,6 +10,9 @@ namespace Ostenvighx.Suibhne.Extensions {
         /// </summary>
         Activation = 1,
 
+        /// <summary>
+        /// Request for extension information. (Name, author, version, etc)
+        /// </summary>
         Details = 2,
 
         Permissions = 3,

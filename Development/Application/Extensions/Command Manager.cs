@@ -118,7 +118,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "test":
-                    string node = message.message.Split(new char[] { ' ' }, 2)[1];
+                    string node = message.message.Split(new char[] { ' ' }, 3)[1];
                     Dictionary<String, MemberInfo> coreNodes = Core.VariableNodes;
 
                     if (Core.VariableNodes.ContainsKey(node)) {
@@ -132,7 +132,11 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 break;
 
                             case MemberTypes.Field:
-                                response.message = "Got field: " + nodeObject.GetType().GetField(nodeObject.Name).GetValue(nodeObject).ToString();
+                                response.message = "Got field: ";
+                                if (nodeObject.DeclaringType == typeof(ExtensionSystem)) {
+                                    Core.Log("Field lookup initiated: " + nodeObject.Name);
+                                    response.message += nodeObject.DeclaringType.GetField(nodeObject.Name).GetValue(ExtensionSystem.Instance).ToString();
+                                }
                                 break;
 
                             case MemberTypes.TypeInfo:
@@ -197,6 +201,16 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                                             case "disable":
                                                 // Used to disable a currently active extension
+                                                if (extensionSystem.Extensions.ContainsKey(new Guid(messageParts[3]))) {
+                                                    ExtensionMap ext = extensionSystem.Extensions[new Guid(messageParts[3])];
+                                                    // ext.Stop();
+                                                    extensionSystem.ShutdownExtensionBySocket(ext.Socket);
+                                                    response.message = "Disabled extension: " + ext.Name;
+                                                    conn.SendMessage(response);
+                                                } else {
+                                                    response.message = "That extension does not exist in the list. Please check the identifier and try again.";
+                                                    conn.SendMessage(response);
+                                                }
                                                 break;
 
                                             case "reload":

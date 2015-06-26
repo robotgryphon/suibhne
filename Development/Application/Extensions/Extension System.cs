@@ -25,7 +25,21 @@ namespace Ostenvighx.Suibhne.Extensions {
     /// </summary>
     public class ExtensionSystem {
 
-        public Guid Identifier;
+        private static ExtensionSystem instance;
+
+        public static ExtensionSystem Instance {
+            get {
+                if (instance == null) {
+                    instance = new ExtensionSystem();
+                }
+                return instance;
+            }
+        }
+
+        public Guid Identifier {
+            get { return Instance.GetType().GUID; }
+        }
+
         protected Dictionary<Guid, NetworkBot> bots;
 
         internal Dictionary<Guid, ExtensionMap> Extensions;
@@ -38,9 +52,11 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         internal DateTime ConfigLastUpdate;
 
-        public ExtensionSystem() {
+        public event Events.ExtensionMapEvent OnExtensionConnected;
+        public event Events.ExtensionMapEvent OnExtensionStopped;
+
+        private ExtensionSystem() {
             this.bots = new Dictionary<Guid, NetworkBot>();
-            this.Identifier = Guid.NewGuid();
             this.Commands = new CommandManager();
 
             if (File.Exists(Core.ExtensionConfigFilename)) {
@@ -56,25 +72,31 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
-            Server.OnSocketCrash += HandleExtensionCrash;
+            Server.OnSocketCrash += ShutdownExtensionBySocket;
             Server.Start();
         }
 
-        #region Registry
         public void AddBot(NetworkBot bot) {
             if (!this.bots.ContainsKey(bot.Identifier))
                 bots.Add(bot.Identifier, bot);
         }
 
 
-        private void HandleExtensionCrash(Socket s) {
+        internal void ShutdownExtensionBySocket(Socket s) {
             foreach(Guid extID in this.Extensions.Keys) {
                 ExtensionMap em = Extensions[extID];
-                if (em.Socket == s) {
-                    Core.Log("Extension '" + em.Name + "' has crashed. Resetting the references for it.", LogType.EXTENSIONS);
+
+                // If socket already shut down, exit
+                if(em.Socket == null)
+                    break;
+                
+                if (em.Socket.RemoteEndPoint == s.RemoteEndPoint) {
+                    Core.Log("Extension '" + em.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
+                    ExtensionHelper.SendShutdownRequest(em);
                     em.Socket = null;
                     em.Ready = false;
 
+                    Extensions[extID] = em;
                     break;
                 }
             }
@@ -106,8 +128,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             Commands.HandleCommand(this, conn, msg);
         }
 
-        #endregion
-
         protected void HandleIncomingData(Socket sock, byte[] data) {
             Responses code = (Responses)data[0];
             byte[] guidBytes = new byte[16];
@@ -123,7 +143,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             // Get the extension suite off the returned Identifier first
             try {
 
-                ExtensionMap suite = Extensions[origin];
+                ExtensionMap extension = Extensions[origin];
 
 
                 #region Handle Code Response
@@ -132,44 +152,30 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case Responses.Activation:
                         Core.Log("Activating extension: " + Extensions[origin].Name, LogType.EXTENSIONS);
 
-                        if (suite.Socket == null) {
-                            suite.Socket = sock;
+                        if (extension.Socket == null) {
+                            extension.Socket = sock;
                         }
 
-                        suite.Ready = true;
+                        extension.Ready = true;
 
-                        Extensions[origin] = suite;
+                        Extensions[origin] = extension;
                         break;
 
                     case Responses.Details:
-                        Console.WriteLine("Recieving extension details");
-                        String suiteName = Encoding.UTF8.GetString(extraData);
-                        suite.Name = suiteName;
+                        Core.Log("Recieved extension details from " + extension.Name + ": " + Encoding.UTF8.GetString(extraData), LogType.EXTENSIONS);
                         break;
 
                     case Responses.Remove:
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
+                        ShutdownExtensionBySocket(sock);
                         return;
 
                     case Responses.Message:
-                        Message msg = new Message(Guid.Empty, new User(), "");
-                        Guid destination;
-                        byte type = 1;
-
-                        Extension.ParseMessage(
-                            data,
-                            out origin,
-                            out destination,
-                            out type,
-                            out msg.sender.DisplayName,
-                            out msg.message);
-
-                        msg.type = (Ostenvighx.Suibhne.Networks.Base.Reference.MessageType)type;
-                        msg.locationID = destination;
+                        Message msg = Extension.ParseMessage(data);
 
                         try {
-                            NetworkBot bot = bots[Core.NetworkLocationMap[destination]];
+                            NetworkBot bot = bots[Core.NetworkLocationMap[msg.locationID]];
                             bot.SendMessage(msg);
                         }
 
@@ -188,7 +194,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                 #endregion
             }
             catch (Exception e) {
-                Core.Log("Extension callback: " + e.Message, LogType.ERROR);
+                Core.Log("Extension error: " + e.Message, LogType.ERROR);
+                Console.WriteLine(e);
             }
         }
 

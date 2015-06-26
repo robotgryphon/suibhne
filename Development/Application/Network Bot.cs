@@ -35,8 +35,6 @@ namespace Ostenvighx.Suibhne {
 
             if (networkType != "unknown") {
 
-                // Fun happens here. Reflection to create a new network from an assembly.
-                // Oh god, what have I done...
                 String networkBase = Directory.GetParent(configDir).Parent.FullName + @"\NetworkTypes\";
                 string[] files = Directory.GetFiles(networkBase + "/", networkType + ".dll");
                 

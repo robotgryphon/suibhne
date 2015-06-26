@@ -143,6 +143,8 @@ namespace Ostenvighx.Suibhne.Extensions {
             catch (Exception e) {
                 Console.WriteLine("Failed to start extension.");
                 Console.WriteLine(e);
+                if(this.OnServerDisconnect != null)
+                    OnServerDisconnect(this);
             }
 
         }
@@ -273,7 +275,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 foreach (Object attr in attrs) {
                                     if (attr.GetType() == typeof(HelpAttribute)) {
                                         HelpAttribute handler = (HelpAttribute)attr;
-                                        SendMessage(origin, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, handler.HelpText);
+                                        SendMessage(origin, Networks.Base.Reference.MessageType.PublicMessage, handler.HelpText);
                                     }
                                 }
                             }
@@ -289,6 +291,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                         conn.Shutdown(SocketShutdown.Both);
                         conn.Close();
                         Connected = false;
+
+                        if (this.OnExtensionExit != null) {
+                            OnExtensionExit(this);
+                        }
                         break;
                 }
 
@@ -315,6 +321,18 @@ namespace Ostenvighx.Suibhne.Extensions {
             conn.Send(dataToSend);
         }
 
+        public static byte[] PrepareMessage(Guid origin, Networks.Base.Message message) {
+            return PrepareMessage(
+                origin,
+                message.locationID,
+                (byte)message.type,
+                message.sender.DisplayName,
+                message.message);
+        }
+
+        /// <summary>
+        /// Deprecated. You should use PrepareMessage(Guid origin, Message message) instead.
+        /// </summary>
         public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String sender, String message) {
             byte[] messageAsBytes = Encoding.UTF8.GetBytes(sender + " " + message);
             byte[] rawMessage = new byte[34 + messageAsBytes.Length];
@@ -330,7 +348,12 @@ namespace Ostenvighx.Suibhne.Extensions {
             return rawMessage;
         }
 
-        public static void ParseMessage(byte[] data, out Guid origin, out Guid destination, out byte type, out String sender, out String message) {
+        public static Networks.Base.Message ParseMessage(byte[] data) {
+            Guid origin;
+            return ParseMessage(data, out origin);
+        }
+
+        public static Networks.Base.Message ParseMessage(byte[] data, out Guid origin) {
             byte[] guidBytes = new byte[16];
 
             Array.Copy(data, 1, guidBytes, 0, 16);
@@ -339,47 +362,41 @@ namespace Ostenvighx.Suibhne.Extensions {
             guidBytes = new byte[16];
 
             Array.Copy(data, 17, guidBytes, 0, 16);
-            destination = new Guid(guidBytes);
 
-            type = data[33];
+            Networks.Base.Message message = new Networks.Base.Message(new Guid(guidBytes), new Networks.Base.User(), "");
+            message.type = (Ostenvighx.Suibhne.Networks.Base.Reference.MessageType) data[33];
 
             byte[] messageBytes = new byte[data.Length - 34];
             Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
-            String messageString = Encoding.UTF8.GetString(messageBytes);
+            message.message = Encoding.UTF8.GetString(messageBytes);
 
-            Match messageMatch = Reference.MessageResponseParser.Match(messageString);
+            Match messageMatch = Reference.MessageResponseParser.Match(message.message);
             if (messageMatch.Success) {
-                sender = messageMatch.Groups["sender"].Value;
-                message = messageMatch.Groups["message"].Value;
+                message.sender.DisplayName = messageMatch.Groups["sender"].Value;
+                message.message = messageMatch.Groups["message"].Value;
             } else {
-                sender = "Unknown";
-                message = "Message";
+                message.sender.DisplayName = "Unknown";
+                message.message = "Message";
             }
+
+            return message;
         }
 
         protected virtual void HandleIncomingMessage(byte[] data) {
-
-
-
-            Guid destination = this.Identifier;
-            byte type = 1;
-            String nickname, message;
             Guid origin;
-            ParseMessage(
-                data,
-                out origin,
-                out destination,
-                out type,
-                out nickname,
-                out message);
+            Networks.Base.Message msg = ParseMessage(data, out origin);
 
             Console.WriteLine("Origin [server]: " + origin);
-            Console.WriteLine("Destination: " + destination);
+            Console.WriteLine("Destination: " + msg.locationID);
 
-            Console.WriteLine("Recieved message from " + nickname + ": " + message);
+            Console.WriteLine("Recieved message from " + msg.sender.DisplayName + ": " + msg.message);
         }
 
-        public void SendMessage(Guid destination, Ostenvighx.Suibhne.Networks.Base.Reference.MessageType type, String message) {
+        public void SendMessage(Networks.Base.Message message) {
+            SendMessage(message.locationID, message.type, message.message);
+        }
+
+        public void SendMessage(Guid destination, Networks.Base.Reference.MessageType type, String message) {
             byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.GetExtensionName().Replace(' ', '_'), message);
             conn.Send(rawMessage);
         }
