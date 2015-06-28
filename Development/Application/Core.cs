@@ -1,4 +1,5 @@
-﻿using Ostenvighx.Suibhne.Extensions;
+﻿using Nini.Config;
+using Ostenvighx.Suibhne.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,8 +23,9 @@ namespace Ostenvighx.Suibhne {
         public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
         public static Dictionary<String, MemberInfo> VariableNodes = new Dictionary<string, MemberInfo>();
 
-        public static String ConfigurationRootDirectory;
-        public static String SystemConfigFilename;
+        public static DateTime ConfigLastUpdate;
+        public static IniConfigSource SystemConfig;
+
 
         [Script("startTime")]
         public static DateTime StartTime = DateTime.Now;

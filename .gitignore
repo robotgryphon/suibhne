@@ -49,3 +49,4 @@ Notes/
 Configuration/
 Release*
 .gitattributes
+Development/Extensions/*

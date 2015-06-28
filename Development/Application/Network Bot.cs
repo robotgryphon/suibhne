@@ -68,10 +68,11 @@ namespace Ostenvighx.Suibhne {
         }
 
         protected void AutoJoinLocations(String configDir) {
-            String[] locations = Directory.GetFiles(configDir + "/Locations/", "*.ini");
+            String[] locations = Directory.GetDirectories(configDir + "/Locations/");
             foreach (String location in locations) {
                 try {
-                    IniConfigSource locConfig = new IniConfigSource(location);
+                    String locationName = location.Substring(location.LastIndexOf("/") + 1);
+                    IniConfigSource locConfig = new IniConfigSource(location + "/" + locationName.ToLower() + ".ini");
                     Ostenvighx.Suibhne.Networks.Base.Location loc = new Ostenvighx.Suibhne.Networks.Base.Location(
                         locConfig.Configs["Location"].GetString("Name", "#Location"),
                         Networks.Base.Reference.LocationType.Public);

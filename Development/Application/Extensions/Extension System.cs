@@ -47,8 +47,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         protected ExtensionServer Server;
         protected CommandManager Commands;
 
-        internal DateTime ConfigLastUpdate;
-
         public event Events.ExtensionMapEvent OnExtensionConnected;
         public event Events.ExtensionMapEvent OnExtensionStopped;
 
@@ -56,9 +54,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             this.bots = new Dictionary<Guid, NetworkBot>();
             this.Commands = new CommandManager();
 
-            if (File.Exists(Core.SystemConfigFilename)) {
+            if (File.Exists(Core.SystemConfig.SavePath)) {
                 // Get some basic info about config file
-                this.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfigFilename);
+                Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
             }
 
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
@@ -98,16 +96,11 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         protected void InitializeExtensions() {
-            if (!File.Exists(Core.SystemConfigFilename))
+            if (!File.Exists(Core.SystemConfig.SavePath))
                 throw new FileNotFoundException("Config file not valid.");
 
-
-            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.SystemConfigFilename);
-
-            Core.Log("Extension file last updated: " + File.GetLastWriteTime(Core.SystemConfigFilename), LogType.EXTENSIONS);
-
             // Get ExtensionDirectories available via directory name
-            String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Directories"].GetString("ExtensionsBinDirectory", Environment.CurrentDirectory + "/Extensions/");
+            String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
 
             ExtensionMap[] exts = ExtensionLoader.LoadExtensions(ExtensionsRootDirectory);
             foreach (ExtensionMap extension in exts) {

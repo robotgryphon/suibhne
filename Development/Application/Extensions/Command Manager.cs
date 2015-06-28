@@ -31,24 +31,22 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public int MapCommands() {
             int mappedCommands = 0;
-            if (!File.Exists(Core.SystemConfigFilename))
+            if (Core.SystemConfig == null)
                 return 0;
-
-            IniConfigSource MainExtensionConfiguration = new IniConfigSource(Core.SystemConfigFilename);
 
             WipeCommandMap();
 
-            String[] commands = MainExtensionConfiguration.Configs["Commands"].GetKeys();
+            String[] commands = Core.SystemConfig.Configs["Commands"].GetKeys();
             foreach (String commandKey in commands) {
-                String commandMap = MainExtensionConfiguration.Configs["Commands"].GetString(commandKey);
+                String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
                 try {
                     CommandMap c = new CommandMap();
                     c.CommandString = commandKey.ToLower();
-                    String ExtensionsRootDirectory = MainExtensionConfiguration.Configs["Directories"].GetString("ExtensionsBinDirectory", Environment.CurrentDirectory + "/Extensions/");
+                    String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
-                    c.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt(c.CommandString, 1);
+                    c.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt(c.CommandString, 1);
 
                     String extensionDirectory = ExtensionsRootDirectory + commandMap.Substring(0, nameEnd);
                     if (Directory.Exists(extensionDirectory)) {
@@ -76,19 +74,20 @@ namespace Ostenvighx.Suibhne.Extensions {
             sys.Method = Guid.Empty;
             sys.Extension = Guid.Empty;
 
-            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt("sys", 250);
+            sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("sys", 250);
             RegisterCommand("sys", sys);
 
-            sys.AccessLevel = (byte)MainExtensionConfiguration.Configs["CommandAccess"].GetInt("system", 250);
+            sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("system", 250);
             RegisterCommand("system", sys);
 
             RegisterCommand("test", new CommandMap() { AccessLevel = 250 });
             RegisterCommand("commands", new CommandMap() { AccessLevel = 1 });
             RegisterCommand("help", new CommandMap() { AccessLevel = 1 });
-            return mappedCommands + 4;
+            return mappedCommands;
         }
 
         public void HandleCommand(ExtensionSystem extensionSystem, NetworkBot conn, Message message) {
+            message.message = message.message.Trim();
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
             String subCommand = "";
@@ -118,39 +117,8 @@ namespace Ostenvighx.Suibhne.Extensions {
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "test":
-                    string node = message.message.Split(new char[] { ' ' }, 3)[1];
-                    Dictionary<String, MemberInfo> coreNodes = Core.VariableNodes;
 
-                    if (Core.VariableNodes.ContainsKey(node)) {
-                        MemberInfo nodeObject = Core.VariableNodes[node];
-                        response.message = "Got object: " + nodeObject.Name;
-
-                        switch (nodeObject.MemberType) {
-
-                            case MemberTypes.Method:
-
-                                break;
-
-                            case MemberTypes.Field:
-                                response.message = "Got field: ";
-                                if (nodeObject.DeclaringType == typeof(ExtensionSystem)) {
-                                    Core.Log("Field lookup initiated: " + nodeObject.Name);
-                                    response.message += nodeObject.DeclaringType.GetField(nodeObject.Name).GetValue(ExtensionSystem.Instance).ToString();
-                                }
-
-                                if (nodeObject.DeclaringType == typeof(Core)) {
-                                    Core.Log("Field lookup initiated: " + nodeObject.Name);
-                                    response.message += nodeObject.DeclaringType.GetField(nodeObject.Name).GetValue(null).ToString();
-                                }
-                                break;
-
-                            case MemberTypes.TypeInfo:
-
-                                break;
-                        }
-
-                        conn.SendMessage(response);
-                    }
+                    Core.Log("Got test args: " + message.message);
 
                     break;
 
@@ -230,29 +198,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                                                 }
                                                 break;
 
-                                            case "reload":
-                                                switch (messageParts[3]) {
-                                                    case "commands":
-                                                        if (File.Exists(Core.SystemConfigFilename)) {
-                                                            DateTime lastUpdate = File.GetLastWriteTime(Core.SystemConfigFilename);
-                                                            if (lastUpdate > extensionSystem.ConfigLastUpdate) {
-                                                                int numRemapped = MapCommands();
-                                                                response.message = "Successfully remapped " + numRemapped + " conmmands to " + extensionSystem.Extensions.Count + " extensions.";
-                                                                conn.SendMessage(response);
-                                                            } else {
-                                                                response.message = "Your extension config is up-to-date. No need to remap commands.";
-                                                                conn.SendMessage(response);
-                                                            }
-                                                        }
-                                                        break;
-
-                                                    case "extensions":
-                                                        // WIP
-                                                        break;
-
-                                                }
-                                                break;
-
 
                                             default:
                                                 response.message = "Unknown command. Available commands: {enable, disable, reload}";
@@ -269,6 +214,49 @@ namespace Ostenvighx.Suibhne.Extensions {
                                         break;
                                 }
                                 #endregion
+                                break;
+
+                            case "reload":
+                                if (messageParts.Length < 3) {
+                                    response.message = "I need more parameters than that. Try config, access, or extensions.";
+                                    conn.SendMessage(response);
+                                    break;
+                                }
+
+                                switch (messageParts[2].ToLower()) {
+
+                                    case "config":
+                                        if (Core.SystemConfig != null) {
+                                            if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
+                                                Core.SystemConfig.Reload();
+                                                int numRemapped = MapCommands();
+                                                response.message = "Successfully remapped " + numRemapped + " commands to " + extensionSystem.Extensions.Count + " extensions.";
+                                                conn.SendMessage(response);
+
+                                                // TODO: MapAccessLevels();
+                                                Core.ConfigLastUpdate = DateTime.Now;
+                                            } else {
+                                                response.message = "Your system config is up-to-date.";
+                                                conn.SendMessage(response);
+                                            }
+                                        }
+                                        break;
+
+                                    case "extensions":
+                                    case "access":
+                                        response.message = "whispers: \"This isn't quite available yet.\"";
+                                        response.type = Networks.Base.Reference.MessageType.PublicAction;
+                                        conn.SendMessage(response);
+                                        response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                                        break;
+
+                                    default:
+                                        response.message = "is not sure what to do with that. Try config or extensions as a paremeter.";
+                                        response.type = Networks.Base.Reference.MessageType.PublicAction;
+                                        conn.SendMessage(response);
+                                        response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                                        break;
+                                }
                                 break;
 
                             case "version":
