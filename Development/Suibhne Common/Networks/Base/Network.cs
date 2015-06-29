@@ -124,7 +124,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
         public abstract void SendMessage(Message m);
 
-        public abstract Guid JoinLocation(Location l);
+        public abstract void JoinLocation(Guid lid, Location l);
 
         public abstract void LeaveLocation(Guid g);
 

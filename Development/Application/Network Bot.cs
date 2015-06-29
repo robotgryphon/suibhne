@@ -8,9 +8,11 @@ using System.Reflection;
 
 namespace Ostenvighx.Suibhne {
     public class NetworkBot {
-
-        protected ExtensionSystem _extensions;
         protected Network _network;
+        public Boolean Ready {
+            get;
+            protected set;
+        }
 
         public User Me {
             get { return _network.Me; }
@@ -24,12 +26,19 @@ namespace Ostenvighx.Suibhne {
         public event IrcCommandEvent OnCommandRecieved;
         #endregion
 
-        public NetworkBot(String configDir, ExtensionSystem exts){
-            this.Identifier = Guid.NewGuid();
-            this._extensions = exts;
+        public NetworkBot(String configDir){
+            String NetworkName = configDir.Substring(configDir.LastIndexOf("/") + 1);
 
-            IniConfigSource config = new IniConfigSource(configDir + "/connection.ini");
+            if (!File.Exists(configDir + "/" + NetworkName + ".ini")) {
+                Core.Log("Could not load network information file: " + configDir + "/" + NetworkName + ".ini");
+                return;
+            }
+
+            IniConfigSource config = new IniConfigSource(configDir + "/" + NetworkName + ".ini");
             config.CaseSensitive = false;
+
+
+            this.Identifier = Utilities.GetOrAssignIdentifier(config);
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -44,7 +53,7 @@ namespace Ostenvighx.Suibhne {
                 foreach (Type t in types) {
                     if (t.IsSubclassOf(typeof(Network))) {
                         this._network = (Network)Activator.CreateInstance(t);
-                        _network.Setup(configDir + "/connection.ini");
+                        _network.Setup(config.SavePath);
                         _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
 
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
@@ -60,7 +69,8 @@ namespace Ostenvighx.Suibhne {
                 }
             }
 
-            exts.AddBot(this);
+            ExtensionSystem.Instance.AddBot(this);
+            this.Ready = true;
         }
 
         public void SendMessage(Message m) {
@@ -72,13 +82,15 @@ namespace Ostenvighx.Suibhne {
             foreach (String location in locations) {
                 try {
                     String locationName = location.Substring(location.LastIndexOf("/") + 1);
-                    IniConfigSource locConfig = new IniConfigSource(location + "/" + locationName.ToLower() + ".ini");
+                    IniConfigSource locConfig = new IniConfigSource(location + "/" + locationName + ".ini");
                     Ostenvighx.Suibhne.Networks.Base.Location loc = new Ostenvighx.Suibhne.Networks.Base.Location(
                         locConfig.Configs["Location"].GetString("Name", "#Location"),
                         Networks.Base.Reference.LocationType.Public);
 
-                    Guid id = _network.JoinLocation(loc);
-                    Core.NetworkLocationMap.Add(id, Identifier);
+                    Guid newLocationID = Utilities.GetOrAssignIdentifier(locConfig);
+                    
+                    _network.JoinLocation(newLocationID, loc);
+                    Core.NetworkLocationMap.Add(newLocationID, Identifier);
                 }
 
                 catch (Exception e) {
@@ -92,7 +104,7 @@ namespace Ostenvighx.Suibhne {
                 OnCommandRecieved(this, message);
             }
 
-            _extensions.HandleCommand(this, message);
+           ExtensionSystem.Instance.HandleCommand(this, message);
         }
 
         protected void HandleMessageRecieved(Message message) {

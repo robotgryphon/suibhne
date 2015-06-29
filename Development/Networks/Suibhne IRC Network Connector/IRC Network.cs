@@ -423,7 +423,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// password as well, if it is defined it will use it.
         /// </summary>
         /// <param name="locationID">Public (as an Location) to join.</param>
-        public override Guid JoinLocation(Networks.Base.Location location) {
+        public override void JoinLocation(Guid locationID, Networks.Base.Location location) {
             if (Status == Base.Reference.ConnectionStatus.Connected) {
                 if (location.Name != null) {
                     Guid loc = GetLocationIdByName(location.Name);
@@ -436,22 +436,17 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                             SendRaw("JOIN " + location.Name);
                         }
 
-                        Guid newLocationID = Guid.NewGuid();
                         location.Parent = this.NetworkIdentifier;
-                        Listened.Add(newLocationID, location);
+                        Listened.Add(locationID, location);
 
                         SendRaw("WHO " + location.Name);
 
                         if (this.OnListeningStart != null) {
-                            OnListeningStart(this, newLocationID);
+                            OnListeningStart(this, locationID);
                         }
-
-                        return newLocationID;
                     }
                 }
             }
-
-            return Guid.Empty;
         }
 
         public override void LeaveLocation(Guid g) {
