@@ -1,0 +1,26 @@
+{
+	
+	"networks": {
+		"Furnet": {
+			"Identifier": "411f7db6-9bf7-450d-9032-561e8201ccf7",
+			"Locations": {
+				"Ostenvighx": { "Identifier": "b5916639-1c25-467f-b909-332601e48078" },
+				"Nat20": { "Identifier": "3284898e-251a-4f08-b63f-c16b890081bd"	}
+			}
+		},
+		
+		"Localhost": {
+			"Identifier": "b5a60b36-38aa-4f70-bc18-0d7d9b1f1c78",
+			"Locations": {
+				"Suibhne": { "Identifier": "6cebc019-c36d-4080-8f35-c41d2c59555c" }
+			}
+		}
+	},
+
+	"commandLevels": {
+		"system": {
+			"Furnet": 250,
+			"Furnet/Ostenvighx": 130
+		}
+	}
+}
