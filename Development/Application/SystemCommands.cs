@@ -17,7 +17,7 @@ namespace Ostenvighx.Suibhne {
             response.type = Networks.Base.Reference.MessageType.PublicAction;
             response.message = "figures you have access to these commands: ";
 
-            CommandMap[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender);
+            String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender);
 
             response.message += String.Join(", ", AvailableCommands);
             conn.SendMessage(response);

@@ -96,18 +96,18 @@ namespace Ostenvighx.Suibhne.Extensions {
             return mappedCommands;
         }
 
-        public CommandMap[] GetAvailableCommandsForUser(User u) {
-            List<CommandMap> available = new List<CommandMap>();
+        public String[] GetAvailableCommandsForUser(User u) {
+            List<String> available = new List<String>();
 
             foreach (KeyValuePair<String, CommandMap> cm in CommandManager.Instance.CommandMapping) {
                 if (ExtensionSystem.Instance.Extensions.ContainsKey(cm.Value.Extension)) {
                     if (ExtensionSystem.Instance.Extensions[cm.Value.Extension].Ready)
                         if(cm.Value.AccessLevel <= u.NetworkAuthLevel)
-                            available.Add(cm.Value);
+                            available.Add(cm.Key);
                 } else {
                     // Command is hard-coded into here
                     if (cm.Value.AccessLevel <= u.NetworkAuthLevel)
-                        available.Add(cm.Value);
+                        available.Add(cm.Key);
                 }
             }
 
@@ -213,7 +213,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                         }
 
                         switch (messageParts[2].ToLower()) {
-
                             case "config":
                                 if (Core.SystemConfig != null) {
                                     if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
