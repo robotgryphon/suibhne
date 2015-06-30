@@ -38,7 +38,7 @@ namespace Ostenvighx.Suibhne {
             config.CaseSensitive = false;
 
 
-            this.Identifier = Utilities.GetOrAssignIdentifier(config);
+            this.Identifier = Utilities.GetOrAssignIdentifier(NetworkName);
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -79,6 +79,8 @@ namespace Ostenvighx.Suibhne {
 
         protected void AutoJoinLocations(String configDir) {
             String[] locations = Directory.GetDirectories(configDir + "/Locations/");
+            String NetworkName = configDir.Substring(configDir.LastIndexOf("/") + 1);
+
             foreach (String location in locations) {
                 try {
                     String locationName = location.Substring(location.LastIndexOf("/") + 1);
@@ -87,7 +89,7 @@ namespace Ostenvighx.Suibhne {
                         locConfig.Configs["Location"].GetString("Name", "#Location"),
                         Networks.Base.Reference.LocationType.Public);
 
-                    Guid newLocationID = Utilities.GetOrAssignIdentifier(locConfig);
+                    Guid newLocationID = Utilities.GetOrAssignIdentifier(NetworkName + "/" + locationName);
                     
                     _network.JoinLocation(newLocationID, loc);
                     Core.NetworkLocationMap.Add(newLocationID, Identifier);

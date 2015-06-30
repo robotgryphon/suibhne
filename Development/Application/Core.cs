@@ -21,9 +21,9 @@ namespace Ostenvighx.Suibhne {
     public class Core {
 
         public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
-        public static Dictionary<String, MemberInfo> VariableNodes = new Dictionary<string, MemberInfo>();
 
         public static DateTime ConfigLastUpdate;
+        public static String ConfigDirectory;
         public static IniConfigSource SystemConfig;
 
 

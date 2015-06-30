@@ -24,6 +24,11 @@ namespace Launcher {
                 Core.SystemConfig.CaseSensitive = false;
 
                 Core.SystemConfig.ExpandKeyValues();
+                Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                if (!File.Exists(Core.ConfigDirectory + "/system.json")) {
+                    File.Create(Core.ConfigDirectory + "/system.json");
+                    File.WriteAllText(Core.ConfigDirectory + "/system.json", "{}");
+                }
             }
 
             catch (Exception) {

@@ -117,9 +117,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "test":
-
                     Core.Log("Got test args: " + message.message);
-
+                    response.message = "Current identifier saved in system: " + message.locationID + ". Network is " + conn.Identifier;
+                    conn.SendMessage(response);
                     break;
 
                 case "commands":
