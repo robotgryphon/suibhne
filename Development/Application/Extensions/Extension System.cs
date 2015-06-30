@@ -45,14 +45,12 @@ namespace Ostenvighx.Suibhne.Extensions {
         internal Dictionary<Guid, ExtensionMap> Extensions;
 
         protected ExtensionServer Server;
-        protected CommandManager Commands;
 
         public event Events.ExtensionMapEvent OnExtensionConnected;
         public event Events.ExtensionMapEvent OnExtensionStopped;
 
         private ExtensionSystem() {
             this.bots = new Dictionary<Guid, NetworkBot>();
-            this.Commands = new CommandManager();
 
             if (File.Exists(Core.SystemConfig.SavePath)) {
                 // Get some basic info about config file
@@ -109,11 +107,11 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
 
-            Commands.MapCommands();
+            CommandManager.Instance.MapCommands();
         }
 
         public void HandleCommand(NetworkBot conn, Message msg) {
-            Commands.HandleCommand(this, conn, msg);
+            CommandManager.Instance.HandleCommand(conn, msg);
         }
 
         protected void HandleIncomingData(Socket sock, byte[] data) {

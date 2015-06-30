@@ -12,8 +12,18 @@ namespace Ostenvighx.Suibhne.Extensions {
     public class CommandManager {
 
         protected Dictionary<string, CommandMap> CommandMapping;
+        private static CommandManager instance;
 
-        public CommandManager() {
+        public static CommandManager Instance {
+            get {
+                if (instance == null)
+                    instance = new CommandManager();
+                
+                return instance;
+            }
+        }
+
+        private CommandManager() {
             this.CommandMapping = new Dictionary<string, CommandMap>();
         }
 
@@ -86,7 +96,26 @@ namespace Ostenvighx.Suibhne.Extensions {
             return mappedCommands;
         }
 
-        public void HandleCommand(ExtensionSystem extensionSystem, NetworkBot conn, Message message) {
+        public CommandMap[] GetAvailableCommandsForUser(User u) {
+            List<CommandMap> available = new List<CommandMap>();
+
+            foreach (KeyValuePair<String, CommandMap> cm in CommandManager.Instance.CommandMapping) {
+                if (ExtensionSystem.Instance.Extensions.ContainsKey(cm.Value.Extension)) {
+                    if (ExtensionSystem.Instance.Extensions[cm.Value.Extension].Ready)
+                        if(cm.Value.AccessLevel <= u.NetworkAuthLevel)
+                            available.Add(cm.Value);
+                } else {
+                    // Command is hard-coded into here
+                    if (cm.Value.AccessLevel <= u.NetworkAuthLevel)
+                        available.Add(cm.Value);
+                }
+            }
+
+            available.Sort();
+            return available.ToArray();
+        }
+
+        public void HandleCommand(NetworkBot conn, Message message) {
             message.message = message.message.Trim();
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
@@ -114,216 +143,18 @@ namespace Ostenvighx.Suibhne.Extensions {
                 return;
             }
 
-            // TODO: Create system commands extension and remove this from here. Clean this method up.
             switch (command) {
                 case "test":
                     Core.Log("Got test args: " + message.message);
-                    response.message = "Current identifier saved in system: " + message.locationID + ". Network is " + conn.Identifier;
-                    conn.SendMessage(response);
                     break;
 
                 case "commands":
-                    response.type = Networks.Base.Reference.MessageType.PublicAction;
-                    response.message = "has these commands available: ";
-                    List<String> available = new List<string>();
-                    foreach (KeyValuePair<String, CommandMap> cm in CommandMapping) {
-                        if (extensionSystem.Extensions.ContainsKey(cm.Value.Extension)) {
-                            if (extensionSystem.Extensions[cm.Value.Extension].Ready)
-                                available.Add(cm.Key);
-                        } else {
-                            // Command is hard-coded into here
-                            available.Add(cm.Key + ((cm.Value.AccessLevel > 1) ? (" (" + cm.Value.AccessLevel.ToString() + ")") : ""));
-                        }
-                    }
-
-                    response.message += String.Join(", ", available.ToArray());
-
-                    conn.SendMessage(response);
-                    response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                    SystemCommands.HandleCommandsCommand(conn, message);
                     break;
 
                 case "sys":
                 case "system":
-                    #region System Commands
-                    if (messageParts.Length > 1 && subCommand != "") {
-                        switch (subCommand) {
-                            case "exts":
-                            case "extensions":
-                                #region Extensions System Handling
-                                switch (messageParts.Length) {
-                                    case 3:
-                                        #region Tier 3
-                                        subCommand = messageParts[2];
-                                        switch (subCommand.ToLower()) {
-                                            case "list":
-                                                String[] exts = extensionSystem.GetActiveExtensions();
-
-                                                if (exts.Length > 0) {
-                                                    response.message = String.Join(", ", exts);
-                                                    conn.SendMessage(response);
-                                                } else {
-                                                    response.message = "No extensions loaded.";
-                                                    conn.SendMessage(response);
-                                                }
-                                                break;
-
-                                            default:
-                                                response.message = "Unknown command. Available commands: {list, enable [ext], disable [ext], reload [type]}";
-                                                conn.SendMessage(response);
-                                                break;
-                                        }
-
-                                        #endregion
-                                        break;
-
-                                    case 4:
-                                        #region Tier 4
-                                        subCommand = messageParts[2];
-                                        switch (subCommand.ToLower()) {
-                                            case "enable":
-                                                // Used for enabling an extension that was disabled during loading
-                                                break;
-
-                                            case "disable":
-                                                // Used to disable a currently active extension
-                                                if (extensionSystem.Extensions.ContainsKey(new Guid(messageParts[3]))) {
-                                                    ExtensionMap ext = extensionSystem.Extensions[new Guid(messageParts[3])];
-                                                    // ext.Stop();
-                                                    extensionSystem.ShutdownExtensionBySocket(ext.Socket);
-                                                    response.message = "Disabled extension: " + ext.Name;
-                                                    conn.SendMessage(response);
-                                                } else {
-                                                    response.message = "That extension does not exist in the list. Please check the identifier and try again.";
-                                                    conn.SendMessage(response);
-                                                }
-                                                break;
-
-
-                                            default:
-                                                response.message = "Unknown command. Available commands: {enable, disable, reload}";
-                                                conn.SendMessage(response);
-                                                break;
-
-                                        }
-                                        #endregion
-                                        break;
-
-                                    default:
-                                        response.message = "Subcommand required. Available commands: {list, enable [ext], disable [ext], reload [type]}";
-                                        conn.SendMessage(response);
-                                        break;
-                                }
-                                #endregion
-                                break;
-
-                            case "reload":
-                                if (messageParts.Length < 3) {
-                                    response.message = "I need more parameters than that. Try config, access, or extensions.";
-                                    conn.SendMessage(response);
-                                    break;
-                                }
-
-                                switch (messageParts[2].ToLower()) {
-
-                                    case "config":
-                                        if (Core.SystemConfig != null) {
-                                            if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
-                                                Core.SystemConfig.Reload();
-                                                int numRemapped = MapCommands();
-                                                response.message = "Successfully remapped " + numRemapped + " commands to " + extensionSystem.Extensions.Count + " extensions.";
-                                                conn.SendMessage(response);
-
-                                                // TODO: MapAccessLevels();
-                                                Core.ConfigLastUpdate = DateTime.Now;
-                                            } else {
-                                                response.message = "Your system config is up-to-date.";
-                                                conn.SendMessage(response);
-                                            }
-                                        }
-                                        break;
-
-                                    case "extensions":
-                                    case "access":
-                                        response.message = "whispers: \"This isn't quite available yet.\"";
-                                        response.type = Networks.Base.Reference.MessageType.PublicAction;
-                                        conn.SendMessage(response);
-                                        response.type = Networks.Base.Reference.MessageType.PublicMessage;
-                                        break;
-
-                                    default:
-                                        response.message = "is not sure what to do with that. Try config or extensions as a paremeter.";
-                                        response.type = Networks.Base.Reference.MessageType.PublicAction;
-                                        conn.SendMessage(response);
-                                        response.type = Networks.Base.Reference.MessageType.PublicMessage;
-                                        break;
-                                }
-                                break;
-
-                            case "version":
-                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                                conn.SendMessage(response);
-                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                break;
-
-                            case "conninfo":
-                                // Get info about connection and system
-                                if (messageParts.Length != 3) {
-                                    response.message = "Invalid Parameters. Format: !sys conninfo [connectionType]";
-                                    conn.SendMessage(response);
-                                    break;
-                                }
-
-                                try {
-                                    string connType = messageParts[2];
-                                    response.message = "Connection type recieved: " + connType;
-                                    IniConfigSource configFile = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
-                                    String configDir = configFile.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/").Trim();
-
-                                    if (File.Exists(configDir + "NetworkTypes/" + connType + ".dll")) {
-                                        Assembly networkTypeAssembly = Assembly.LoadFrom(configDir + "NetworkTypes/" + connType + ".dll");
-                                        response.message = "Assembly information: " +
-                                            ((AssemblyTitleAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title +
-                                            " written by " +
-                                            ((AssemblyCompanyAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company +
-                                            " (v" + networkTypeAssembly.GetName().Version + ")";
-
-                                        conn.SendMessage(response);
-                                    }
-
-                                }
-
-                                catch (Exception e) {
-                                    response.message = "There was an error processing the command. (" + e.GetType().Name + ")";
-                                    conn.SendMessage(response);
-                                }
-                                break;
-
-                            case "uptime":
-                                TimeSpan diff = DateTime.Now - Core.StartTime;
-                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                response.message = "has been up for " +
-                                    (diff.Days > 0 ? diff.Days + " days" : "") +
-                                    (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
-                                    (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
-                                    (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + Core.StartTime.ToString() + "]";
-
-                                conn.SendMessage(response);
-                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                break;
-
-                            default:
-                                response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                                response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
-                                conn.SendMessage(response);
-                                response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-                                break;
-                        }
-                    } else {
-                        response.message = "Available system commands: {exts/extensions, version, conninfo, uptime}";
-                        conn.SendMessage(response);
-                    }
-                    #endregion
+                    HandleSystemCommand(conn, message);
                     break;
 
                 case "help":
@@ -331,7 +162,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         // Map command to id
                         if (CommandMapping.ContainsKey(subCommand)) {
                             CommandMap mappedCommand = CommandMapping[subCommand];
-                            ExtensionMap ext = extensionSystem.Extensions[mappedCommand.Extension];
+                            ExtensionMap ext = ExtensionSystem.Instance.Extensions[mappedCommand.Extension];
                             Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
                             ext.HandleHelpCommandRecieved(conn, mappedCommand.Method, message);
                         } else {
@@ -343,7 +174,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                     break;
 
                 default:
-                    ExtensionMap extension = extensionSystem.Extensions[CommandMapping[command].Extension];
+                    ExtensionMap extension = ExtensionSystem.Instance.Extensions[CommandMapping[command].Extension];
 
                     Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [methodID: " + cmd.Method + "]", LogType.EXTENSIONS);
                     if (!extension.Ready) {
@@ -354,6 +185,106 @@ namespace Ostenvighx.Suibhne.Extensions {
                     }
 
                     break;
+            }
+        }
+
+        private void HandleSystemCommand(NetworkBot conn, Message msg) {
+            string[] messageParts = msg.message.Split(' ');
+            String subCommand = "";
+            Message response = new Message(msg.locationID, conn.Me, "System Command Response");
+
+            if (messageParts.Length > 1)
+                subCommand = messageParts[1];
+
+            if (messageParts.Length > 1 && subCommand != "") {
+                switch (subCommand) {
+                    case "exts":
+                    case "extensions":
+                        #region Extensions System Handling
+                        SystemCommands.HandleExtensionsCommand(conn, msg);
+                        #endregion
+                        break;
+
+                    case "reload":
+                        if (messageParts.Length < 3) {
+                            response.message = "I need more parameters than that. Try config, access, or extensions.";
+                            conn.SendMessage(response);
+                            break;
+                        }
+
+                        switch (messageParts[2].ToLower()) {
+
+                            case "config":
+                                if (Core.SystemConfig != null) {
+                                    if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
+                                        Core.SystemConfig.Reload();
+                                        int numRemapped = MapCommands();
+                                        response.message = "Successfully remapped " + numRemapped + " commands to " + ExtensionSystem.Instance.Extensions.Count + " extensions.";
+                                        conn.SendMessage(response);
+
+                                        // TODO: MapAccessLevels();
+                                        Core.ConfigLastUpdate = DateTime.Now;
+                                    } else {
+                                        response.message = "Your system config is up-to-date.";
+                                        conn.SendMessage(response);
+                                    }
+                                }
+                                break;
+
+                            case "extensions":
+                            case "access":
+                                response.message = "whispers: \"This isn't quite available yet.\"";
+                                response.type = Networks.Base.Reference.MessageType.PublicAction;
+                                conn.SendMessage(response);
+                                response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                                break;
+
+                            default:
+                                response.message = "is not sure what to do with that. Try config or extensions as a paremeter.";
+                                response.type = Networks.Base.Reference.MessageType.PublicAction;
+                                conn.SendMessage(response);
+                                response.type = Networks.Base.Reference.MessageType.PublicMessage;
+                                break;
+                        }
+                        break;
+
+                    case "version":
+                        SystemCommands.HandleVersionCommand(conn, msg);
+                        break;
+
+                    case "netinfo":
+                        SystemCommands.HandleNetworkInfoCommand(conn, msg);
+                        break;
+
+                    case "uptime":
+                        TimeSpan diff = DateTime.Now - Core.StartTime;
+                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                        response.message = "has been up for " +
+                            (diff.Days > 0 ? diff.Days + " days" : "") +
+                            (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
+                            (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
+                            (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + Core.StartTime.ToString() + "]";
+
+                        conn.SendMessage(response);
+                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+                        break;
+
+                    case "id":
+                    case "identifier":
+                        response.message = "Current identifier for location: " + msg.locationID + ". Network identifier: " + conn.Identifier;
+                        conn.SendMessage(response);
+                        break;
+
+                    default:
+                        response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
+                        response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
+                        conn.SendMessage(response);
+                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
+                        break;
+                }
+            } else {
+                response.message = "Available system commands: {exts/extensions, version, netinfo, uptime}";
+                conn.SendMessage(response);
             }
         }
 
