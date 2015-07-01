@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Linq;
 
 using Nini.Config;
 using System.Reflection;
@@ -41,7 +42,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.Connected = false;           
 
-            // TODO: Verify registration of commands in routing table here
             this.Commands = new Dictionary<Guid, CommandHandler>();
         }
 
@@ -92,9 +92,14 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Console.WriteLine("Got command handler: " + handler.Name + " (maps to " + method.Name + ")");
 
                         // TODO: Add in validation here for valid CommandHandler delegate
-                        method.GetParameters();
-                        CommandHandler methodDelegate = (CommandHandler)Delegate.CreateDelegate(typeof(CommandHandler), null, method);
+                        ParameterInfo[] commandMethodParams = method.GetParameters();
 
+                        if (commandMethodParams.Length != 2 || (
+                            commandMethodParams[0].ParameterType != typeof(Extension) || commandMethodParams[1].ParameterType != typeof(Networks.Base.Message))
+                        )
+                            throw new Exception("Invalid method signature for command handler: " + method.DeclaringType.FullName + ":" + method.Name);
+
+                        CommandHandler methodDelegate = (CommandHandler)Delegate.CreateDelegate(typeof(CommandHandler), null, method);
                         methodMap.Add(handler.Name, methodDelegate);
                     }
                 }
@@ -222,8 +227,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                         // Connect suite name into bytes for response, then prepare response
                         byte[] nameAsBytes = Encoding.UTF8.GetBytes(GetExtensionName());
                         SendBytes(Responses.Details, nameAsBytes);
-
-                        // TODO: Handle command validation here
 
                         break;
 

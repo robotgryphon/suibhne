@@ -17,7 +17,8 @@ namespace Ostenvighx.Suibhne.Extensions {
         public Boolean Ready;
 
         public void Send(byte[] data) {
-            Socket.Send(data);
+            if(Socket.Connected)
+                Socket.Send(data);
         }
 
         public void HandleHelpCommandRecieved(NetworkBot conn, Guid method, Message msg) {
