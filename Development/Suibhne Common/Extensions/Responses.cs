@@ -29,6 +29,9 @@ namespace Ostenvighx.Suibhne.Extensions {
         /// </summary>
         Remove = 5,
 
+        /// <summary>
+        /// Used when an extension should handle a message.
+        /// </summary>
         Command = 6,
 
         /// <summary>
@@ -61,6 +64,8 @@ namespace Ostenvighx.Suibhne.Extensions {
         ConnectionStopped = 14,
 
         Message = 20,
+
+        LocationGet = 30,
 
         Help = 21
     };

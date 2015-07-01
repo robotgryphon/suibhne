@@ -13,17 +13,22 @@ namespace Ostenvighx.Suibhne.Extensions {
             if (msg.message.IndexOf(" ") != -1)
                 commandArgs = msg.message.Substring(msg.message.IndexOf(" ") + 1);
 
-            byte[] commandArgsBytes = Encoding.UTF8.GetBytes(commandArgs);
-            byte[] messageOriginBytes = Encoding.UTF8.GetBytes(msg.sender.DisplayName + " ");
+            msg.message = commandArgs;
+            byte[] commandData = Extension.PrepareMessage(method, msg);
+            commandData[0] = (byte)Responses.Command;
+            return commandData;
 
-            byte[] data = new byte[33 + commandArgsBytes.Length + messageOriginBytes.Length];
-            data[0] = (byte)Responses.Message;
-            Array.Copy(msg.locationID.ToByteArray(), 0, data, 1, 16);
-            Array.Copy(method.ToByteArray(), 0, data, 17, 16);
-            Array.Copy(messageOriginBytes, 0, data, 33, messageOriginBytes.Length);
-            Array.Copy(commandArgsBytes, 0, data, 33 + messageOriginBytes.Length, commandArgsBytes.Length);
+            //byte[] commandArgsBytes = Encoding.UTF8.GetBytes(commandArgs);
+            //byte[] messageOriginBytes = Encoding.UTF8.GetBytes(msg.sender.DisplayName + " ");
 
-            return data;
+            //byte[] data = new byte[33 + commandArgsBytes.Length + messageOriginBytes.Length];
+            //data[0] = (byte)Responses.Command;
+            //Array.Copy(msg.locationID.ToByteArray(), 0, data, 1, 16);
+            //Array.Copy(method.ToByteArray(), 0, data, 17, 16);
+            //Array.Copy(messageOriginBytes, 0, data, 33, messageOriginBytes.Length);
+            //Array.Copy(commandArgsBytes, 0, data, 33 + messageOriginBytes.Length, commandArgsBytes.Length);
+
+            //return data;
         }
 
         public static void SendShutdownRequest(ExtensionMap em) {

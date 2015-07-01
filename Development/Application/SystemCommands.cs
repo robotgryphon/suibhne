@@ -13,18 +13,20 @@ namespace Ostenvighx.Suibhne {
     public class SystemCommands {
 
         public static void HandleCommandsCommand(NetworkBot conn, Message msg) {
-            Message response = new Message(msg.locationID, conn.Me, "");
-            response.type = Networks.Base.Reference.MessageType.PublicAction;
+            Message response = Message.GenerateResponse(conn.Me, msg);
+            if (Message.IsPrivateMessage(response))
+                response.type = Networks.Base.Reference.MessageType.PrivateAction;
+            
             response.message = "figures you have access to these commands: ";
 
-            String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender);
+            String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender, false);
 
             response.message += String.Join(", ", AvailableCommands);
             conn.SendMessage(response);
         }
 
         public static void HandleExtensionsCommand(NetworkBot conn, Message msg) {
-            Message response = new Message(msg.locationID, conn.Me, "");
+            Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
             String subCommand = "";
 
@@ -93,19 +95,20 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void HandleVersionCommand(NetworkBot conn, Message msg) {
-            Message response = new Message(msg.locationID, conn.Me, "");
+            Message response = Message.GenerateResponse(conn.Me, msg);
+            if (Message.IsPrivateMessage(response))
+                response.type = Networks.Base.Reference.MessageType.PrivateAction;
 
-            response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
             response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             conn.SendMessage(response);
         }
 
         public static void HandleNetworkInfoCommand(NetworkBot conn, Message msg) {
-            Message response = new Message(msg.locationID, conn.Me, "");
+            Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
 
             if (messageParts.Length != 3) {
-                response.message = "Invalid Parameters. Format: !sys conninfo [connectionType]";
+                response.message = "Invalid Parameters. Format: !sys netinfo [connectionType]";
                 conn.SendMessage(response);
                 return;
             }
@@ -113,17 +116,18 @@ namespace Ostenvighx.Suibhne {
             try {
                 string connType = messageParts[2];
                 response.message = "Connection type recieved: " + connType;
-                IniConfigSource configFile = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
-                String configDir = configFile.Configs["Suibhne"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/").Trim();
 
-                if (File.Exists(configDir + "NetworkTypes/" + connType + ".dll")) {
-                    Assembly networkTypeAssembly = Assembly.LoadFrom(configDir + "NetworkTypes/" + connType + ".dll");
+                if (File.Exists(Core.ConfigDirectory + "NetworkTypes/" + connType + ".dll")) {
+                    Assembly networkTypeAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "NetworkTypes/" + connType + ".dll");
                     response.message = "Assembly information: " +
                         ((AssemblyTitleAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title +
                         " written by " +
                         ((AssemblyCompanyAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company +
                         " (v" + networkTypeAssembly.GetName().Version + ")";
 
+                    conn.SendMessage(response);
+                } else {
+                    response.message = "I couldn't find that network connector's file. Check spelling and capitaliation.";
                     conn.SendMessage(response);
                 }
 

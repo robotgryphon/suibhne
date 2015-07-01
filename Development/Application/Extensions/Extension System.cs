@@ -161,8 +161,12 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Message msg = Extension.ParseMessage(data);
 
                         try {
-                            NetworkBot bot = bots[Core.NetworkLocationMap[msg.locationID]];
-                            bot.SendMessage(msg);
+                            foreach (NetworkBot bot in bots.Values) {
+                                if(bot.IsListeningTo(msg.locationID)){
+                                    bot.SendMessage(msg);
+                                }
+                            }
+                            
                         }
 
                         catch (KeyNotFoundException) {

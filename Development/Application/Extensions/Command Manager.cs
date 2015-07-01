@@ -96,18 +96,18 @@ namespace Ostenvighx.Suibhne.Extensions {
             return mappedCommands;
         }
 
-        public String[] GetAvailableCommandsForUser(User u) {
+        public String[] GetAvailableCommandsForUser(User u, bool includeAccessLevels = false) {
             List<String> available = new List<String>();
 
             foreach (KeyValuePair<String, CommandMap> cm in CommandManager.Instance.CommandMapping) {
                 if (ExtensionSystem.Instance.Extensions.ContainsKey(cm.Value.Extension)) {
                     if (ExtensionSystem.Instance.Extensions[cm.Value.Extension].Ready)
                         if(cm.Value.AccessLevel <= u.NetworkAuthLevel)
-                            available.Add(cm.Key);
+                            available.Add(cm.Key + (includeAccessLevels ? " (" + cm.Value.AccessLevel + ")" : ""));
                 } else {
                     // Command is hard-coded into here
                     if (cm.Value.AccessLevel <= u.NetworkAuthLevel)
-                        available.Add(cm.Key);
+                        available.Add(cm.Key + (includeAccessLevels ? " (" + cm.Value.AccessLevel + ")" : ""));
                 }
             }
 
@@ -170,6 +170,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                             response.message = "does not have information on that command.";
                             conn.SendMessage(response);
                         }
+                    } else {
+                        response.message = "The !help command is used to get information on a command. Format is !help <command>.";
+                        conn.SendMessage(response);
+                        break;
                     }
                     break;
 
@@ -192,6 +196,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             string[] messageParts = msg.message.Split(' ');
             String subCommand = "";
             Message response = new Message(msg.locationID, conn.Me, "System Command Response");
+            if (msg.type != Networks.Base.Reference.MessageType.PublicAction || msg.type != Networks.Base.Reference.MessageType.PublicMessage) {
+                response.target = msg.target;
+            }
 
             if (messageParts.Length > 1)
                 subCommand = messageParts[1];

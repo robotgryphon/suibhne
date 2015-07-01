@@ -55,7 +55,6 @@ namespace Ostenvighx.Suibhne {
                         this._network = (Network)Activator.CreateInstance(t);
                         _network.Setup(config.SavePath);
                         _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
-
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
                         _network.OnConnectionComplete += (conn) => {
                             AutoJoinLocations(configDir);
@@ -71,6 +70,16 @@ namespace Ostenvighx.Suibhne {
 
             ExtensionSystem.Instance.AddBot(this);
             this.Ready = true;
+        }
+
+        public bool IsListeningTo(Guid g) {
+            foreach (Guid listened in _network.Listened.Keys) {
+                if (listened == g) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void SendMessage(Message m) {
@@ -92,7 +101,6 @@ namespace Ostenvighx.Suibhne {
                     Guid newLocationID = Utilities.GetOrAssignIdentifier(NetworkName + "/" + locationName);
                     
                     _network.JoinLocation(newLocationID, loc);
-                    Core.NetworkLocationMap.Add(newLocationID, Identifier);
                 }
 
                 catch (Exception e) {

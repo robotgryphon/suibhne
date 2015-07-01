@@ -1,5 +1,7 @@
 ﻿
 using System;
+using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Ostenvighx.Suibhne.Networks.Base {
@@ -35,6 +37,26 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// </summary>
         public Reference.MessageType type;
 
+        public Message(byte[] stream) {
+            // <destination:16>
+            // <messageType:1>
+            // <message:*> = {sender} {message}
+            byte[] guidBytes = new byte[16];
+
+            Array.Copy(stream, 0, guidBytes, 0, 16);
+            this.locationID = new Guid(guidBytes);
+
+            this.type = (Ostenvighx.Suibhne.Networks.Base.Reference.MessageType) stream[16];
+
+            byte[] messageBytes = new byte[stream.Length - 17];
+            Array.Copy(stream, 17, messageBytes, 0, messageBytes.Length);
+            this.message = Encoding.UTF8.GetString(messageBytes);
+
+            sender = new User(message.Split(';')[0]);
+            target = new User(message.Split(';')[1]);
+            message = message.Split(';')[2];
+        }
+
         /// <summary>
         /// Create an instance of a new Networks.Irc Message object.
         /// Default message type is unknown.
@@ -49,8 +71,47 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             this.message = message;
             this.type = Reference.MessageType.Unknown;
         }
-   
 
+        public static Message GenerateResponse(User u, Message msg) {
+            Message response = new Message(msg.locationID, u, "Response");
+            response.type = Reference.MessageType.PublicMessage;
+
+            if (Message.IsPrivateMessage(msg)) {
+                response.type = Reference.MessageType.PrivateMessage;
+                response.target = msg.sender;
+            }
+
+            return response;
+        }
+
+        public static bool IsPrivateMessage(Message msg) {
+            switch (msg.type) {
+                case Reference.MessageType.PrivateMessage:
+                case Reference.MessageType.PrivateAction:
+                case Reference.MessageType.Notice:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public byte[] ConvertToBytes() {
+            byte[] messageAsBytes = Encoding.UTF8.GetBytes(this.sender.DisplayName + ";" + this.target.DisplayName + ";" + message);
+            byte[] rawMessage = new byte[17 + messageAsBytes.Length];
+
+            // Copy message's target location to array
+            Array.Copy(locationID.ToByteArray(), 0, rawMessage, 0, 16);
+
+            // Copy in message type
+            rawMessage[16] = (byte) type;
+
+            // Copy message sender and message bytes in
+            Array.Copy(messageAsBytes, 0, rawMessage, 17, messageAsBytes.Length);
+
+            return rawMessage;
+        }
+        
         /// <summary>
         /// Output an example of a formatted Message. This will give subtle hints on the type of message, and shows
         /// all of the contents (sender, message, and location).

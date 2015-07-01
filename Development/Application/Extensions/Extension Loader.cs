@@ -48,6 +48,9 @@ namespace Ostenvighx.Suibhne.Extensions {
                 extension.Name = br.ReadString();
                 extension.Identifier = new Guid(br.ReadBytes(16));
 
+                br.Close();
+                br.Dispose();
+                br = null;
 
                 file.Close();
                 file.Dispose();
@@ -56,6 +59,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Core.Log("Could not load extension; Extension information files not found. (" + extDir + ")", LogType.ERROR);
             }
 
+            Core.Log("Loaded extension " + extension.Name + " with id " + extension.Identifier, LogType.EXTENSIONS);
             return extension;
         }
 

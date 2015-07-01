@@ -8,6 +8,7 @@ using System.Threading;
 
 using Nini.Config;
 using System.Reflection;
+using Ostenvighx.Suibhne.Networks.Base;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -27,7 +28,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         
-        public delegate void CommandHandler(Extension e, Guid origin, string sender, string args);
+        public delegate void CommandHandler(Extension e, Networks.Base.Message msg);
         public delegate void ExtensionEvent(Extension e);
 
         protected Dictionary<Guid, CommandHandler> Commands;
@@ -46,6 +47,8 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public void Start() {
             LoadConfig();
+
+            Console.WriteLine("Loaded id: " + Identifier);
             MapCommandMethods();
             Connect();
         }
@@ -214,7 +217,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (data.Length > 17)
                     additionalData = Encoding.UTF8.GetString(data, 17, data.Length - 17);
 
-                Console.WriteLine((Responses)data[0]);
                 switch ((Responses)data[0]) {
                     case Responses.Activation:
                         // Connect suite name into bytes for response, then prepare response
@@ -235,23 +237,18 @@ namespace Ostenvighx.Suibhne.Extensions {
                         String messageLocation = messageParts[0];
                         String messageSender = messageParts[1];
 
-                        byte[] rawMessage = Extension.PrepareMessage(Identifier, origin, (byte) Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage, this.GetExtensionName().Replace(" ", "_"), response);
-                        SendBytes(Responses.Message, rawMessage);
-
+                        SendMessage(new Message(origin, new User(), response));
                         break;
 
                     case Responses.Command:
                         if (data.Length > 33) {
-                            guidBytes = new byte[16];
-                            Array.Copy(data, 17, guidBytes, 0, 16);
-                            Guid commandID = new Guid(guidBytes);
 
-                            byte[] commandInfoBytes = new byte[data.Length - 33];
-                            Array.Copy(data, 33, commandInfoBytes, 0, commandInfoBytes.Length);
-                            String commandInfo = Encoding.UTF8.GetString(commandInfoBytes);
-                            if (Commands.ContainsKey(commandID)) {
-                                string[] cdata = commandInfo.Split(new char[] { ' ' }, 2);
-                                Commands[commandID].Invoke(this, origin, cdata[0], cdata[1]);
+                            Guid method;
+                            Networks.Base.Message msg = Extension.ParseMessage(data, out method);
+
+                            if (Commands.ContainsKey(method)) {
+                                Console.WriteLine("Got command for " + Commands[method].Method.Name + " with arguments " + msg.message);
+                                Commands[method].Invoke(this, msg);
                             }
                         } else {
                             Console.WriteLine("Invalid command string. Need identifier, at least.");
@@ -275,7 +272,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 foreach (Object attr in attrs) {
                                     if (attr.GetType() == typeof(HelpAttribute)) {
                                         HelpAttribute handler = (HelpAttribute)attr;
-                                        SendMessage(origin, Networks.Base.Reference.MessageType.PublicMessage, handler.HelpText);
+                                        SendMessage(new Message(origin, new User(), handler.HelpText));
                                     }
                                 }
                             }
@@ -317,33 +314,36 @@ namespace Ostenvighx.Suibhne.Extensions {
             Array.Copy(Identifier.ToByteArray(), 0, dataToSend, 1, 16);
             Array.Copy(data, 0, dataToSend, 17, data.Length);
 
-            Console.WriteLine("Sending Data");
+            Console.WriteLine("Sending response: " + (Responses) dataToSend[0]);
             conn.Send(dataToSend);
         }
 
-        public static byte[] PrepareMessage(Guid origin, Networks.Base.Message message) {
-            return PrepareMessage(
-                origin,
-                message.locationID,
-                (byte)message.type,
-                message.sender.DisplayName,
-                message.message);
-        }
 
         /// <summary>
-        /// Deprecated. You should use PrepareMessage(Guid origin, Message message) instead.
+        /// Prepares a message for transmission between client and server.
         /// </summary>
-        public static byte[] PrepareMessage(Guid origin, Guid destination, byte type, String sender, String message) {
-            byte[] messageAsBytes = Encoding.UTF8.GetBytes(sender + " " + message);
-            byte[] rawMessage = new byte[34 + messageAsBytes.Length];
+        /// <param name="destination">For extensions, the destination is unused. For 
+        /// incoming messages, the destination or method is the location the message is 
+        /// trying to access in the extension.</param>
+        /// 
+        /// <param name="message">The message contains all the information about the message- 
+        /// origin point, sender, type, etc.</param>
+        /// <returns></returns>
+        public static byte[] PrepareMessage(Guid destination, Networks.Base.Message message) {
 
-            rawMessage[0] = (byte)Responses.Message;
+            // Encode sender and message
+            byte[] messageAsBytes = message.ConvertToBytes();
 
-            Array.Copy(origin.ToByteArray(), 0, rawMessage, 1, 16);
-            Array.Copy(destination.ToByteArray(), 0, rawMessage, 17, 16);
+            byte[] rawMessage = new byte[17 + messageAsBytes.Length];
 
-            rawMessage[33] = type;
-            Array.Copy(messageAsBytes, 0, rawMessage, 34, messageAsBytes.Length);
+            // State this is a message to reciever
+            rawMessage[0] = (byte) Responses.Message;
+
+            // Copy message origin (destination here) to array
+            Array.Copy(destination.ToByteArray(), 0, rawMessage, 1, 16);
+
+            // Copy message information in
+            Array.Copy(messageAsBytes, 0, rawMessage, 17, messageAsBytes.Length);
 
             return rawMessage;
         }
@@ -359,25 +359,11 @@ namespace Ostenvighx.Suibhne.Extensions {
             Array.Copy(data, 1, guidBytes, 0, 16);
             origin = new Guid(guidBytes);
 
-            guidBytes = new byte[16];
+            byte[] messageBytes = new byte[data.Length - 17];
+            Array.Copy(data, 17, messageBytes, 0, messageBytes.Length);
 
-            Array.Copy(data, 17, guidBytes, 0, 16);
+            Message message = new Message(messageBytes);
 
-            Networks.Base.Message message = new Networks.Base.Message(new Guid(guidBytes), new Networks.Base.User(), "");
-            message.type = (Ostenvighx.Suibhne.Networks.Base.Reference.MessageType) data[33];
-
-            byte[] messageBytes = new byte[data.Length - 34];
-            Array.Copy(data, 34, messageBytes, 0, messageBytes.Length);
-            message.message = Encoding.UTF8.GetString(messageBytes);
-
-            Match messageMatch = Reference.MessageResponseParser.Match(message.message);
-            if (messageMatch.Success) {
-                message.sender.DisplayName = messageMatch.Groups["sender"].Value;
-                message.message = messageMatch.Groups["message"].Value;
-            } else {
-                message.sender.DisplayName = "Unknown";
-                message.message = "Message";
-            }
 
             return message;
         }
@@ -393,17 +379,9 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public void SendMessage(Networks.Base.Message message) {
-            SendMessage(message.locationID, message.type, message.message);
-        }
-
-        public void SendMessage(Guid destination, Networks.Base.Reference.MessageType type, String message) {
-            byte[] rawMessage = PrepareMessage(this.Identifier, destination, (byte)type, this.GetExtensionName().Replace(' ', '_'), message);
+            byte[] rawMessage = PrepareMessage(this.Identifier, message);
             conn.Send(rawMessage);
         }
-
-
     }
-
-
 }
 

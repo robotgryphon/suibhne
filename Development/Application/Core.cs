@@ -20,10 +20,13 @@ namespace Ostenvighx.Suibhne {
     [Script("core")]
     public class Core {
 
-        public static Dictionary<Guid, Guid> NetworkLocationMap = new Dictionary<Guid, Guid>();
-
         public static DateTime ConfigLastUpdate;
+
+        /// <summary>
+        /// Base configuration directory. Will always have a trailing slash. ALWAYS.
+        /// </summary>
         public static String ConfigDirectory;
+
         public static IniConfigSource SystemConfig;
 
 

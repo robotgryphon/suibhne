@@ -13,7 +13,6 @@ using Ostenvighx.Suibhne.Networks.Base;
 using Nini.Config;
 using Ostenvighx.Suibhne.Scripting;
 
-// TODO: Create Parrot extension to test regex/extension handling
 namespace Launcher {
     class Program {
         static void Main(string[] args) {
@@ -25,6 +24,11 @@ namespace Launcher {
 
                 Core.SystemConfig.ExpandKeyValues();
                 Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
+                    Core.ConfigDirectory += "/";
+                    Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
+                    Core.SystemConfig.Save();
+                }
                 if (!File.Exists(Core.ConfigDirectory + "/system.json")) {
                     File.Create(Core.ConfigDirectory + "/system.json");
                     File.WriteAllText(Core.ConfigDirectory + "/system.json", "{}");
