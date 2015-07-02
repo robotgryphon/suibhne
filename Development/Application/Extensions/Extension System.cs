@@ -14,6 +14,7 @@ using System.Net;
 using System.Text;
 using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Networks.Base;
+using Newtonsoft.Json.Linq;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -100,9 +101,26 @@ namespace Ostenvighx.Suibhne.Extensions {
             // Get ExtensionDirectories available via directory name
             String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
 
-            ExtensionMap[] exts = ExtensionLoader.LoadExtensions(ExtensionsRootDirectory);
-            foreach (ExtensionMap extension in exts) {
-                Extensions.Add(extension.Identifier, extension);
+            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
+            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+            JObject config = JObject.Parse(decodedFile);
+
+            foreach (JProperty ext in config["Extensions"]) {
+                Core.Log("Loading extension information: " + ext.Name, LogType.EXTENSIONS);
+                ExtensionMap map = new ExtensionMap();
+                map.Ready = false;
+                map.Socket = null;
+                map.Name = ext.Name;
+                map.Identifier = Guid.Parse((String)ext.Value["Identifier"]);
+
+                Extensions.Add(map.Identifier, map);
+
+                String extensionExtension = Path.GetExtension(ext.Value["InstallPath"].ToString());
+                if (extensionExtension.ToLower() == ".exe") {
+                    Core.Log("Starting extension " + ext.Name + "...", LogType.EXTENSIONS);
+
+                    Process.Start(ext.Value["InstallPath"].ToString(), "--launch " + Core.ConfigDirectory);
+                }
             }
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);

@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
 
-using Nini.Config;
 using System.Reflection;
 using Ostenvighx.Suibhne.Networks.Base;
+using Newtonsoft.Json.Linq;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -45,41 +45,38 @@ namespace Ostenvighx.Suibhne.Extensions {
             this.Commands = new Dictionary<Guid, CommandHandler>();
         }
 
-        public void Start() {
-            LoadConfig();
+        public void Start(string configBase) {
+            LoadConfig(configBase);
 
             Console.WriteLine("Loaded id: " + Identifier);
-            MapCommandMethods();
+            MapCommandMethods(configBase);
             Connect();
         }
 
-        public void LoadConfig() {
-            IniConfigSource config = new IniConfigSource(Environment.CurrentDirectory + "/extension.ini");
+        public void LoadConfig(string configBase) {
+            String systemFile = new DirectoryInfo(configBase).FullName + @"\system.sns";
+            if (File.Exists(systemFile)) {
 
-            if (File.Exists(Environment.CurrentDirectory + @"\extension")) {
+                string encodedFile = File.ReadAllText(systemFile);
+                string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+                JObject config = JObject.Parse(decodedFile);
 
-                BinaryReader file = new BinaryReader(File.OpenRead(Environment.CurrentDirectory + @"\extension"));
+                if (config["Extensions"] == null || config["Extensions"][GetExtensionName()] == null)
+                    return;
 
-                try {
-                    file.ReadString(); // Get past extension name - not used here.
-                    this.Identifier = new Guid(file.ReadBytes(16));
-                }
-
-                catch (Exception) {
-
-                }
-
-                file.Close();
+                JObject thisConfig = (JObject) config["Extensions"][GetExtensionName()];
+                this.Identifier = new Guid((String) thisConfig.GetValue("Identifier"));
 
             } else {
 
                 // Terminate, extension not installed properly
-
+                throw new FileNotFoundException("System information file not found. Please re-install the extension.");
             }
         }
 
-        private void MapCommandMethods() {
+        private void MapCommandMethods(String configBase) {
             // Get all possible command handler methods and create a mapping dictionary
+            
 
             Dictionary<String, CommandHandler> methodMap = new Dictionary<string, CommandHandler>();
 
@@ -105,20 +102,16 @@ namespace Ostenvighx.Suibhne.Extensions {
                 }
             }
 
-            if (File.Exists(Environment.CurrentDirectory + @"\extension")) {
+            String systemFile = new DirectoryInfo(configBase).FullName + @"\system.sns";
+            if (File.Exists(systemFile)) {
 
-                FileStream file = File.OpenRead(Environment.CurrentDirectory + @"\extension");
+                string encodedFile = File.ReadAllText(systemFile);
+                string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+                JObject config = JObject.Parse(decodedFile);
 
-                BinaryReader br = new BinaryReader(file);
-
-                br.ReadString();        // Get past extension name
-                br.ReadBytes(16);       // Get past extension identifier
-
-                short methods = br.ReadInt16();
-                for (int methodNumber = 1; methodNumber < methods + 1; methodNumber++) {
-                    String methodName = br.ReadString();
-                    byte[] guid = br.ReadBytes(16);
-                    Guid g = new Guid(guid);
+                foreach(JProperty method in config["Extensions"][this.GetExtensionName()]["CommandHandlers"]) {
+                    String methodName = method.Name;
+                    Guid g = Guid.Parse((String) method.Value);
 
                     if (methodMap.ContainsKey(methodName)) {
                         this.Commands.Add(g, methodMap[methodName]);

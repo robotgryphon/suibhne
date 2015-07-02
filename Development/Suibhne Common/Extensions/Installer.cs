@@ -6,11 +6,18 @@ using System.Reflection;
 
 using Ostenvighx.Suibhne.Extensions;
 using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace Ostenvighx.Suibhne.Common {
     public abstract class ExtensionInstaller {
 
-        public static void DumpInstallData(Type extension, Boolean test = false){
+        public enum InstallType {
+            Binary,
+            Json,
+            Test
+        }
+
+        public static void DumpInstallData(Type extension, String InstallPath, InstallType type){
 
             // Make sure we have an extension, not something stupid
             if (!extension.IsSubclassOf(typeof(Extension)))
@@ -37,10 +44,20 @@ namespace Ostenvighx.Suibhne.Common {
             FileStream f = File.Create(Environment.CurrentDirectory + "/installing");
             f.Close();
 
-            if (!test)
-                GenerateInstallFile(e, CommandHandlers);
-            else
-                TestGenerateInstallFile(e, CommandHandlers);
+            switch (type) {
+                case InstallType.Binary:
+                    GenerateBinaryFile(e, CommandHandlers);
+                    break;
+
+                case InstallType.Json:
+                    GenerateJsonFile(e, InstallPath, CommandHandlers);
+                    break;
+
+                case InstallType.Test:
+                    TestGenerateInstallFile(e, CommandHandlers);
+                    break;
+            }
+                
 
             // Remove install flag file
             File.Delete(Environment.CurrentDirectory + "/installing");
@@ -68,7 +85,7 @@ namespace Ostenvighx.Suibhne.Common {
             }
         }
 
-        private static void GenerateInstallFile(Extension e, Dictionary<String, MethodInfo> CommandHandlers) {
+        private static void GenerateBinaryFile(Extension e, Dictionary<String, MethodInfo> CommandHandlers) {
             FileStream file = File.OpenWrite(Environment.CurrentDirectory + "/extension");
             BinaryWriter bw = new BinaryWriter(file);
 
@@ -96,6 +113,61 @@ namespace Ostenvighx.Suibhne.Common {
 
             bw.Close();
             file.Close();
+        }
+
+        private static void GenerateJsonFile(Extension e, String InstallPath, Dictionary<String, MethodInfo> CommandHandlers) {
+
+            string encodedFile = File.ReadAllText(InstallPath + "/system.sns");
+            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+            JObject systemConfig = JObject.Parse(decodedFile);
+
+            Console.WriteLine(systemConfig);
+
+            if (systemConfig["Extensions"] == null)
+                systemConfig.Add("Extensions", new JObject());
+
+            JObject extObj = new JObject();
+            extObj.Add("Identifier", Guid.NewGuid().ToString());
+            extObj.Add("InstallPath", System.Windows.Forms.Application.ExecutablePath);
+
+            JObject commands = new JObject();
+            foreach (KeyValuePair<String, MethodInfo> method in CommandHandlers) {
+                commands.Add(method.Key, Guid.NewGuid());
+            }
+            extObj.Add("CommandHandlers", commands);
+
+            JArray EventHandlers = new JArray();
+            Attribute[] attrs = e.GetType().GetCustomAttributes().ToArray();
+            foreach (Attribute a in attrs) {
+                if (a.GetType() == typeof(Attributes.MessageHandlerAttribute))
+                    EventHandlers.Add("Message:Recieve");
+
+                if (a.GetType() == typeof(Attributes.UserJoinHandlerAttribute))
+                    EventHandlers.Add("User:Join");
+
+                if (a.GetType() == typeof(Attributes.UserQuitHandlerAttribute))
+                    EventHandlers.Add("User:Quit");
+
+                if (a.GetType() == typeof(Attributes.UserLeaveHandlerAttribute))
+                    EventHandlers.Add("User:Leave");
+            }
+
+            extObj.Add("Handlers", EventHandlers);
+
+            if (systemConfig["Extensions"][e.GetExtensionName()] == null)
+                ((JObject)systemConfig["Extensions"]).Add(e.GetExtensionName(), extObj);
+            else
+                systemConfig["Extensions"][e.GetExtensionName()] = extObj;
+
+            Console.WriteLine(systemConfig);
+
+
+            File.WriteAllText(@"D:\Suibhne\Configuration\system.json", systemConfig.ToString());
+
+            byte[] binaryOfFile = Encoding.ASCII.GetBytes(systemConfig.ToString());
+            String encoded = Convert.ToBase64String(binaryOfFile);
+
+            File.WriteAllText(@"D:\Suibhne\Configuration\system.sns", encoded);
         }
     }
 }

@@ -12,6 +12,7 @@ using Ostenvighx.Suibhne.Networks.Base;
 
 using Nini.Config;
 using Ostenvighx.Suibhne.Scripting;
+using Newtonsoft.Json.Linq;
 
 namespace Launcher {
     class Program {
@@ -29,9 +30,9 @@ namespace Launcher {
                     Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
                     Core.SystemConfig.Save();
                 }
-                if (!File.Exists(Core.ConfigDirectory + "/system.json")) {
-                    File.Create(Core.ConfigDirectory + "/system.json");
-                    File.WriteAllText(Core.ConfigDirectory + "/system.json", "{}");
+                if (!File.Exists(Core.ConfigDirectory + "/system.sns")) {
+                    File.Create(Core.ConfigDirectory + "/system.sns");
+                    File.WriteAllText(Core.ConfigDirectory + "/system.sns", Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")));
                 }
             }
 

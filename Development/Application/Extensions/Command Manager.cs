@@ -1,4 +1,5 @@
-﻿using Nini.Config;
+﻿using Newtonsoft.Json.Linq;
+using Nini.Config;
 using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
@@ -44,38 +45,44 @@ namespace Ostenvighx.Suibhne.Extensions {
             if (Core.SystemConfig == null)
                 return 0;
 
+            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
+            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+            JObject config = JObject.Parse(decodedFile);
+
             WipeCommandMap();
 
             String[] commands = Core.SystemConfig.Configs["Commands"].GetKeys();
             foreach (String commandKey in commands) {
                 String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
+
                 try {
-                    CommandMap c = new CommandMap();
-                    c.CommandString = commandKey.ToLower();
-                    String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
-                    c.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt(c.CommandString, 1);
+                    string extName = commandMap.Substring(0, nameEnd);
 
-                    String extensionDirectory = ExtensionsRootDirectory + commandMap.Substring(0, nameEnd);
-                    if (Directory.Exists(extensionDirectory)) {
-                        ExtensionMap em = ExtensionLoader.LoadExtension(extensionDirectory);
-                        if (em.Identifier != Guid.Empty) {
-                            c.Extension = em.Identifier;
-                            Guid methodID = ExtensionLoader.GetMethodIdentifier(extensionDirectory, commandMap.Substring(nameEnd + 1).Trim());
-                            if (methodID != Guid.Empty) {
-                                c.Method = methodID;
-                                RegisterCommand(c.CommandString, c);
-                                mappedCommands++;
+                    if (config["Extensions"][extName] == null)
+                        continue;
 
-                            } else
-                                Core.Log("Command '" + commandKey + "' not valid. Method name is wrong.", LogType.ERROR);
-                        }
-                    }
+                    JObject commandConfig = (JObject) config["Extensions"][extName];
+
+                    CommandMap cm = new CommandMap();
+                    cm.CommandString = commandMap.Substring(nameEnd + 1).Trim();
+                    cm.Extension = Guid.Parse((String) commandConfig["Identifier"]);
+                    cm.Method = Guid.Parse((String) commandConfig["CommandHandlers"][cm.CommandString]);
+                    cm.AccessLevel = (byte)Core.SystemConfig.Configs["CommandAccess"].GetInt(commandKey, 1);
+
+                    CommandManager.Instance.RegisterCommand(commandKey, cm);
+                    mappedCommands++;
+
                 }
+
+                catch (IndexOutOfRangeException) {
+
+                }
+
                 catch (FormatException) {
-                    Core.Log("Failed to register command '{0}': Invalid mapping format.", LogType.EXTENSIONS);
+
                 }
             }
 

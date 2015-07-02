@@ -12,58 +12,42 @@ namespace Ostenvighx.Suibhne {
     public class Utilities {
 
         public static Guid GetOrAssignIdentifier(String nodeName) {
+            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
+            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
+            JObject systemFile = JObject.Parse(decodedFile);
+
             if (nodeName == null || nodeName.Trim() == "")
                 return Guid.Empty;
 
             Guid returned = Guid.Empty;
-            JObject systemFile = JObject.Parse(File.ReadAllText(Core.ConfigDirectory + "/system.json"));
-            if (systemFile["identifiers"] == null) {
-                systemFile["identifiers"] = new JObject();
-                File.WriteAllText(Core.ConfigDirectory + "/system.json", systemFile.ToString());
+            if (systemFile["Identifiers"] == null) {
+                systemFile["Identifiers"] = new JObject();
+                SaveToSystemFile(systemFile);
             }
 
             // Actually get/check identifier for nodeName
-            if (systemFile["identifiers"][nodeName] == null) {
+            if (systemFile["Identifiers"][nodeName] == null) {
                 returned = Guid.NewGuid();
-                systemFile["identifiers"][nodeName] = returned.ToString();
-                File.WriteAllText(Core.ConfigDirectory + "/system.json", systemFile.ToString());
+                systemFile["Identifiers"][nodeName] = returned.ToString();
+                SaveToSystemFile(systemFile);
             } else {
                 try {
-                    returned = Guid.Parse((String) systemFile["identifiers"][nodeName]);
+                    returned = Guid.Parse((String) systemFile["Identifiers"][nodeName]);
                 }
 
                 catch (Exception) {
                     returned = Guid.NewGuid();
-                    systemFile["identifiers"][nodeName] = returned.ToString();
-                    File.WriteAllText(Core.ConfigDirectory + "/system.json", systemFile.ToString());
+                    systemFile["Identifiers"][nodeName] = returned.ToString();
+                    SaveToSystemFile(systemFile);   
                 }
             }
 
             return returned;
         }
 
-        public static Guid GetOrAssignIdentifier(IniConfigSource source) {
-            Guid returned = Guid.Empty;
-
-            if (source.Configs["System"] != null) {
-                try {
-                    returned = new Guid(source.Configs["System"].GetString("Identifier", new Guid().ToString()));
-                }
-
-                catch (Exception) {
-                    Core.Log("The identifier format in file '" + source.SavePath + "' is invalid. Please don't modify the System variables unless you know what you're doing. Re-creating it..");
-                    returned = Guid.NewGuid();
-                    source.Configs["System"].Set("Identifier", returned);
-                    source.Save();
-                }
-            } else {
-                source.Configs.Add("System");
-                returned = Guid.NewGuid();
-                source.Configs["System"].Set("Identifier", returned);
-                source.Save();
-            }
-
-            return returned;
+        public static void SaveToSystemFile(JObject j) {
+            String converted = Convert.ToBase64String(Encoding.UTF8.GetBytes(j.ToString()));
+            File.WriteAllText(Core.ConfigDirectory + "/system.sns", converted);
         }
     }
 }
