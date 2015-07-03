@@ -30,9 +30,9 @@ namespace Launcher {
                     Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
                     Core.SystemConfig.Save();
                 }
-                if (!File.Exists(Core.ConfigDirectory + "/system.sns")) {
-                    File.Create(Core.ConfigDirectory + "/system.sns");
-                    File.WriteAllText(Core.ConfigDirectory + "/system.sns", Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")));
+                if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
+                    File.Create(Core.ConfigDirectory + "system.sns");
+                    File.WriteAllText(Core.ConfigDirectory + "system.sns", Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")));
                 }
             }
 

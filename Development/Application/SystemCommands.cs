@@ -98,6 +98,8 @@ namespace Ostenvighx.Suibhne {
             Message response = Message.GenerateResponse(conn.Me, msg);
             if (Message.IsPrivateMessage(response))
                 response.type = Networks.Base.Reference.MessageType.PrivateAction;
+            else
+                response.type = Networks.Base.Reference.MessageType.PublicAction;
 
             response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             conn.SendMessage(response);

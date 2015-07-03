@@ -36,7 +36,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         protected void AcceptConnection(IAsyncResult result) {
             try {
                 Socket s = Connection.EndAccept(result);
-                Core.Log("Connected extension.", LogType.EXTENSIONS);
                 s.BeginReceive(Buffer, 0, Buffer.Length, SocketFlags.None, RecieveDataCallback, s);
                 Connection.BeginAccept(AcceptConnection, null);
             }

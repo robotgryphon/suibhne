@@ -119,7 +119,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (extensionExtension.ToLower() == ".exe") {
                     Core.Log("Starting extension " + ext.Name + "...", LogType.EXTENSIONS);
 
-                    Process.Start(ext.Value["InstallPath"].ToString(), "--launch " + Core.ConfigDirectory);
+                    // Process.Start(ext.Value["InstallPath"].ToString(), "--launch " + Core.ConfigDirectory);
                 }
             }
 
