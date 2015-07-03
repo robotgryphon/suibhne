@@ -9,7 +9,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ostenvighx.Suibhne.Extensions {
+using Ostenvighx.Suibhne.Extensions;
+
+namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
 
         protected Dictionary<string, CommandMap> CommandMapping;

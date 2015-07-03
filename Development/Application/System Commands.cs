@@ -9,6 +9,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
+using Ostenvighx.Suibhne.Commands;
+
 namespace Ostenvighx.Suibhne {
     public class SystemCommands {
 
