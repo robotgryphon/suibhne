@@ -15,6 +15,7 @@ using System.Text;
 using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Networks.Base;
 using Newtonsoft.Json.Linq;
+using Ostenvighx.Suibhne.Commands;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -41,8 +42,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             get { return Instance.GetType().GUID; }
         }
 
-        protected Dictionary<Guid, NetworkBot> bots;
-
         internal Dictionary<Guid, ExtensionMap> Extensions;
 
         protected ExtensionServer Server;
@@ -51,8 +50,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         public event Events.ExtensionMapEvent OnExtensionStopped;
 
         private ExtensionSystem() {
-            this.bots = new Dictionary<Guid, NetworkBot>();
-
             if (File.Exists(Core.SystemConfig.SavePath)) {
                 // Get some basic info about config file
                 Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
@@ -66,11 +63,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             Server.OnDataRecieved += HandleIncomingData;
             Server.OnSocketCrash += ShutdownExtensionBySocket;
             Server.Start();
-        }
-
-        public void AddBot(NetworkBot bot) {
-            if (!this.bots.ContainsKey(bot.Identifier))
-                bots.Add(bot.Identifier, bot);
         }
 
 
@@ -179,7 +171,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Message msg = Extension.ParseMessage(data);
 
                         try {
-                            foreach (NetworkBot bot in bots.Values) {
+                            foreach (NetworkBot bot in Core.Networks.Values) {
                                 if(bot.IsListeningTo(msg.locationID)){
                                     bot.SendMessage(msg);
                                 }
@@ -221,6 +213,13 @@ namespace Ostenvighx.Suibhne.Extensions {
             return maps.ToArray();
         }
 
+        public void Shutdown() {
+            foreach (ExtensionMap em in Extensions.Values) {
+                ExtensionHelper.SendShutdownRequest(em);
+            }
+
+            this.Server.Stop();
+        }
     }
 }
 

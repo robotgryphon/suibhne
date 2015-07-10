@@ -17,7 +17,12 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public enum ConnectionStatus : byte {
 
             /// <summary>
-            /// Network is not connected.
+            /// Network is not ready to be connected.
+            /// </summary>
+            NotReady,
+
+            /// <summary>
+            /// Network is not connected, but is ready.
             /// </summary>
             Disconnected,
 

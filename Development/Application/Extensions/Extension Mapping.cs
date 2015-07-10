@@ -17,7 +17,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         public Boolean Ready;
 
         public void Send(byte[] data) {
-            if(Socket.Connected)
+            if(this.Ready && this.Socket != null && Socket.Connected)
                 Socket.Send(data);
         }
 

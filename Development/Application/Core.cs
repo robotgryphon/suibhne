@@ -20,6 +20,8 @@ namespace Ostenvighx.Suibhne {
     [Script("core")]
     public class Core {
 
+        public static Dictionary<Guid, NetworkBot> Networks;
+
         public static DateTime ConfigLastUpdate;
 
         /// <summary>
@@ -32,6 +34,61 @@ namespace Ostenvighx.Suibhne {
 
         [Script("startTime")]
         public static DateTime StartTime = DateTime.Now;
+
+        internal static void DoStartup() {
+            try {
+                Core.ConfigLastUpdate = DateTime.Now;
+                Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
+                Core.SystemConfig.CaseSensitive = false;
+
+                Core.Networks = new Dictionary<Guid, NetworkBot>();
+
+                Core.SystemConfig.ExpandKeyValues();
+                Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
+                    Core.ConfigDirectory += "/";
+                    Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
+                    Core.SystemConfig.Save();
+                }
+                if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
+                    File.Create(Core.ConfigDirectory + "system.sns");
+                    File.WriteAllText(Core.ConfigDirectory + "system.sns", Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")));
+                }
+            }
+
+            catch (Exception) {
+                return;
+            }
+
+            Scripting.Scripting.GatherScriptNodes();
+
+            try {
+                String networkRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
+                String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
+
+                foreach (String networkDirectory in networkDirectories) {
+
+
+                    NetworkBot network = new NetworkBot(networkDirectory);
+                    Core.Networks.Add(network.Identifier, network);
+
+                    if (File.Exists(networkDirectory + "/disabled"))
+                        continue;
+
+                    if (network.Status == Ostenvighx.Suibhne.Networks.Base.Reference.ConnectionStatus.Disconnected) {
+                        network.Connect();
+                    }
+                }
+            }
+
+            catch (FileNotFoundException fnfe) {
+                Console.WriteLine("Network configuration file not found: " + fnfe.Message);
+            }
+
+            catch (Exception e) {
+                Console.WriteLine("Exception thrown: " + e);
+            }
+        }
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 

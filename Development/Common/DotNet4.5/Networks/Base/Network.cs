@@ -11,10 +11,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// See the Base.Reference.ConnectionStatus enum.
         /// </summary>
         /// <seealso cref="Ostenvighx.Suibhne.Networks.Base.Reference.ConnectionStatus"/>
-        public Base.Reference.ConnectionStatus Status {
-            get;
-            protected set;
-        }
+        public Base.Reference.ConnectionStatus Status;
 
         /// <summary>
         /// A MessageRecieved event is fired off when an Message is recieved on the server.

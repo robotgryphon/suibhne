@@ -81,7 +81,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.GlobalBuffer = new byte[2048];
 
             this.Listened = new Dictionary<Guid, Base.Location>();
-            this.Status = Base.Reference.ConnectionStatus.Disconnected;
+            this.Status = Base.Reference.ConnectionStatus.NotReady;
 
             this._conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.UserIdentifier = Guid.NewGuid();
@@ -482,7 +482,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="message">Line to send to the server.</param>
         /// <param name="log">If set to <c>true</c>, log the raw command to the output window. (Enabled by default)</param>
         public void SendRaw(String data) {
-            if (Status != Base.Reference.ConnectionStatus.Disconnected) {
+            if (this._conn.Connected && Status != Base.Reference.ConnectionStatus.Disconnected) {
                 byte[] bdata = Encoding.UTF8.GetBytes(data + "\r\n");
                 _conn.Send(bdata);
             }

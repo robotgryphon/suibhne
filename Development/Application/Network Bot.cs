@@ -7,11 +7,30 @@ using Ostenvighx.Suibhne.Networks.Base;
 using System.Reflection;
 
 namespace Ostenvighx.Suibhne {
-    public class NetworkBot {
+    public class NetworkBot : IComparable {
         protected Network _network;
-        public Boolean Ready {
+
+        public Network Network {
+            get {
+                return this._network;
+            }
+
+            protected set { }
+        }
+
+        public Networks.Base.Reference.ConnectionStatus Status {
+            get {
+                return (_network != null && _network.Status != null) ? _network.Status : Networks.Base.Reference.ConnectionStatus.NotReady;
+            }
+
+            protected set {
+                _network.Status = value;
+            }
+        }
+
+        public String FriendlyName {
             get;
-            protected set;
+            private set;
         }
 
         public User Me {
@@ -27,18 +46,18 @@ namespace Ostenvighx.Suibhne {
         #endregion
 
         public NetworkBot(String configDir){
-            String NetworkName = configDir.Substring(configDir.LastIndexOf("/") + 1);
+            this.FriendlyName = configDir.Substring(configDir.LastIndexOf("/") + 1);
 
-            if (!File.Exists(configDir + "/" + NetworkName + ".ini")) {
-                Core.Log("Could not load network information file: " + configDir + "/" + NetworkName + ".ini");
+            if (!File.Exists(configDir + "/" + FriendlyName + ".ini")) {
+                Core.Log("Could not load network information file: " + configDir + "/" + FriendlyName + ".ini");
                 return;
             }
 
-            IniConfigSource config = new IniConfigSource(configDir + "/" + NetworkName + ".ini");
+            IniConfigSource config = new IniConfigSource(configDir + "/" + FriendlyName + ".ini");
             config.CaseSensitive = false;
 
 
-            this.Identifier = Utilities.GetOrAssignIdentifier(NetworkName);
+            this.Identifier = Utilities.GetOrAssignIdentifier(FriendlyName);
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -68,8 +87,7 @@ namespace Ostenvighx.Suibhne {
                 }
             }
 
-            ExtensionSystem.Instance.AddBot(this);
-            this.Ready = true;
+            this.Status = Networks.Base.Reference.ConnectionStatus.Disconnected;
         }
 
         public bool IsListeningTo(Guid g) {
@@ -88,7 +106,6 @@ namespace Ostenvighx.Suibhne {
 
         protected void AutoJoinLocations(String configDir) {
             String[] locations = Directory.GetDirectories(configDir + "/Locations/");
-            String NetworkName = configDir.Substring(configDir.LastIndexOf("/") + 1);
 
             foreach (String location in locations) {
                 try {
@@ -98,7 +115,7 @@ namespace Ostenvighx.Suibhne {
                         locConfig.Configs["Location"].GetString("Name", "#Location"),
                         Networks.Base.Reference.LocationType.Public);
 
-                    Guid newLocationID = Utilities.GetOrAssignIdentifier(NetworkName + "/" + locationName);
+                    Guid newLocationID = Utilities.GetOrAssignIdentifier(FriendlyName + "/" + locationName);
                     
                     _network.JoinLocation(newLocationID, loc);
                 }
@@ -125,6 +142,17 @@ namespace Ostenvighx.Suibhne {
 
         public void Connect() {
             _network.Connect();
+        }
+
+        public void Disconnect() {
+            _network.Disconnect("Suibhne system shutdown.");
+        }
+
+        public int CompareTo(object obj) {
+            if (obj.GetType() != typeof(NetworkBot))
+                throw new ArgumentException("Object is not a network");
+
+            return ((NetworkBot)obj).FriendlyName.CompareTo(this.FriendlyName);
         }
     }
 }

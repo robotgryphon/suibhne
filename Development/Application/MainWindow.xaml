@@ -1,0 +1,28 @@
+﻿<Window x:Class="Interface_v2.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Suibhne Networking" Width="1000" ResizeMode="CanMinimize" WindowStartupLocation="Manual" HorizontalAlignment="Right">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="Sidebar" Width="1*"/>
+            <ColumnDefinition Width="5*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+
+        <Label Content="Program Output:" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Left" Margin="12,5,0,0" 
+               VerticalAlignment="Top" RenderTransformOrigin="0.577,-0.298" FontWeight="Bold" Height="26" Width="106"/>
+        
+        <RichTextBox x:Name="output" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Left" Margin="0,0,0,0" 
+                     VerticalAlignment="Top" Height="450" IsReadOnly="True" Width="Auto">
+            <FlowDocument>
+                <Paragraph LineHeight="12"></Paragraph>
+            </FlowDocument>
+        </RichTextBox>
+        
+
+    </Grid>
+</Window>
