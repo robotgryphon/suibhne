@@ -17,6 +17,9 @@ using Ostenvighx.Suibhne.Networks.Base;
 using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Commands;
 
+using System.Data;
+using System.Data.SQLite;
+
 namespace Ostenvighx.Suibhne.Extensions {
 
     [Script("extensions")]
@@ -61,27 +64,29 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
-            Server.OnSocketCrash += ShutdownExtensionBySocket;
+            Server.OnSocketCrash += ShutdownExtension;
             Server.Start();
         }
 
+        internal void ShutdownExtension(Guid id) {
+            ExtensionMap extension = this.Extensions[id];
 
-        internal void ShutdownExtensionBySocket(Socket s) {
-            foreach(Guid extID in this.Extensions.Keys) {
-                ExtensionMap em = Extensions[extID];
+            Core.Log("Extension '" + extension.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
+            ExtensionHelper.SendShutdownRequest(extension);
+            extension.Socket = null;
+            extension.Ready = false;
 
-                // If socket already shut down, exit
-                if(em.Socket == null)
-                    break;
-                
-                if (em.Socket.RemoteEndPoint == s.RemoteEndPoint) {
-                    Core.Log("Extension '" + em.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
-                    ExtensionHelper.SendShutdownRequest(em);
-                    em.Socket = null;
-                    em.Ready = false;
+            Extensions[id] = extension;
+        }
 
-                    Extensions[extID] = em;
-                    break;
+        internal void ShutdownExtension(Socket s) {
+            foreach(Guid extensionID in this.Extensions.Keys) {
+
+                ExtensionMap extension = this.Extensions[extensionID];
+
+                if (extension.Socket.RemoteEndPoint == s.RemoteEndPoint) {
+                    ShutdownExtension(extension.Identifier);
+                    return;
                 }
             }
         }
@@ -93,26 +98,51 @@ namespace Ostenvighx.Suibhne.Extensions {
             // Get ExtensionDirectories available via directory name
             String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
 
-            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
-            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
-            JObject config = JObject.Parse(decodedFile);
+            DataTable extensions = new DataTable();
+            try {
+                Core.Database.Open();
 
-            foreach (JProperty ext in config["Extensions"]) {
-                Core.Log("Loading extension information: " + ext.Name, LogType.EXTENSIONS);
-                ExtensionMap map = new ExtensionMap();
-                map.Ready = false;
-                map.Socket = null;
-                map.Name = ext.Name;
-                map.Identifier = Guid.Parse((String)ext.Value["Identifier"]);
+                SQLiteCommand c = new SQLiteCommand(Core.Database);
+                c.CommandText = "SELECT * FROM Extensions WHERE Enabled=1;";
 
-                Extensions.Add(map.Identifier, map);
+                SQLiteDataReader r = c.ExecuteReader();
+                extensions.Load(r);
 
-                String extensionExtension = Path.GetExtension(ext.Value["InstallPath"].ToString());
-                if (extensionExtension.ToLower() == ".exe") {
-                    Core.Log("Starting extension " + ext.Name + "...", LogType.EXTENSIONS);
+                foreach (DataRow extension in extensions.Rows) {
+                    // Extension information gotten
+                    ExtensionMap map = new ExtensionMap();
+                    map.Ready = false;
+                    map.Socket = null;
+                    map.Name = extension["Name"].ToString();
+                    map.Identifier = Guid.Parse((String) extension["Identifier"]);
 
-                    // Process.Start(ext.Value["InstallPath"].ToString(), "--launch " + Core.ConfigDirectory);
+                    Core.Log("Got information from extension " + map.Name);
+
+                    Extensions.Add(map.Identifier, map);
+
+                    String extensionExtension = Path.GetExtension(extension["InstallPath"].ToString());
+                    if (extensionExtension.ToLower() == ".exe") {
+                        Core.Log("Starting extension " + map.Name + " (" + extension["InstallPath"] + ") ...", LogType.EXTENSIONS);
+
+                        try {
+                            Process.Start(extension["InstallPath"].ToString(), "--launch");
+                        }
+
+                        catch (Exception e) {
+                            Core.Log("Caught exception trying to start extension: " + e);
+                        }
+                        
+                    }
                 }
+
+            }
+
+            catch (Exception e) {
+
+            }
+
+            finally {
+                Core.Database.Close();
             }
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
@@ -164,7 +194,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case Responses.Remove:
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
-                        ShutdownExtensionBySocket(sock);
+                        ShutdownExtension(sock);
                         return;
 
                     case Responses.Message:
@@ -208,7 +238,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             List<String> maps = new List<String>();
             foreach (ExtensionMap map in Extensions.Values) {
                 if(map.Ready)
-                    maps.Add(map.Name + ": " + map.Identifier);
+                    maps.Add(map.Name);
             }
             return maps.ToArray();
         }

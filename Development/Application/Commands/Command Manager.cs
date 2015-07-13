@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Ostenvighx.Suibhne.Extensions;
+using System.Data;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -47,7 +48,7 @@ namespace Ostenvighx.Suibhne.Commands {
             if (Core.SystemConfig == null)
                 return 0;
 
-            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
+            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system-old.sns");
             string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
             JObject config = JObject.Parse(decodedFile);
 
@@ -286,8 +287,34 @@ namespace Ostenvighx.Suibhne.Commands {
 
                     case "id":
                     case "identifier":
-                        response.message = "Current identifier for location: " + msg.locationID + ". Network identifier: " + conn.Identifier;
-                        conn.SendMessage(response);
+                        DataRow location;
+                        switch(messageParts.Length) {
+                            case 2:
+                                response.message = "Current identifier for location: " + msg.locationID + ". Network identifier: " + conn.Identifier;
+                                conn.SendMessage(response);
+                                break;
+
+                            case 3:
+                                // Looking up local location id
+                                location = Utilities.GetLocationEntry(conn.FriendlyName, messageParts[2].ToLower());
+                                response.message = "Current identifier for location " + location["LocationName"] + ": " + location["Identifier"] + ".";
+                                conn.SendMessage(response);
+                                break;
+
+                            case 4:
+                                location = Utilities.GetLocationEntry(messageParts[3].ToLower(), messageParts[2].ToLower());
+                                response.message = "Current identifier for location " + location["LocationName"] + 
+                                    " on network " + location["NetworkName"] + ": " + location["Identifier"] + ".";
+
+                                conn.SendMessage(response);
+                                break;
+
+                            default:
+
+                                break;
+
+                        }
+                        
                         break;
 
                     default:

@@ -57,7 +57,7 @@ namespace Ostenvighx.Suibhne {
             config.CaseSensitive = false;
 
 
-            this.Identifier = Utilities.GetOrAssignIdentifier(FriendlyName);
+            this.Identifier = Guid.Parse((String) Utilities.GetLocationEntry(FriendlyName)["Identifier"]);
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -115,7 +115,7 @@ namespace Ostenvighx.Suibhne {
                         locConfig.Configs["Location"].GetString("Name", "#Location"),
                         Networks.Base.Reference.LocationType.Public);
 
-                    Guid newLocationID = Utilities.GetOrAssignIdentifier(FriendlyName + "/" + locationName);
+                    Guid newLocationID = Guid.Parse((String) Utilities.GetLocationEntry(FriendlyName, loc.Name)["Identifier"]);
                     
                     _network.JoinLocation(newLocationID, loc);
                 }

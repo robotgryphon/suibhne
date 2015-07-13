@@ -7,6 +7,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
+using System.Data;
+using System.Data.SQLite;
+
 namespace Ostenvighx.Suibhne {
 
     public enum LogType : byte {
@@ -30,7 +33,7 @@ namespace Ostenvighx.Suibhne {
         public static String ConfigDirectory;
 
         public static IniConfigSource SystemConfig;
-
+        public static SQLiteConnection Database;
 
         [Script("startTime")]
         public static DateTime StartTime = DateTime.Now;
@@ -41,6 +44,7 @@ namespace Ostenvighx.Suibhne {
                 Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
                 Core.SystemConfig.CaseSensitive = false;
 
+                
                 Core.Networks = new Dictionary<Guid, NetworkBot>();
 
                 Core.SystemConfig.ExpandKeyValues();
@@ -51,9 +55,12 @@ namespace Ostenvighx.Suibhne {
                     Core.SystemConfig.Save();
                 }
                 if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
-                    File.Create(Core.ConfigDirectory + "system.sns");
-                    File.WriteAllText(Core.ConfigDirectory + "system.sns", Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")));
+                    SQLiteConnection.CreateFile(Core.ConfigDirectory + "system.sns");
                 }
+
+                Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
+                Core.Log("Database connection opened. Validating..");
+                ValidateDatabase();
             }
 
             catch (Exception) {
@@ -88,6 +95,12 @@ namespace Ostenvighx.Suibhne {
             catch (Exception e) {
                 Console.WriteLine("Exception thrown: " + e);
             }
+
+            ExtensionSystem.Instance.GetActiveExtensions();
+        }
+
+        public static void ValidateDatabase() {
+
         }
 
         public static void Log(string message, LogType type = LogType.GENERAL) {

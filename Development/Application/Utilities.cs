@@ -8,41 +8,68 @@ using System.IO;
 
 using Newtonsoft.Json.Linq;
 
+using System.Data;
+using System.Data.SQLite;
+
 namespace Ostenvighx.Suibhne {
     public class Utilities {
 
-        public static Guid GetOrAssignIdentifier(String nodeName) {
-            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system.sns");
-            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
-            JObject systemFile = JObject.Parse(decodedFile);
-
-            if (nodeName == null || nodeName.Trim() == "")
-                return Guid.Empty;
-
-            Guid returned = Guid.Empty;
-            if (systemFile["Identifiers"] == null) {
-                systemFile["Identifiers"] = new JObject();
-                SaveToSystemFile(systemFile);
+        public static DataRow GetLocationEntry(Guid id) {
+            if (Core.Database == null) {
+                // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
+                return null;
             }
 
-            // Actually get/check identifier for nodeName
-            if (systemFile["Identifiers"][nodeName] == null) {
-                returned = Guid.NewGuid();
-                systemFile["Identifiers"][nodeName] = returned.ToString();
-                SaveToSystemFile(systemFile);
-            } else {
-                try {
-                    returned = Guid.Parse((String) systemFile["Identifiers"][nodeName]);
-                }
+            try {
+                Core.Database.Open();
+                DataTable resultsTable = new DataTable();
+                SQLiteCommand c = Core.Database.CreateCommand();
+                c.CommandText = "SELECT * FROM Identifiers WHERE Identifier = '" + id + "';";
 
-                catch (Exception) {
-                    returned = Guid.NewGuid();
-                    systemFile["Identifiers"][nodeName] = returned.ToString();
-                    SaveToSystemFile(systemFile);   
-                }
+                SQLiteDataReader resultsReader = c.ExecuteReader();
+                resultsTable.Load(resultsReader);
+
+                return resultsTable.Rows[0];
             }
 
-            return returned;
+            catch (Exception e) {
+
+            }
+
+            finally {
+                Core.Database.Close();
+            }
+
+            return null;
+        }
+
+        public static DataRow GetLocationEntry(string network, string location = "") {
+            if (Core.Database == null) {
+                // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
+                return null;
+            }
+
+            try {
+                Core.Database.Open();
+                DataTable resultsTable = new DataTable();
+                SQLiteCommand c = Core.Database.CreateCommand();
+                c.CommandText = "SELECT * FROM Identifiers WHERE lower(NetworkName)='" + network.ToLower() + "' AND lower(LocationName)='" + location.ToLower() + "';";
+
+                SQLiteDataReader resultsReader = c.ExecuteReader();
+                resultsTable.Load(resultsReader);
+
+                return resultsTable.Rows[0];
+            }
+
+            catch (Exception e) {
+
+            }
+
+            finally {
+                Core.Database.Close();
+            }
+
+            return null;
         }
 
         public static void SaveToSystemFile(JObject j) {

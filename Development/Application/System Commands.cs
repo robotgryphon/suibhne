@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Ostenvighx.Suibhne.Commands;
+using System.Data.SQLite;
+using System.Data;
 
 namespace Ostenvighx.Suibhne {
     public class SystemCommands {
@@ -18,7 +20,7 @@ namespace Ostenvighx.Suibhne {
             Message response = Message.GenerateResponse(conn.Me, msg);
             if (Message.IsPrivateMessage(response))
                 response.type = Networks.Base.Reference.MessageType.PrivateAction;
-            
+
             response.message = "figures you have access to these commands: ";
 
             String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender, false);
@@ -31,66 +33,105 @@ namespace Ostenvighx.Suibhne {
             Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
             String subCommand = "";
+            ExtensionMap workingExtension = new ExtensionMap();
 
-            switch (messageParts.Length) {
-                case 3:
-                    #region Tier 3
-                    subCommand = messageParts[2];
-                    switch (subCommand.ToLower()) {
-                        case "list":
-                            String[] exts = ExtensionSystem.Instance.GetActiveExtensions();
+            switch (messageParts[2].ToLower()) {
+                case "list":
+                    String[] exts = ExtensionSystem.Instance.GetActiveExtensions();
 
-                            if (exts.Length > 0) {
-                                response.message = String.Join(", ", exts);
-                                conn.SendMessage(response);
-                            } else {
-                                response.message = "No extensions loaded.";
-                                conn.SendMessage(response);
-                            }
-                            break;
-
-                        default:
-                            response.message = "Unknown command. Available commands: {list, enable [ext], disable [ext], reload [type]}";
-                            conn.SendMessage(response);
-                            break;
+                    if (exts.Length > 0) {
+                        response.message = String.Join(", ", exts);
+                        conn.SendMessage(response);
+                    } else {
+                        response.message = "No extensions loaded.";
+                        conn.SendMessage(response);
                     }
-
-                    #endregion
                     break;
 
-                case 4:
-                    #region Tier 4
-                    subCommand = messageParts[2];
-                    switch (subCommand.ToLower()) {
-                        case "enable":
-                            // Used for enabling an extension that was disabled during loading
-                            break;
+                case "id":
+                    if (messageParts.Length < 4) {
+                        response.message = "You need to specify an extension to disable.";
+                        conn.SendMessage(response);
+                        break;
+                    }
 
-                        case "disable":
-                            // Used to disable a currently active extension
-                            if (ExtensionSystem.Instance.Extensions.ContainsKey(new Guid(messageParts[3]))) {
-                                ExtensionMap ext = ExtensionSystem.Instance.Extensions[new Guid(messageParts[3])];
-                                ExtensionSystem.Instance.ShutdownExtensionBySocket(ext.Socket);
-                                response.message = "Disabled extension: " + ext.Name;
-                                conn.SendMessage(response);
-                            } else {
-                                response.message = "That extension does not exist in the list. Please check the identifier and try again.";
-                                conn.SendMessage(response);
-                            }
-                            break;
+                    workingExtension.Name = msg.message.Split(new char[] { ' ' }, 4)[3];
 
+                    // DB query to fetch extension ID
+                    try {
+                        Core.Database.Open();
+                        SQLiteCommand extensionIdFetchCommand = Core.Database.CreateCommand();
+                        extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
 
-                        default:
-                            response.message = "Unknown command. Available commands: {enable, disable, reload}";
-                            conn.SendMessage(response);
-                            break;
+                        SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
+                        DataTable results = new DataTable();
+                        results.Load(r);
+
+                        response.message = "I have an id of '" + results.Rows[0]["Identifier"].ToString() + "' for extension '" + workingExtension.Name + "'.";
+                        conn.SendMessage(response);
 
                     }
-                    #endregion
+
+                    catch (Exception e) {
+                        response.message = "There was an error processing your request. Sorry about that!";
+                        conn.SendMessage(response);
+
+                    }
+
+                    finally {
+                        Core.Database.Close();
+                    }
+                    break;
+
+                case "enable":
+                    break;
+
+                case "disable":
+                    if (messageParts.Length < 4) {
+                        response.message = "You need to specify an extension to disable.";
+                        conn.SendMessage(response);
+                        break;
+                    }
+
+                    workingExtension.Name = msg.message.Split(new char[] { ' ' }, 4)[3];
+
+                    // DB query to fetch extension ID
+                    try {
+                        Core.Database.Open();
+                        SQLiteCommand extensionIdFetchCommand = Core.Database.CreateCommand();
+                        extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
+
+                        SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
+                        DataTable results = new DataTable();
+                        results.Load(r);
+
+                        workingExtension.Identifier = Guid.Parse(results.Rows[0]["Identifier"].ToString());
+
+                        if (ExtensionSystem.Instance.Extensions.ContainsKey(workingExtension.Identifier)) {
+                            ExtensionSystem.Instance.ShutdownExtension(workingExtension.Identifier);
+                            response.message = "Disabled extension: " + workingExtension.Name;
+                            conn.SendMessage(response);
+                        } else {
+                            response.message = "That extension does not exist in the list. Please check the identifier and try again.";
+                        }
+                    }
+
+                    catch (Exception e) {
+
+                    }
+
+                    finally {
+                        Core.Database.Close();
+                    }
+                    
+                    break;
+
+                case "reload":
+
                     break;
 
                 default:
-                    response.message = "Subcommand required. Available commands: {list, enable [ext], disable [ext], reload [type]}";
+                    response.message = "Unknown command. Available commands: {list, enable [ext], disable [ext], reload [type]}";
                     conn.SendMessage(response);
                     break;
             }
