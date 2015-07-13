@@ -37,6 +37,21 @@ namespace Ostenvighx.Suibhne.Extensions {
         public event ExtensionEvent OnServerDisconnect;
         public event ExtensionEvent OnExtensionExit;
 
+        public String Name {
+            get { return ((AssemblyTitleAttribute) this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute), true)[0]).Title.ToString(); }
+            protected set { }
+        }
+
+        public String Author {
+            get { return ((AssemblyCompanyAttribute) this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCompanyAttribute), true)[0]).Company.ToString(); }
+            protected set {}
+        }
+
+        public String Version {
+            get { return this.GetType().Assembly.GetName().Version.ToString(); }
+            protected set {}
+        }
+
         public Extension() {
             this.buffer = new byte[2048];
             this.conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -119,18 +134,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                 }
 
             }
-        }
-
-        public virtual string GetExtensionName() {
-            return ((AssemblyTitleAttribute)this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute), true)[0]).Title.ToString();
-        }
-
-        public virtual string GetExtensionAuthor() {
-            return ((AssemblyCompanyAttribute)this.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCompanyAttribute), true)[0]).Company.ToString();
-        }
-
-        public virtual string GetExtensionVersion() {
-            return this.GetType().Assembly.GetName().Version.ToString();
         }
 
         public virtual void Connect() {
@@ -217,16 +220,14 @@ namespace Ostenvighx.Suibhne.Extensions {
                 switch ((Responses)data[0]) {
                     case Responses.Activation:
                         // Connect suite name into bytes for response, then prepare response
-                        byte[] nameAsBytes = Encoding.UTF8.GetBytes(GetExtensionName());
+                        byte[] nameAsBytes = Encoding.UTF8.GetBytes(Name);
                         SendBytes(Responses.Details, nameAsBytes);
 
                         break;
 
                     case Responses.Details:
                         string response =
-                            "[" + Identifier + "] " +
-                            GetExtensionName() + " (v. " + GetExtensionVersion() + ")" +
-                            " developed by " + string.Join(", ", GetExtensionAuthor());
+                            "[" + Identifier + "] " + Name + " (v. " + Version + ")" + " developed by " + Author;
 
                         String[] messageParts = additionalData.Split(new char[] { ' ' }, 2);
                         String messageLocation = messageParts[0];

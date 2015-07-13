@@ -23,26 +23,29 @@ namespace Interface_v2 {
     /// </summary>
     public partial class MainWindow : Window {
         public MainWindow() {
-            Core.DoStartup();
-
             InitializeComponent();
 
-            foreach (NetworkBot bot in Core.Networks.Values) {
-                bot.Network.OnMessageRecieved += AddOutput;
-            }
+            Core.DoStartup();
+            Core.OnLogMessage += (m, t) => {
+                AddOutput(m.ToString());
+            };
         }
 
-        private void AddOutput(Message m) {
+        public void AddOutput(String s) {
             if (this.output.Dispatcher.CheckAccess()) {
-                this.output.AppendText(m.ToString() + "\u2028");
+                this.output.AppendText(s + "\u2028");
             } else {
                 this.output.Dispatcher.Invoke(
                     System.Windows.Threading.DispatcherPriority.Normal,
                     new Action(() => {
-                        this.output.AppendText(m.ToString() + "\u2028");           
+                        this.output.AppendText(s + "\u2028");
                     })
                 );
             }
+        }
+
+        public void AddOutput(Message m) {
+            AddOutput(m.ToString());
         }
     }
 }

@@ -320,7 +320,7 @@ namespace Ostenvighx.Suibhne.Commands {
                                     }
                                 }
 
-                                response.message = "Current identifier for " + (location["LocationName"] != "" ? "location " + location["LocationName"] : "network " + location["NetworkName"] + ": ") + location["Identifier"];
+                                response.message = "Current identifier for " + (location["LocationName"].ToString() != "" ? "location " + location["LocationName"] : "network " + location["NetworkName"] + ": ") + location["Identifier"];
                                 conn.SendMessage(response);
                                 break;
 

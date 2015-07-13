@@ -67,6 +67,11 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         LocationGet = 30,
 
-        Help = 21
+        Help = 21,
+
+        UserJoin = 41,
+        UserLeave = 42,
+        UserQuit = 43,
+        UserNameChange = 44
     };
 }

@@ -38,6 +38,9 @@ namespace Ostenvighx.Suibhne {
         [Script("startTime")]
         public static DateTime StartTime = DateTime.Now;
 
+        public delegate void CoreLogEvent(String log, LogType type = LogType.GENERAL);
+        public static event CoreLogEvent OnLogMessage;
+
         internal static void DoStartup() {
             try {
                 Core.ConfigLastUpdate = DateTime.Now;
@@ -138,6 +141,10 @@ namespace Ostenvighx.Suibhne {
 
             Console.WriteLine("{0}", message);
             Console.ResetColor();
+
+            if (OnLogMessage != null) {
+                OnLogMessage(message, type);
+            }
         }
     }
 }
