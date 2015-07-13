@@ -17,7 +17,7 @@ namespace Ostenvighx.Suibhne.Common {
             Test
         }
 
-        public static void DumpInstallData(Type extension, String InstallPath, InstallType type){
+        public static void DumpInstallData(Type extension, InstallType type){
 
             // Make sure we have an extension, not something stupid
             if (!extension.IsSubclassOf(typeof(Extension)))
@@ -50,7 +50,7 @@ namespace Ostenvighx.Suibhne.Common {
                     break;
 
                 case InstallType.Json:
-                    GenerateJsonFile(e, InstallPath, CommandHandlers);
+                    GenerateJsonFile(e, CommandHandlers);
                     break;
 
                 case InstallType.Test:
@@ -115,20 +115,15 @@ namespace Ostenvighx.Suibhne.Common {
             file.Close();
         }
 
-        private static void GenerateJsonFile(Extension e, String InstallPath, Dictionary<String, MethodInfo> CommandHandlers) {
+        private static void GenerateJsonFile(Extension e, Dictionary<String, MethodInfo> CommandHandlers) {
 
-            string encodedFile = File.ReadAllText(InstallPath + "/system.sns");
-            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
-            JObject systemConfig = JObject.Parse(decodedFile);
+            if (File.Exists(Environment.CurrentDirectory + "/extension.sns")) {
+                File.Delete(Environment.CurrentDirectory + "/extension.sns");
+            }
 
-            Console.WriteLine(systemConfig);
-
-            if (systemConfig["Extensions"] == null)
-                systemConfig.Add("Extensions", new JObject());
 
             JObject extObj = new JObject();
             extObj.Add("Identifier", Guid.NewGuid().ToString());
-            extObj.Add("InstallPath", System.Windows.Forms.Application.ExecutablePath);
 
             JObject commands = new JObject();
             foreach (KeyValuePair<String, MethodInfo> method in CommandHandlers) {
@@ -154,20 +149,12 @@ namespace Ostenvighx.Suibhne.Common {
 
             extObj.Add("Handlers", EventHandlers);
 
-            if (systemConfig["Extensions"][e.GetExtensionName()] == null)
-                ((JObject)systemConfig["Extensions"]).Add(e.GetExtensionName(), extObj);
-            else
-                systemConfig["Extensions"][e.GetExtensionName()] = extObj;
+            Console.WriteLine(extObj.ToString());
 
-            Console.WriteLine(systemConfig);
-
-
-            File.WriteAllText(@"D:\Suibhne\Configuration\system.json", systemConfig.ToString());
-
-            byte[] binaryOfFile = Encoding.ASCII.GetBytes(systemConfig.ToString());
+            byte[] binaryOfFile = Encoding.ASCII.GetBytes(extObj.ToString());
             String encoded = Convert.ToBase64String(binaryOfFile);
 
-            File.WriteAllText(@"D:\Suibhne\Configuration\system.sns", encoded);
+            File.WriteAllText(Environment.CurrentDirectory + @"\extension.sns", encoded);
         }
     }
 }

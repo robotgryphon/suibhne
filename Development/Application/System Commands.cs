@@ -59,8 +59,8 @@ namespace Ostenvighx.Suibhne {
 
                     // DB query to fetch extension ID
                     try {
-                        Core.Database.Open();
-                        SQLiteCommand extensionIdFetchCommand = Core.Database.CreateCommand();
+                        ExtensionSystem.Database.Open();
+                        SQLiteCommand extensionIdFetchCommand = ExtensionSystem.Database.CreateCommand();
                         extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
 
                         SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
@@ -79,7 +79,7 @@ namespace Ostenvighx.Suibhne {
                     }
 
                     finally {
-                        Core.Database.Close();
+                        ExtensionSystem.Database.Close();
                     }
                     break;
 
@@ -97,8 +97,8 @@ namespace Ostenvighx.Suibhne {
 
                     // DB query to fetch extension ID
                     try {
-                        Core.Database.Open();
-                        SQLiteCommand extensionIdFetchCommand = Core.Database.CreateCommand();
+                        ExtensionSystem.Database.Open();
+                        SQLiteCommand extensionIdFetchCommand = ExtensionSystem.Database.CreateCommand();
                         extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
 
                         SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
@@ -121,7 +121,7 @@ namespace Ostenvighx.Suibhne {
                     }
 
                     finally {
-                        Core.Database.Close();
+                        ExtensionSystem.Database.Close();
                     }
                     
                     break;

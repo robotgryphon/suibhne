@@ -59,6 +59,8 @@ namespace Ostenvighx.Suibhne {
                 }
 
                 Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
+                ExtensionSystem.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/extensions.sns");
+
                 Core.Log("Database connection opened. Validating..");
                 ValidateDatabase();
             }

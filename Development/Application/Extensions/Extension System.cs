@@ -32,6 +32,8 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         private static ExtensionSystem instance;
 
+        public static SQLiteConnection Database;
+
         public static ExtensionSystem Instance {
             get {
                 if (instance == null) {
@@ -84,6 +86,10 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 ExtensionMap extension = this.Extensions[extensionID];
 
+                // If this extension isn't ready or it's socket is not connected, just skip it
+                if (!extension.Ready || extension.Socket == null)
+                    continue;
+
                 if (extension.Socket.RemoteEndPoint == s.RemoteEndPoint) {
                     ShutdownExtension(extension.Identifier);
                     return;
@@ -92,17 +98,14 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         protected void InitializeExtensions() {
-            if (!File.Exists(Core.SystemConfig.SavePath))
-                throw new FileNotFoundException("Config file not valid.");
-
             // Get ExtensionDirectories available via directory name
             String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
 
             DataTable extensions = new DataTable();
             try {
-                Core.Database.Open();
+                ExtensionSystem.Database.Open();
 
-                SQLiteCommand c = new SQLiteCommand(Core.Database);
+                SQLiteCommand c = new SQLiteCommand(ExtensionSystem.Database);
                 c.CommandText = "SELECT * FROM Extensions WHERE Enabled=1;";
 
                 SQLiteDataReader r = c.ExecuteReader();
@@ -125,7 +128,13 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Core.Log("Starting extension " + map.Name + " (" + extension["InstallPath"] + ") ...", LogType.EXTENSIONS);
 
                         try {
-                            Process.Start(extension["InstallPath"].ToString(), "--launch");
+                            ProcessStartInfo psi = new ProcessStartInfo();
+                            psi.WorkingDirectory = new DirectoryInfo(extension["InstallPath"].ToString()).Parent.FullName;
+                            psi.UseShellExecute = true;
+                            psi.FileName = extension["InstallPath"].ToString();
+                            psi.Arguments = "--launch";
+                            
+                            Process.Start(psi);
                         }
 
                         catch (Exception e) {
@@ -142,7 +151,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             finally {
-                Core.Database.Close();
+                ExtensionSystem.Database.Close();
             }
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 using Ostenvighx.Suibhne.Extensions;
 using System.Data;
+using System.Data.SQLite;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -48,45 +49,56 @@ namespace Ostenvighx.Suibhne.Commands {
             if (Core.SystemConfig == null)
                 return 0;
 
-            string encodedFile = File.ReadAllText(Core.ConfigDirectory + "/system-old.sns");
-            string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
-            JObject config = JObject.Parse(decodedFile);
+            
+            try {
+                ExtensionSystem.Database.Open();
 
-            WipeCommandMap();
+                WipeCommandMap();
 
-            String[] commands = Core.SystemConfig.Configs["Commands"].GetKeys();
-            foreach (String commandKey in commands) {
-                String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
+                String[] commands = Core.SystemConfig.Configs["Commands"].GetKeys();
 
-                try {
+                // Loop through requested commands (!<command>)
+                foreach (String commandKey in commands) {
+                    String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
+
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
+                    // Get mapped extension name
                     string extName = commandMap.Substring(0, nameEnd);
-
-                    if (config["Extensions"][extName] == null)
-                        continue;
-
-                    JObject commandConfig = (JObject) config["Extensions"][extName];
 
                     CommandMap cm = new CommandMap();
                     cm.CommandString = commandMap.Substring(nameEnd + 1).Trim();
-                    cm.Extension = Guid.Parse((String) commandConfig["Identifier"]);
-                    cm.Method = Guid.Parse((String) commandConfig["CommandHandlers"][cm.CommandString]);
-                    cm.AccessLevel = (byte)Core.SystemConfig.Configs["CommandAccess"].GetInt(commandKey, 1);
+
+                    SQLiteCommand extensionCommandHandlers = ExtensionSystem.Database.CreateCommand();
+                    extensionCommandHandlers.CommandText = "SELECT Extensions.Name, Extensions.Identifier, ExtensionCommands.CommandMethod, ExtensionCommands.CommandId" +
+                        " FROM Extensions, ExtensionCommands" +
+                        " WHERE lower(ExtensionCommands.CommandMethod) = '" + cm.CommandString.ToLower() + 
+                            "' AND Extensions.Identifier = ExtensionCommands.ExtensionId;";
+
+                    SQLiteDataReader sdr = extensionCommandHandlers.ExecuteReader();
+                    DataTable extensionCommands = new DataTable();
+                    extensionCommands.Load(sdr);
+
+                    DataRow mappedCommand = extensionCommands.Rows[0];
+
+                    // Now that we have the mapped command row..
+                    cm.Extension = Guid.Parse(mappedCommand["Identifier"].ToString());
+                    cm.Method = Guid.Parse(mappedCommand["CommandId"].ToString());
+                    cm.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt(commandKey, 1);
 
                     CommandManager.Instance.RegisterCommand(commandKey, cm);
                     mappedCommands++;
-
                 }
+                
+            }
 
-                catch (IndexOutOfRangeException) {
+            catch (Exception e) {
 
-                }
+            }
 
-                catch (FormatException) {
-
-                }
+            finally {
+                ExtensionSystem.Database.Close();
             }
 
             CommandMap sys = new CommandMap();

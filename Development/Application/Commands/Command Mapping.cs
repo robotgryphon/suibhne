@@ -12,5 +12,8 @@ namespace Ostenvighx.Suibhne.Commands {
         public Guid Method;
         public byte AccessLevel;
 
+        public override string ToString() {
+            return this.CommandString;
+        }
     }
 }

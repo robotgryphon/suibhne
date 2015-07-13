@@ -45,27 +45,26 @@ namespace Ostenvighx.Suibhne.Extensions {
             this.Commands = new Dictionary<Guid, CommandHandler>();
         }
 
-        public void Start(string configBase) {
-            LoadConfig(configBase);
+        public void Start() {
+            LoadConfig();
 
             Console.WriteLine("Loaded id: " + Identifier);
-            MapCommandMethods(configBase);
+            MapCommandMethods();
             Connect();
         }
 
-        public void LoadConfig(string configBase) {
-            String systemFile = new DirectoryInfo(configBase).FullName + @"\system.sns";
+        public void LoadConfig() {
+            String systemFile = Environment.CurrentDirectory + @"\extension.sns";
             if (File.Exists(systemFile)) {
 
                 string encodedFile = File.ReadAllText(systemFile);
                 string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
                 JObject config = JObject.Parse(decodedFile);
 
-                if (config["Extensions"] == null || config["Extensions"][GetExtensionName()] == null)
+                if (config == null)
                     return;
 
-                JObject thisConfig = (JObject) config["Extensions"][GetExtensionName()];
-                this.Identifier = new Guid((String) thisConfig.GetValue("Identifier"));
+                this.Identifier = new Guid((String) config.GetValue("Identifier"));
 
             } else {
 
@@ -74,7 +73,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        private void MapCommandMethods(String configBase) {
+        private void MapCommandMethods() {
             // Get all possible command handler methods and create a mapping dictionary
             
 
@@ -88,7 +87,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                         CommandHandlerAttribute handler = (CommandHandlerAttribute)attr;
                         Console.WriteLine("Got command handler: " + handler.Name + " (maps to " + method.Name + ")");
 
-                        // TODO: Add in validation here for valid CommandHandler delegate
                         ParameterInfo[] commandMethodParams = method.GetParameters();
 
                         if (commandMethodParams.Length != 2 || (
@@ -102,18 +100,19 @@ namespace Ostenvighx.Suibhne.Extensions {
                 }
             }
 
-            String systemFile = new DirectoryInfo(configBase).FullName + @"\system.sns";
+            String systemFile = Environment.CurrentDirectory + @"\extension.sns";
             if (File.Exists(systemFile)) {
 
                 string encodedFile = File.ReadAllText(systemFile);
                 string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
                 JObject config = JObject.Parse(decodedFile);
 
-                foreach(JProperty method in config["Extensions"][this.GetExtensionName()]["CommandHandlers"]) {
+                foreach(JProperty method in config["CommandHandlers"]) {
                     String methodName = method.Name;
                     Guid g = Guid.Parse((String) method.Value);
 
                     if (methodMap.ContainsKey(methodName)) {
+                        Console.WriteLine("Got command mapping id for " + method.Name + ": " + method.Value);
                         this.Commands.Add(g, methodMap[methodName]);
                     }
 
