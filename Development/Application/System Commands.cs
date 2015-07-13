@@ -32,7 +32,6 @@ namespace Ostenvighx.Suibhne {
         public static void HandleExtensionsCommand(NetworkBot conn, Message msg) {
             Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
-            String subCommand = "";
             ExtensionMap workingExtension = new ExtensionMap();
 
             switch (messageParts[2].ToLower()) {

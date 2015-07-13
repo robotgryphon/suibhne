@@ -268,7 +268,7 @@ namespace Ostenvighx.Suibhne.Commands {
                                 break;
 
                             default:
-                                response.message = "is not sure what to do with that. Try config or extensions as a paremeter.";
+                                response.message = "is not sure what to do with that. Try config or extensions as a parameter.";
                                 response.type = Networks.Base.Reference.MessageType.PublicAction;
                                 conn.SendMessage(response);
                                 response.type = Networks.Base.Reference.MessageType.PublicMessage;
@@ -309,12 +309,23 @@ namespace Ostenvighx.Suibhne.Commands {
                             case 3:
                                 // Looking up local location id
                                 location = Utilities.GetLocationEntry(conn.FriendlyName, messageParts[2].ToLower());
-                                response.message = "Current identifier for location " + location["LocationName"] + ": " + location["Identifier"] + ".";
+
+                                if (location == null) {
+                                    location = Utilities.GetLocationEntry(messageParts[2].ToLower(), "");
+                                    if (location == null) {
+                                        response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
+                                        conn.SendMessage(response);
+
+                                        break;
+                                    }
+                                }
+
+                                response.message = "Current identifier for " + (location["LocationName"] != "" ? "location " + location["LocationName"] : "network " + location["NetworkName"] + ": ") + location["Identifier"];
                                 conn.SendMessage(response);
                                 break;
 
                             case 4:
-                                location = Utilities.GetLocationEntry(messageParts[3].ToLower(), messageParts[2].ToLower());
+                                location = Utilities.GetLocationEntry(messageParts[2].ToLower(), messageParts[3].ToLower());
                                 response.message = "Current identifier for location " + location["LocationName"] + 
                                     " on network " + location["NetworkName"] + ": " + location["Identifier"] + ".";
 
@@ -337,7 +348,7 @@ namespace Ostenvighx.Suibhne.Commands {
                         break;
                 }
             } else {
-                response.message = "Available system commands: {exts/extensions, version, netinfo, uptime}";
+                response.message = "Available system commands: {exts/extensions, reload, id/identifier, version, netinfo, uptime}";
                 conn.SendMessage(response);
             }
         }
