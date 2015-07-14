@@ -61,6 +61,8 @@ namespace Ostenvighx.Suibhne.Commands {
                 foreach (String commandKey in commands) {
                     String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
 
+                    Core.Log("Attempting to map entry " + commandKey + " to " + commandMap);
+
                     int nameEnd = commandMap.IndexOf(":");
                     if (nameEnd == -1) nameEnd = 0;
 
@@ -246,13 +248,20 @@ namespace Ostenvighx.Suibhne.Commands {
                             case "config":
                                 if (Core.SystemConfig != null) {
                                     if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
-                                        Core.SystemConfig.Reload();
-                                        int numRemapped = MapCommands();
-                                        response.message = "Successfully remapped " + numRemapped + " commands to " + ExtensionSystem.Instance.Extensions.Count + " extensions.";
-                                        conn.SendMessage(response);
+                                        try {
+                                            Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + @"/suibhne.ini");
+                                            int numRemapped = MapCommands();
+                                            response.message = "Successfully remapped " + numRemapped + " commands to " + ExtensionSystem.Instance.Extensions.Count + " extensions.";
+                                            conn.SendMessage(response);
 
-                                        // TODO: MapAccessLevels();
-                                        Core.ConfigLastUpdate = DateTime.Now;
+                                            // TODO: MapAccessLevels();
+                                            Core.ConfigLastUpdate = DateTime.Now;
+                                        }
+
+                                        catch (Exception e) {
+                                            response.message = "Error processing request: " + e.Message;
+                                            conn.SendMessage(response);
+                                        }
                                     } else {
                                         response.message = "Your system config is up-to-date.";
                                         conn.SendMessage(response);
