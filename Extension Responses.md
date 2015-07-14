@@ -4,9 +4,7 @@
 	"*contents*": "Message Contents.",
     "*location*": {
         "*id*": "<guid>",
-        "*type*": "public",                   // Can also be "private" or "user"
-        "*is_action*": false,                 // OPTIONAL: If true, will send message as an action
-        "*target*": "Delenas"                 // OPTIONAL: If set and type is user will send message to this DisplayName
+        "*type*": "public/private/user"
     },
 	"*sender*": {
 		"*DisplayName*": "Delenas", 
