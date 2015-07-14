@@ -10,12 +10,6 @@ namespace Ostenvighx.Suibhne.Attributes {
     public class MessageHandlerAttribute : Attribute { }
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class UserJoinHandlerAttribute : Attribute { }
-
-    [AttributeUsage(AttributeTargets.Class)]
-    public class UserLeaveHandlerAttribute : Attribute { }
-
-    [AttributeUsage(AttributeTargets.Class)]
-    public class UserQuitHandlerAttribute : Attribute { }
+    public class UserEventHandlerAttribute : Attribute { }
 
 }

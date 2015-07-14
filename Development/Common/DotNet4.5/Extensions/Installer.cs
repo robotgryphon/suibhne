@@ -7,6 +7,7 @@ using System.Reflection;
 using Ostenvighx.Suibhne.Extensions;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using System.Windows.Forms;
 
 namespace Ostenvighx.Suibhne.Common {
     public abstract class ExtensionInstaller {
@@ -123,6 +124,9 @@ namespace Ostenvighx.Suibhne.Common {
 
 
             JObject extObj = new JObject();
+            String exeName = new FileInfo(Application.ExecutablePath).Name;
+
+            extObj.Add("Name", e.Name);
             extObj.Add("Identifier", Guid.NewGuid().ToString());
 
             JObject commands = new JObject();
@@ -137,14 +141,8 @@ namespace Ostenvighx.Suibhne.Common {
                 if (a.GetType() == typeof(Attributes.MessageHandlerAttribute))
                     EventHandlers.Add("Message:Recieve");
 
-                if (a.GetType() == typeof(Attributes.UserJoinHandlerAttribute))
-                    EventHandlers.Add("User:Join");
-
-                if (a.GetType() == typeof(Attributes.UserQuitHandlerAttribute))
-                    EventHandlers.Add("User:Quit");
-
-                if (a.GetType() == typeof(Attributes.UserLeaveHandlerAttribute))
-                    EventHandlers.Add("User:Leave");
+                if (a.GetType() == typeof(Attributes.UserEventHandlerAttribute))
+                    EventHandlers.Add("User");
             }
 
             extObj.Add("Handlers", EventHandlers);

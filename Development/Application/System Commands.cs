@@ -20,6 +20,8 @@ namespace Ostenvighx.Suibhne {
             Message response = Message.GenerateResponse(conn.Me, msg);
             if (Message.IsPrivateMessage(response))
                 response.type = Networks.Base.Reference.MessageType.PrivateAction;
+            else
+                response.type = Networks.Base.Reference.MessageType.PublicAction;
 
             response.message = "figures you have access to these commands: ";
 

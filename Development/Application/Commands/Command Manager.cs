@@ -73,7 +73,8 @@ namespace Ostenvighx.Suibhne.Commands {
                     SQLiteCommand extensionCommandHandlers = ExtensionSystem.Database.CreateCommand();
                     extensionCommandHandlers.CommandText = "SELECT Extensions.Name, Extensions.Identifier, ExtensionCommands.CommandMethod, ExtensionCommands.CommandId" +
                         " FROM Extensions, ExtensionCommands" +
-                        " WHERE lower(ExtensionCommands.CommandMethod) = '" + cm.CommandString.ToLower() + 
+                        " WHERE lower(Extensions.Name) = '" + extName.ToLower() + "' AND" + 
+                        " lower(ExtensionCommands.CommandMethod) = '" + cm.CommandString.ToLower() + 
                             "' AND Extensions.Identifier = ExtensionCommands.ExtensionId;";
 
                     SQLiteDataReader sdr = extensionCommandHandlers.ExecuteReader();

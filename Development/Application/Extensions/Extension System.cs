@@ -34,6 +34,8 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static SQLiteConnection Database;
 
+        public static String ConfigRoot;
+
         public static ExtensionSystem Instance {
             get {
                 if (instance == null) {
@@ -48,6 +50,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         internal Dictionary<Guid, ExtensionMap> Extensions;
+        internal List<Guid> UserEventHandlers;
 
         protected ExtensionServer Server;
 
@@ -60,9 +63,15 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
             }
 
-            this.Extensions = new Dictionary<Guid, ExtensionMap>();
+            ConfigRoot = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
 
-            InitializeExtensions();
+            this.Extensions = new Dictionary<Guid, ExtensionMap>();
+            this.UserEventHandlers = new List<Guid>();
+
+            LoadExtensionData();
+            CommandManager.Instance.MapCommands();
+
+            AutostartExtensions();
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
@@ -97,16 +106,37 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        protected void InitializeExtensions() {
-            // Get ExtensionDirectories available via directory name
-            String ExtensionsRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
+        protected void AutostartExtensions() {
+            foreach (String extDir in Directory.GetDirectories(ConfigRoot)) {
+                // Start extension
+                DirectoryInfo di = new DirectoryInfo(extDir);
 
+                Core.Log("Trying to start " + di.Name + ".", LogType.EXTENSIONS);
+                String filename = "";
+                if (File.Exists(extDir + @"\" + di.Name + ".exe"))
+                    filename = extDir + @"\" + di.Name + ".exe";
+
+                if (File.Exists(extDir + @"\" + di.Name + ".jar"))
+                    filename = extDir + @"\" + di.Name + ".jar";
+
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.WorkingDirectory = extDir;
+                psi.FileName = filename;
+                psi.Arguments = "--launch";
+                psi.UseShellExecute = true;
+
+                Process.Start(psi);
+            }
+        }
+
+        protected void LoadExtensionData() {
             DataTable extensions = new DataTable();
             try {
                 ExtensionSystem.Database.Open();
 
                 SQLiteCommand c = new SQLiteCommand(ExtensionSystem.Database);
-                c.CommandText = "SELECT * FROM Extensions WHERE Enabled=1;";
+                c.CommandText = "SELECT * FROM Extensions;";
 
                 SQLiteDataReader r = c.ExecuteReader();
                 extensions.Load(r);
@@ -122,26 +152,6 @@ namespace Ostenvighx.Suibhne.Extensions {
                     Core.Log("Got information from extension " + map.Name);
 
                     Extensions.Add(map.Identifier, map);
-
-                    String extensionExtension = Path.GetExtension(extension["InstallPath"].ToString());
-                    if (extensionExtension.ToLower() == ".exe") {
-                        Core.Log("Starting extension " + map.Name + " (" + extension["InstallPath"] + ") ...", LogType.EXTENSIONS);
-
-                        try {
-                            ProcessStartInfo psi = new ProcessStartInfo();
-                            psi.WorkingDirectory = new DirectoryInfo(extension["InstallPath"].ToString()).Parent.FullName;
-                            psi.UseShellExecute = true;
-                            psi.FileName = extension["InstallPath"].ToString();
-                            psi.Arguments = "--launch";
-                            
-                            Process.Start(psi);
-                        }
-
-                        catch (Exception e) {
-                            Core.Log("Caught exception trying to start extension: " + e);
-                        }
-                        
-                    }
                 }
 
             }
@@ -155,8 +165,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
-
-            CommandManager.Instance.MapCommands();
         }
 
         public void HandleCommand(NetworkBot conn, Message msg) {
