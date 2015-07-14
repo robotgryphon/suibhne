@@ -321,14 +321,14 @@ namespace Ostenvighx.Suibhne.Commands {
                                     }
                                 }
 
-                                response.message = "Current identifier for " + (location["LocationName"].ToString() != "" ? "location " + location["LocationName"] : "network " + location["NetworkName"] + ": ") + location["Identifier"];
+                                response.message = "Current identifier for " + (location["Name"].ToString() != "" ? "location " + location["Name"] + ": " : "network " + location["Name"] + ": ") + location["Identifier"];
                                 conn.SendMessage(response);
                                 break;
 
                             case 4:
                                 location = Utilities.GetLocationEntry(messageParts[2].ToLower(), messageParts[3].ToLower());
-                                response.message = "Current identifier for location " + location["LocationName"] + 
-                                    " on network " + location["NetworkName"] + ": " + location["Identifier"] + ".";
+                                response.message = "Current identifier for location " + location["Name"] + 
+                                    " on network " + messageParts[2] + ": " + location["Identifier"] + ".";
 
                                 conn.SendMessage(response);
                                 break;

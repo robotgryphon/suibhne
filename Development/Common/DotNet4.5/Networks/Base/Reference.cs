@@ -95,27 +95,27 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             /// <summary>
             /// Location is a locationID.
             /// </summary>
-            Public,
+            Public = 2,
 
             /// <summary>
             /// Location is a private query window.
             /// </summary>
-            Private,
+            Private = 3,
 
             /// <summary>
             /// Location is a notice recieved by a user or locationID.
             /// </summary>
-            Notice,
+            Notice = 4,
 
             /// <summary>
             /// Location is a serverwide broadcast.
             /// </summary>
-            Network,
+            Network = 1,
 
             /// <summary>
             /// Use if not sure. You really should be sure, though.
             /// </summary>
-            Unknown
+            Unknown = 0
         };
 
         #endregion

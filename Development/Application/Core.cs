@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 
 using System.Data;
+using Newtonsoft.Json;
 using System.Data.SQLite;
 
 namespace Ostenvighx.Suibhne {
@@ -143,7 +144,7 @@ namespace Ostenvighx.Suibhne {
             Console.ResetColor();
 
             if (OnLogMessage != null) {
-                OnLogMessage(message, type);
+                OnLogMessage("[" + DateTime.Now + "] " + message, type);
             }
         }
     }

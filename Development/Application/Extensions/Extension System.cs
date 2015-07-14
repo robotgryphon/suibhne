@@ -51,6 +51,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         internal Dictionary<Guid, ExtensionMap> Extensions;
         internal List<Guid> UserEventHandlers;
+        internal List<Guid> MessageHandlers;
 
         protected ExtensionServer Server;
 
@@ -67,6 +68,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
             this.UserEventHandlers = new List<Guid>();
+            this.MessageHandlers = new List<Guid>();
 
             LoadExtensionData();
             CommandManager.Instance.MapCommands();
@@ -152,6 +154,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                     Core.Log("Got information from extension " + map.Name);
 
                     Extensions.Add(map.Identifier, map);
+
+                    if (extension["HandlesUserEvents"].ToString() == "1") UserEventHandlers.Add(map.Identifier);
+                    if (extension["HandlesMessages"].ToString() == "1") MessageHandlers.Add(map.Identifier);
+                    
                 }
 
             }
@@ -165,6 +171,17 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
+
+            // If we have any event handlers
+            if (UserEventHandlers.Count > 0) {
+                foreach (NetworkBot b in Core.Networks.Values) {
+                    b.Network.OnUserJoin += ExtensionEventHandlers.HandleUserJoin;
+                    b.Network.OnUserLeave += ExtensionEventHandlers.HandleUserLeave;
+                    b.Network.OnUserQuit += ExtensionEventHandlers.HandleUserQuit;
+
+                    b.Network.OnUserDisplayNameChange += ExtensionEventHandlers.HandleUserNameChange;
+                }
+            }
         }
 
         public void HandleCommand(NetworkBot conn, Message msg) {
@@ -218,6 +235,11 @@ namespace Ostenvighx.Suibhne.Extensions {
                         Message msg = Extension.ParseMessage(data);
 
                         try {
+                            DataRow location = Utilities.GetLocationEntry(msg.locationID);
+                            if (location != null) {
+                                // Now we should have network name
+
+                            }
                             foreach (NetworkBot bot in Core.Networks.Values) {
                                 if(bot.IsListeningTo(msg.locationID)){
                                     bot.SendMessage(msg);

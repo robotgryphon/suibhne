@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Ostenvighx.Suibhne.Networks.Base {
@@ -35,6 +37,18 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// </summary>
         public String DisplayName;
 
+        public User(byte[] stream) {
+            String base64 = Encoding.UTF8.GetString(stream);
+            byte[] converted = Convert.FromBase64String(base64);
+            String decoded = Encoding.UTF8.GetString(converted);
+
+
+            JObject thisAsJson = JObject.Parse(decoded);
+            this.Username = thisAsJson["Username"].ToString();
+            this.LastDisplayName = thisAsJson["LastDisplayName"].ToString();
+            this.DisplayName = thisAsJson["DisplayName"].ToString();
+        }
+
         public User() : this("unknown") { }
 
         /// <summary>
@@ -52,6 +66,17 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             this.DisplayName = current_displayname;
         }
 
+        public byte[] ConvertToBytes() {
+            JObject thisAsJson = new JObject();
+            thisAsJson.Add("DisplayName", this.DisplayName);
+            thisAsJson.Add("LastDisplayName", this.LastDisplayName);
+            thisAsJson.Add("Username", this.Username);
+
+            String json = thisAsJson.ToString();
+            byte[] data = Encoding.UTF8.GetBytes(json);
+            String base64 = Convert.ToBase64String(data);
+            return Encoding.UTF8.GetBytes(base64);
+        }
 
         /// <summary>
         /// Returns a string that is equal to the User's current DisplayName.

@@ -156,7 +156,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Base.User tmpMe = new Base.User(Me.Username, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
 
-                HandleUserDisplayNameChange(Listened[NetworkIdentifier], Me);
+                HandleUserDisplayNameChange(NetworkIdentifier, Me);
             }
         }
 
@@ -346,17 +346,17 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                     case "join":
                         Base.User joiner = User.Parse(dataChunks[0]);
-                        HandleUserJoin(GetLocationByName(dataChunks[2].TrimStart(':')), joiner);
+                        HandleUserJoin(GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
                         break;
 
                     case "part":
                         Base.User parter = User.Parse(dataChunks[0]);
-                        HandleUserLeave(GetLocationByName(dataChunks[2].TrimStart(':')), parter);
+                        HandleUserLeave(GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
                         break;
 
                     case "quit":
                         Base.User quitter = User.Parse(dataChunks[0]);
-                        HandleUserQuit(Listened[NetworkIdentifier], quitter);
+                        HandleUserQuit(NetworkIdentifier, quitter);
 
                         foreach (Base.Location listened in Listened.Values) {
                             string hostmask = dataChunks[0].Substring(line.IndexOf("@") + 1);
@@ -533,14 +533,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             }
         }
 
-        protected override void HandleUserJoin(Base.Location l, Base.User u) {
+        protected override void HandleUserJoin(Guid l, Base.User u) {
             base.HandleUserJoin(l, u);
-            SendRaw("WHO " + l.Name);
+            SendRaw("WHO " + Listened[l].Name);
         }
 
-        protected override void HandleUserLeave(Base.Location l, Base.User u) {
+        protected override void HandleUserLeave(Guid l, Base.User u) {
             base.HandleUserLeave(l, u);
-            SendRaw("WHO " + l.Name);
+            SendRaw("WHO " + Listened[l].Name);
         }
 
         /// <summary>
@@ -559,7 +559,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Me = me;
             }
 
-            HandleUserDisplayNameChange(Listened[NetworkIdentifier], changer);
+            HandleUserDisplayNameChange(NetworkIdentifier, changer);
 
             foreach (Base.Location location in Listened.Values) {
                 foreach (String host in location.AccessLevels.Keys) {

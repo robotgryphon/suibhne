@@ -289,6 +289,18 @@ namespace Ostenvighx.Suibhne.Extensions {
                             OnExtensionExit(this);
                         }
                         break;
+
+                    #region User Events
+                    case Responses.UserJoin:
+                    case Responses.UserLeave:
+                    case Responses.UserNameChange:
+                    case Responses.UserQuit:
+                        byte[] userBytes = new byte[data.Length - 18];
+                        Array.Copy(data, 18, userBytes, 0, userBytes.Length);
+                        User user = new User(userBytes);
+                        HandleUserEvent((Responses)data[0], (Networks.Base.Reference.LocationType) data[17], origin, user);
+                        break;
+                    #endregion
                 }
 
             }
@@ -296,6 +308,10 @@ namespace Ostenvighx.Suibhne.Extensions {
             catch (Exception e) {
                 Console.WriteLine(e);
             }
+        }
+
+        protected virtual void HandleUserEvent(Responses type, Networks.Base.Reference.LocationType locType, Guid origin, User u) {
+            Console.WriteLine("Got user event for user: " + u.ToString() + " of type " + type.ToString());
         }
 
         /// <summary>

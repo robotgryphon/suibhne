@@ -53,7 +53,15 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
-                c.CommandText = "SELECT * FROM Identifiers WHERE lower(NetworkName)='" + network.ToLower() + "' AND lower(LocationName)='" + location.ToLower() + "';";
+
+                if (location != "") {
+                    c.CommandText = "SELECT * FROM Identifiers " +
+	                    "WHERE Identifiers.ParentId IN (SELECT Identifier FROM Identifiers WHERE lower(Name) = '" + network.ToLower() + "')" +
+                        " AND lower(Name) = '" + location.ToLower() + "';";
+                } else {
+                    c.CommandText = "SELECT * FROM Identifiers WHERE lower(Name) = '" + network.ToLower() + "';";
+                }
+
 
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);

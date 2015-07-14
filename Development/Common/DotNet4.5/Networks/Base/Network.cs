@@ -126,22 +126,22 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public abstract void LeaveLocation(Guid g);
 
         #region User Events
-        protected virtual void HandleUserJoin(Location l, User u) {
+        protected virtual void HandleUserJoin(Guid l, User u) {
             if (this.OnUserJoin != null)
                 OnUserJoin(l, u);
         }
 
-        protected virtual void HandleUserLeave(Location l, User u) {
+        protected virtual void HandleUserLeave(Guid l, User u) {
             if (this.OnUserLeave != null)
                 OnUserLeave(l, u);
         }
 
-        protected virtual void HandleUserQuit(Location l, User u) {
+        protected virtual void HandleUserQuit(Guid l, User u) {
             if (this.OnUserQuit != null)
                 OnUserQuit(l, u);
         }
 
-        protected virtual void HandleUserDisplayNameChange(Location l, User u) {
+        protected virtual void HandleUserDisplayNameChange(Guid l, User u) {
             if (this.OnUserDisplayNameChange != null)
                 OnUserDisplayNameChange(l, u);
         }
