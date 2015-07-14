@@ -14,8 +14,8 @@
 
 ### UserEvent - user.join, user.leave, user.quit, user.namechange
 {
-	"**responseCode**": "user.join",
-	"**location**": {
+    "**responseCode**": "user.join",
+    "**location**": {
         "id": "<guid>",
         "type": "public"
     },
