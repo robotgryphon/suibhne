@@ -49,3 +49,8 @@
     }
 }
 
+### ExtensionEvent - extension.activate, extension.shutdown
+{
+    "**responseCode**": "extension.activate",
+    "**id**": "<guid>"
+}
