@@ -1,6 +1,6 @@
 ### Message
 {
-	"*responseCode**": "message.recieve",
+	"**responseCode**": "message.recieve",
 	"**contents**": "Message Contents.",
     "**location**": {
         "*id*": "<guid>",
