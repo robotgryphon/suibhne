@@ -1,12 +1,12 @@
 ### Message
 {
-	"*responseCode*": "message.recieve",
-	"*contents*": "Message Contents.",
-    "*location*": {
+	"*responseCode**": "message.recieve",
+	"**contents**": "Message Contents.",
+    "**location**": {
         "*id*": "<guid>",
         "*type*": "public/private/user"
     },
-	"*sender*": {
+	"**sender**": {
 		"*DisplayName*": "Delenas", 
 		"*Username*": "delenas" 
 	}
@@ -14,12 +14,12 @@
 
 ### UserEvent - user.join, user.leave, user.quit, user.namechange
 {
-	"responseCode": "user.join",
-	"location": {
+	"**responseCode**": "user.join",
+	"**location**": {
         "id": "<guid>",
         "type": "public"
     },
-	"user": {
+	"**user**": {
 		"DisplayName": "Delenas",
 		"Username": "delenas"
 	}
@@ -27,14 +27,13 @@
 
 ### Command
 {
-	"*responseCode*": "command.recieve",
-	"*network*": "<guid>",
-	"*arguments*": "command arguments",
-    "*location*": {
+	"**responseCode**": "command.recieve",
+	"**arguments**": "command arguments",
+    "**location**": {
         "*id*": "<guid>",
         "*type*": "public"
     },
-    "*sender*": {
+    "**sender**": {
         "*DisplayName*": "Delenas",
         "*Username*": "delenas"
     }
@@ -42,9 +41,9 @@
 
 ### InformationRequest - info.request, info.response
 {
-    "*responseCode*": "info.request",
-    "*requestType*": "location.id",
-    "*params*": {
+    "**responseCode**": "info.request",
+    "**requestType**": "location.id",
+    "**params**": {
         "*networkName*": "<string>",
         "*locationName*": "<string>"
     }
