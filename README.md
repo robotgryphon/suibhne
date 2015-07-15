@@ -6,14 +6,14 @@
 * Extensions are now installed to a database under the configuration root directory.
 
 #### New event hooks
-* User events: Allows extensions to catch user-related events happening on networks. For this to work, you must include the `UserEventHandler` attribute on your main class, or, in the compiled install file, it's under handlers as `User`.
-  * **user.join**: User joining a location.
-  * **user.leave**: User leaving a location.
-  * **user.quit**: User quitting a network.
-  * **user.namechange**: User changing their display name on a network.
+*User events*: Allows extensions to catch user-related events happening on networks. For this to work, you must include the `UserEventHandler` attribute on your main class, or, in the compiled install file, it's under handlers as `User`.
+    * **user.join**: User joining a location.
+    * **user.leave**: User leaving a location.
+    * **user.quit**: User quitting a network.
+    * **user.namechange**: User changing their display name on a network.
 
-* Message events
-  * **message.recieve**: Returning from an older build, this allows extensions to catch incoming messages on networks. For this to work, the attribute `MessageHandler` MUST be applied to the extension class on installation. In the compiled install file, this is signalled by the handler `Message:Recieve`.
+*Message events*
+    * **message.recieve**: Returning from an older build, this allows extensions to catch incoming messages on networks. For this to work, the attribute `MessageHandler` MUST be applied to the extension class on installation. In the compiled install file, this is signalled by the handler `Message:Recieve`.
 
 
 ### Interface Changes
