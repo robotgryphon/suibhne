@@ -9,7 +9,6 @@ namespace Ostenvighx.Suibhne.Commands {
 
         public String CommandString;
         public Guid Extension;
-        public Guid Method;
         public byte AccessLevel;
 
         public override string ToString() {

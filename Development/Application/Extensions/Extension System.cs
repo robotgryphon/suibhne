@@ -85,7 +85,11 @@ namespace Ostenvighx.Suibhne.Extensions {
             ExtensionMap extension = this.Extensions[id];
 
             Core.Log("Extension '" + extension.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
-            ExtensionHelper.SendShutdownRequest(extension);
+            JObject shutdown = new JObject();
+            shutdown.Add("responseCode", "extension.shutdown");
+
+            extension.Send(Encoding.UTF32.GetBytes(shutdown.ToString()));
+
             extension.Socket = null;
             extension.Ready = false;
 
@@ -188,29 +192,22 @@ namespace Ostenvighx.Suibhne.Extensions {
             CommandManager.Instance.HandleCommand(conn, msg);
         }
 
-        protected void HandleIncomingData(Socket sock, byte[] data) {
-            Responses code = (Responses)data[0];
-            byte[] guidBytes = new byte[16];
-            Array.Copy(data, 1, guidBytes, 0, 16);
-
-            Guid origin = new Guid(guidBytes);
-            byte[] extraData = new byte[0];
-            if (data.Length > 17) {
-                extraData = new byte[data.Length - 17];
-                Array.Copy(data, 17, extraData, 0, extraData.Length);
-            }
+        protected void HandleIncomingData(Socket sock, byte[] data) {               
 
             // Get the extension suite off the returned Identifier first
             try {
 
-                ExtensionMap extension = Extensions[origin];
+                string json = Encoding.UTF32.GetString(data);
+                JObject ev = JObject.Parse(json);
+
+                ExtensionMap extension = Extensions[Guid.Parse(ev["extid"].ToString())];
 
 
                 #region Handle Code Response
-                switch (code) {
+                switch (ev["responseCode"].ToString().ToLower()) {
 
-                    case Responses.Activation:
-                        Core.Log("Activating extension: " + Extensions[origin].Name, LogType.EXTENSIONS);
+                    case "extension.activate":
+                        Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
 
                         if (extension.Socket == null) {
                             extension.Socket = sock;
@@ -218,34 +215,24 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                         extension.Ready = true;
 
-                        Extensions[origin] = extension;
+                        Extensions[extension.Identifier] = extension;
                         break;
 
-                    case Responses.Details:
-                        Core.Log("Recieved extension details from " + extension.Name + ": " + Encoding.UTF8.GetString(extraData), LogType.EXTENSIONS);
-                        break;
-
-                    case Responses.Remove:
+                    case "extension.shutdown":
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
                         ShutdownExtension(sock);
                         return;
 
-                    case Responses.Message:
-                        Message msg = Extension.ParseMessage(data);
-
+                    case "message.send":
                         try {
-                            DataRow location = Utilities.GetLocationEntry(msg.locationID);
-                            if (location != null) {
-                                // Now we should have network name
+                            DataRow location = Utilities.GetLocationEntry(Guid.Parse(ev["location"]["id"].ToString()));
+                            if (location == null) break;
 
-                            }
-                            foreach (NetworkBot bot in Core.Networks.Values) {
-                                if(bot.IsListeningTo(msg.locationID)){
-                                    bot.SendMessage(msg);
-                                }
-                            }
-                            
+                            NetworkBot bot = Core.Networks[Guid.Parse(location["ParentId"].ToString())];
+                            Message msg = new Message( Guid.Parse(location["Identifier"].ToString()), new User(extension.Name), ev["contents"].ToString() );
+                            msg.type = (Reference.MessageType)((byte) ev["location"]["type"]);
+                            bot.SendMessage(msg);                           
                         }
 
                         catch (KeyNotFoundException) {
@@ -256,7 +243,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                     default:
                         // Unknown response
-
+                        Core.Log("Recieved unknown response code: " + ev["responseCode"].ToString());
                         break;
 
                 }
@@ -284,7 +271,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public void Shutdown() {
             foreach (ExtensionMap em in Extensions.Values) {
-                ExtensionHelper.SendShutdownRequest(em);
+                ShutdownExtension(em.Identifier);
             }
 
             this.Server.Stop();

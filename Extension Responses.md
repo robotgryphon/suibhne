@@ -4,7 +4,7 @@
 	"**contents**": "Message Contents.",
     "**location**": {
         "*id*": "<guid>",
-        "*type*": "public/private/user"
+        "*type*": "(public|private)_(message|action|notice)"
     },
 	"**sender**": {
 		"*DisplayName*": "Delenas", 
@@ -13,12 +13,11 @@
 }
 
 ### UserEvent - user.join, user.leave, user.quit, user.namechange
+user.namechange has an additional param under user: "LastDisplayName".
+
 {
     "**responseCode**": "user.join",
-    "**location**": {
-        "id": "<guid>",
-        "type": "public"
-    },
+    "**location**": "<guid>",
 	"**user**": {
 		"DisplayName": "Delenas",
 		"Username": "delenas"
@@ -28,6 +27,7 @@
 ### Command
 {
 	"**responseCode**": "command.recieve",
+    "**handler**": "commandHandler",
 	"**arguments**": "command arguments",
     "**location**": {
         "*id*": "<guid>",

@@ -87,7 +87,6 @@ namespace Ostenvighx.Suibhne.Commands {
 
                     // Now that we have the mapped command row..
                     cm.Extension = Guid.Parse(mappedCommand["Identifier"].ToString());
-                    cm.Method = Guid.Parse(mappedCommand["CommandId"].ToString());
                     cm.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt(commandKey, 1);
 
                     CommandManager.Instance.RegisterCommand(commandKey, cm);
@@ -106,7 +105,6 @@ namespace Ostenvighx.Suibhne.Commands {
 
             CommandMap sys = new CommandMap();
             sys.CommandString = "system";
-            sys.Method = Guid.Empty;
             sys.Extension = Guid.Empty;
 
             sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("sys", 250);
@@ -188,8 +186,8 @@ namespace Ostenvighx.Suibhne.Commands {
                         if (CommandMapping.ContainsKey(subCommand)) {
                             CommandMap mappedCommand = CommandMapping[subCommand];
                             ExtensionMap ext = ExtensionSystem.Instance.Extensions[mappedCommand.Extension];
-                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [methodID: " + mappedCommand.Method + "]", LogType.EXTENSIONS);
-                            ext.HandleHelpCommandRecieved(conn, mappedCommand.Method, message);
+                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [handler: " + mappedCommand.CommandString + "]", LogType.EXTENSIONS);
+                            ext.HandleHelpCommandRecieved(conn, mappedCommand, message);
                         } else {
                             response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                             response.message = "does not have information on that command.";
@@ -205,12 +203,12 @@ namespace Ostenvighx.Suibhne.Commands {
                 default:
                     ExtensionMap extension = ExtensionSystem.Instance.Extensions[CommandMapping[command].Extension];
 
-                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [methodID: " + cmd.Method + "]", LogType.EXTENSIONS);
+                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [handler: " + cmd.CommandString + "]", LogType.EXTENSIONS);
                     if (!extension.Ready) {
                         response.message = "I have {" + command + "} registered as a command, but it looks like the extension isn't ready yet. Try again later.";
                         conn.SendMessage(response);
                     } else {
-                        extension.HandleCommandRecieved(conn, cmd.Method, message);
+                        extension.HandleCommandRecieved(conn, cmd, message);
                     }
 
                     break;

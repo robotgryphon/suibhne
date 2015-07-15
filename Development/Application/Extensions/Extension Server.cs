@@ -16,8 +16,10 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public ExtensionServer() {
             this.Connection = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.Connection.ReceiveBufferSize = 4096;
+            this.Connection.SendBufferSize = 4096;
 
-            this.Buffer = new byte[1024];
+            this.Buffer = new byte[4096];
         }
 
         public void Start() {

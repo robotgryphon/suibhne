@@ -1,4 +1,5 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Newtonsoft.Json.Linq;
+using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -13,16 +14,18 @@ namespace Ostenvighx.Suibhne.Extensions {
             DataRow location = Utilities.GetLocationEntry(l);
             Core.Log("Handling user " + u.DisplayName + " joining location " + location["Name"]);
 
-            byte[] userBytes = u.ConvertToBytes();
-            byte[] toSendToExtension = new byte[18 + userBytes.Length];
-            toSendToExtension[0] = (byte)Extensions.Responses.UserJoin;
-            toSendToExtension[17] = byte.Parse(location["LocationType"].ToString());
+            JObject userEvent = new JObject();
+            userEvent.Add("responseCode", "user.join");
+            userEvent.Add("location", l);
 
-            Array.Copy(l.ToByteArray(), 0, toSendToExtension, 1, 16);
-            Array.Copy(userBytes, 0, toSendToExtension, 18, userBytes.Length);
+            JObject user = new JObject();
+            user.Add("DisplayName", u.DisplayName);
+            user.Add("Username", u.Username);
+
+            userEvent.Add("user", user);
 
             foreach (Guid em in ExtensionSystem.Instance.UserEventHandlers) {
-                ExtensionSystem.Instance.Extensions[em].Send(toSendToExtension);
+                ExtensionSystem.Instance.Extensions[em].Send(Encoding.UTF32.GetBytes(userEvent.ToString()));
             }
         }
 
@@ -30,16 +33,18 @@ namespace Ostenvighx.Suibhne.Extensions {
             DataRow location = Utilities.GetLocationEntry(l);
             Core.Log("Handling user " + u.DisplayName + " leaving location " + location["Name"]);
 
-            byte[] userBytes = u.ConvertToBytes();
-            byte[] toSendToExtension = new byte[18 + userBytes.Length];
-            toSendToExtension[0] = (byte)Extensions.Responses.UserLeave;
-            toSendToExtension[17] = byte.Parse(location["LocationType"].ToString());
+            JObject userEvent = new JObject();
+            userEvent.Add("responseCode", "user.leave");
+            userEvent.Add("location", l);
 
-            Array.Copy(l.ToByteArray(), 0, toSendToExtension, 1, 16);
-            Array.Copy(userBytes, 0, toSendToExtension, 18, userBytes.Length);
+            JObject user = new JObject();
+            user.Add("DisplayName", u.DisplayName);
+            user.Add("Username", u.Username);
+
+            userEvent.Add("user", user);
 
             foreach (Guid em in ExtensionSystem.Instance.UserEventHandlers) {
-                ExtensionSystem.Instance.Extensions[em].Send(toSendToExtension);
+                ExtensionSystem.Instance.Extensions[em].Send(Encoding.UTF32.GetBytes(userEvent.ToString()));
             }
         }
 
@@ -47,22 +52,39 @@ namespace Ostenvighx.Suibhne.Extensions {
             DataRow location = Utilities.GetLocationEntry(l);
             Core.Log("Handling user " + u.DisplayName + " quitting location " + location["Name"]);
 
-            byte[] userBytes = u.ConvertToBytes();
-            byte[] toSendToExtension = new byte[18 + userBytes.Length];
-            toSendToExtension[0] = (byte)Extensions.Responses.UserQuit;
-            toSendToExtension[17] = byte.Parse(location["LocationType"].ToString());
+            JObject userEvent = new JObject();
+            userEvent.Add("responseCode", "user.quit");
+            userEvent.Add("location", l);
 
-            Array.Copy(l.ToByteArray(), 0, toSendToExtension, 1, 16);
-            Array.Copy(userBytes, 0, toSendToExtension, 18, userBytes.Length);
+            JObject user = new JObject();
+            user.Add("DisplayName", u.DisplayName);
+            user.Add("Username", u.Username);
+
+            userEvent.Add("user", user);
 
             foreach (Guid em in ExtensionSystem.Instance.UserEventHandlers) {
-                ExtensionSystem.Instance.Extensions[em].Send(toSendToExtension);
+                ExtensionSystem.Instance.Extensions[em].Send(Encoding.UTF32.GetBytes(userEvent.ToString()));
             }
         }
 
         public static void HandleUserNameChange(Guid l, User u) {
             DataRow location = Utilities.GetLocationEntry(l);
             Core.Log("Handling user " + u.LastDisplayName + " changing name to " + u.DisplayName + " on network " + location["Name"]);
+
+            JObject userEvent = new JObject();
+            userEvent.Add("responseCode", "user.namechange");
+            userEvent.Add("location", l);
+
+            JObject user = new JObject();
+            user.Add("LastDisplayName", u.LastDisplayName);
+            user.Add("DisplayName", u.DisplayName);
+            user.Add("Username", u.Username);
+
+            userEvent.Add("user", user);
+
+            foreach (Guid em in ExtensionSystem.Instance.UserEventHandlers) {
+                ExtensionSystem.Instance.Extensions[em].Send(Encoding.UTF32.GetBytes(userEvent.ToString()));
+            }
         }
     }
 }
