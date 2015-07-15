@@ -86,6 +86,10 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             return this.DisplayName;
         }
 
+        public override int GetHashCode() {
+            return base.GetHashCode();
+        }
+
         public override bool Equals(object obj) {
             if (obj.GetType() == typeof(User)) {
                 return ((User)obj).Username == this.Username;

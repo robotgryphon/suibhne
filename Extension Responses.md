@@ -4,7 +4,7 @@
 	"**contents**": "Message Contents.",
 	"**location**": {
 		"*id*": "<guid>",
-		"*type*": "(public|private)_(message|action|notice)"
+		"*type*": 1
 	},
 	"**sender**": {
 		"*DisplayName*": "Delenas", 
@@ -31,7 +31,7 @@ user.namechange has an additional param under user: "LastDisplayName".
 	"**arguments**": "command arguments",
 	"**location**": {
 		"*id*": "<guid>",
-		"*type*": "public"
+		"*type*": 1,
 	},
 	"**sender**": {
 		"*DisplayName*": "Delenas",

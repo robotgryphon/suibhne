@@ -20,7 +20,7 @@ namespace Ostenvighx.Suibhne {
 
         public Networks.Base.Reference.ConnectionStatus Status {
             get {
-                return (_network != null && _network.Status != null) ? _network.Status : Networks.Base.Reference.ConnectionStatus.NotReady;
+                return (_network != null) ? _network.Status : Networks.Base.Reference.ConnectionStatus.NotReady;
             }
 
             protected set {

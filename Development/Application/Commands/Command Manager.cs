@@ -73,11 +73,9 @@ namespace Ostenvighx.Suibhne.Commands {
                     cm.CommandString = commandMap.Substring(nameEnd + 1).Trim();
 
                     SQLiteCommand extensionCommandHandlers = ExtensionSystem.Database.CreateCommand();
-                    extensionCommandHandlers.CommandText = "SELECT Extensions.Name, Extensions.Identifier, ExtensionCommands.CommandMethod, ExtensionCommands.CommandId" +
-                        " FROM Extensions, ExtensionCommands" +
-                        " WHERE lower(Extensions.Name) = '" + extName.ToLower() + "' AND" + 
-                        " lower(ExtensionCommands.CommandMethod) = '" + cm.CommandString.ToLower() + 
-                            "' AND Extensions.Identifier = ExtensionCommands.ExtensionId;";
+                    extensionCommandHandlers.CommandText = "SELECT Extensions.Name, Extensions.Identifier" +
+                        " FROM Extensions" +
+                        " WHERE lower(Extensions.Name) = '" + extName.ToLower() + "';";
 
                     SQLiteDataReader sdr = extensionCommandHandlers.ExecuteReader();
                     DataTable extensionCommands = new DataTable();
@@ -228,6 +226,12 @@ namespace Ostenvighx.Suibhne.Commands {
 
             if (messageParts.Length > 1 && subCommand != "") {
                 switch (subCommand) {
+                    case "test":
+                        ExtensionSystem es = ExtensionSystem.Instance;
+
+                        Core.Log(es.ToString());
+                        break;
+
                     case "exts":
                     case "extensions":
                         #region Extensions System Handling

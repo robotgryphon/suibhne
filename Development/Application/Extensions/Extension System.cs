@@ -186,6 +186,12 @@ namespace Ostenvighx.Suibhne.Extensions {
                     b.Network.OnUserDisplayNameChange += ExtensionEventHandlers.HandleUserNameChange;
                 }
             }
+
+            if (MessageHandlers.Count > 0) {
+                foreach (NetworkBot b in Core.Networks.Values) {
+                    b.Network.OnMessageRecieved += ExtensionEventHandlers.HandleMessageRecieved;
+                }
+            }
         }
 
         public void HandleCommand(NetworkBot conn, Message msg) {
@@ -200,7 +206,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 string json = Encoding.UTF32.GetString(data);
                 JObject ev = JObject.Parse(json);
 
-                ExtensionMap extension = Extensions[Guid.Parse(ev["extid"].ToString())];
+                ExtensionMap extension = Extensions[ev["extid"].ToObject<Guid>()];
 
 
                 #region Handle Code Response
