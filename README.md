@@ -1,7 +1,23 @@
 # Versioning and Changelog #
-## Version 2.5: Indev
-#### Planned changes
-* Scripting system- ability to create script files in various locations of the config directory that run when events are driven. For example, creating a `UserJoin.script` file inside `Config/Network/Location` could run a script that occurs whenever a user joins `Location` on `Network`.
+## Version 2.5
+### Extension changes
+* Extension communication system is now done through a single JSON object. Examples of the requests can be found in the `Extension Responses` file.
+* Extension command handlers are now passed directly through the JSON object, under the key "handler". No more identifiers needed.
+* Extensions are now installed to a database under the configuration root directory.
+
+#### New event hooks
+* User events: Allows extensions to catch user-related events happening on networks. For this to work, you must include the `UserEventHandler` attribute on your main class, or, in the compiled install file, it's under handlers as `User`.
+  * **user.join**: User joining a location.
+  * **user.leave**: User leaving a location.
+  * **user.quit**: User quitting a network.
+  * **user.namechange**: User changing their display name on a network.
+
+* Message events
+  * **message.recieve**: Returning from an older build, this allows extensions to catch incoming messages on networks. For this to work, the attribute `MessageHandler` MUST be applied to the extension class on installation. In the compiled install file, this is signalled by the handler `Message:Recieve`.
+
+
+### Interface Changes
+* Interface is now done in WPF instead of WinForms. This should be a bit nicer to work with, but for now it's a basic console window.
 
 
 ## Version 2.4: The overhaul update
