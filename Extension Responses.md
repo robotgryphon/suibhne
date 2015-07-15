@@ -2,10 +2,10 @@
 {
 	"**responseCode**": "message.recieve",
 	"**contents**": "Message Contents.",
-    "**location**": {
-        "*id*": "<guid>",
-        "*type*": "(public|private)_(message|action|notice)"
-    },
+	"**location**": {
+		"*id*": "<guid>",
+		"*type*": "(public|private)_(message|action|notice)"
+	},
 	"**sender**": {
 		"*DisplayName*": "Delenas", 
 		"*Username*": "delenas" 
@@ -16,8 +16,8 @@
 user.namechange has an additional param under user: "LastDisplayName".
 
 {
-    "**responseCode**": "user.join",
-    "**location**": "<guid>",
+	"**responseCode**": "user.join",
+	"**location**": "<guid>",
 	"**user**": {
 		"DisplayName": "Delenas",
 		"Username": "delenas"
@@ -27,30 +27,30 @@ user.namechange has an additional param under user: "LastDisplayName".
 ### Command
 {
 	"**responseCode**": "command.recieve",
-    "**handler**": "commandHandler",
+	"**handler**": "commandHandler",
 	"**arguments**": "command arguments",
-    "**location**": {
-        "*id*": "<guid>",
-        "*type*": "public"
-    },
-    "**sender**": {
-        "*DisplayName*": "Delenas",
-        "*Username*": "delenas"
-    }
+	"**location**": {
+		"*id*": "<guid>",
+		"*type*": "public"
+	},
+	"**sender**": {
+		"*DisplayName*": "Delenas",
+		"*Username*": "delenas"
+	}
 }
 
 ### InformationRequest - info.request, info.response
 {
-    "**responseCode**": "info.request",
-    "**requestType**": "location.id",
-    "**params**": {
-        "*networkName*": "<string>",
-        "*locationName*": "<string>"
-    }
+	"**responseCode**": "info.request",
+	"**requestType**": "location.id",
+	"**params**": {
+		"*networkName*": "<string>",
+		"*locationName*": "<string>"
+	}
 }
 
 ### ExtensionEvent - extension.activate, extension.shutdown
 {
-    "**responseCode**": "extension.activate",
-    "**id**": "<guid>"
+	"**responseCode**": "extension.activate",
+	"**extid**": "<guid>"
 }
