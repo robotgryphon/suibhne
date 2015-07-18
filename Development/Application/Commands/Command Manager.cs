@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Ostenvighx.Suibhne.Extensions;
 using System.Data;
 using System.Data.SQLite;
+using System.Text.RegularExpressions;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -93,7 +94,7 @@ namespace Ostenvighx.Suibhne.Commands {
                 
             }
 
-            catch (Exception e) {
+            catch (Exception) {
 
             }
 
@@ -110,8 +111,6 @@ namespace Ostenvighx.Suibhne.Commands {
 
             sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("system", 250);
             RegisterCommand("system", sys);
-
-            RegisterCommand("test", new CommandMap() { AccessLevel = 250 });
             RegisterCommand("commands", new CommandMap() { AccessLevel = 1 });
             RegisterCommand("help", new CommandMap() { AccessLevel = 1 });
             return mappedCommands;
@@ -150,6 +149,9 @@ namespace Ostenvighx.Suibhne.Commands {
                 response.target = message.target;
             }
 
+            if(!Regex.Match(command, @"[\w\d]+").Success)
+                return;
+            
             if (!CommandMapping.ContainsKey(command)) {
                 response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
                 response.message = "is not sure what to do with this information. [INVALID COMMAND]";
@@ -165,10 +167,6 @@ namespace Ostenvighx.Suibhne.Commands {
             }
 
             switch (command) {
-                case "test":
-                    Core.Log("Got test args: " + message.message);
-                    break;
-
                 case "commands":
                     SystemCommands.HandleCommandsCommand(conn, message);
                     break;

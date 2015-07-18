@@ -37,6 +37,14 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// </summary>
         public Reference.MessageType type;
 
+        public Boolean IsPrivate {
+            get {
+                return Message.IsPrivateMessage(type);
+            }
+
+            protected set { }
+        }
+
         public Message(byte[] stream) {
             // <destination:16>
             // <messageType:1>
@@ -84,16 +92,14 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             return response;
         }
 
-        public static bool IsPrivateMessage(Message msg) {
-            switch (msg.type) {
-                case Reference.MessageType.PrivateMessage:
-                case Reference.MessageType.PrivateAction:
-                case Reference.MessageType.Notice:
-                    return true;
+        public static bool IsPrivateMessage(Reference.MessageType type) {
+            return (type == Reference.MessageType.PrivateMessage) ||
+                    (type == Reference.MessageType.PrivateAction) ||
+                    (type == Reference.MessageType.Notice);
+        }
 
-                default:
-                    return false;
-            }
+        public static bool IsPrivateMessage(Message msg) {
+            return msg.IsPrivate;
         }
 
         public byte[] ConvertToBytes() {

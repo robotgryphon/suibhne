@@ -32,14 +32,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         protected byte[] GlobalBuffer;
         #endregion
 
-        /// <summary>
-        /// Used to group all users together in one "location".
-        /// If the location is equal to this, then it's a private message. 
-        /// Check the sender in that case.
-        /// </summary>
-        public Guid UserIdentifier { get; protected set; }
-
-        protected Guid NetworkIdentifier {
+        internal Guid Identifier {
             get { return GetLocationIdByName("<network>"); }
             private set { }
         }
@@ -84,8 +77,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.Status = Base.Reference.ConnectionStatus.NotReady;
 
             this._conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.UserIdentifier = Guid.NewGuid();
-            this.Listened.Add(UserIdentifier, new Base.Location("<user>"));
 
             this.Me = new Base.User();
             this.Server = new Base.Location("localhost", Networks.Base.Reference.LocationType.Network);
@@ -156,7 +147,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Base.User tmpMe = new Base.User(Me.Username, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
 
-                HandleUserDisplayNameChange(NetworkIdentifier, Me);
+                HandleUserDisplayNameChange(Identifier, Me);
             }
         }
 
@@ -258,7 +249,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
         protected override void HandleConnectionComplete(Base.Network n) {
             if (Me.LastDisplayName != "") {
-                Base.Message message = new Base.Message(UserIdentifier, Me, "IDENTIFY " + Me.LastDisplayName);
+                Base.Message message = new Base.Message(this.Identifier, Me, "IDENTIFY " + Me.LastDisplayName);
+                message.type = Base.Reference.MessageType.PrivateMessage;
                 message.target = new Base.User("NickServ");
                 SendMessage(message);
             }
@@ -274,6 +266,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (this.OnDataRecieved != null) {
                 OnDataRecieved(this, line);
             }
+            
+            Console.WriteLine(line);
 
             String[] dataChunks = line.Split(new char[] { ' ' });
             try {
@@ -356,7 +350,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                     case "quit":
                         Base.User quitter = User.Parse(dataChunks[0]);
-                        HandleUserQuit(NetworkIdentifier, quitter);
+                        HandleUserQuit(Identifier, quitter);
 
                         foreach (Base.Location listened in Listened.Values) {
                             string hostmask = dataChunks[0].Substring(line.IndexOf("@") + 1);
@@ -406,7 +400,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 if (loc.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
                     msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
 
-                Base.Location serv = Listened[NetworkIdentifier];
+                Base.Location serv = Listened[Identifier];
                 if (serv.AccessLevels.ContainsKey("*@" + hostmask))
                     msg.sender.NetworkAuthLevel = serv.AccessLevels["*@" + hostmask];
 
@@ -436,7 +430,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                             SendRaw("JOIN " + location.Name);
                         }
 
-                        location.Parent = this.NetworkIdentifier;
+                        location.Parent = this.Identifier;
                         Listened.Add(locationID, location);
 
                         SendRaw("WHO " + location.Name);
@@ -499,7 +493,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                 String location;
                 if (Listened.ContainsKey(message.locationID)) {
-                    if (message.locationID == UserIdentifier)
+                    if (message.locationID == this.Identifier && message.IsPrivate)
                         location = message.target.DisplayName;
                     else
                         location = Listened[message.locationID].Name;
@@ -559,7 +553,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Me = me;
             }
 
-            HandleUserDisplayNameChange(NetworkIdentifier, changer);
+            HandleUserDisplayNameChange(Identifier, changer);
 
             foreach (Base.Location location in Listened.Values) {
                 foreach (String host in location.AccessLevels.Keys) {

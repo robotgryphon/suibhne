@@ -74,7 +74,7 @@ namespace Ostenvighx.Suibhne {
                     }
 
                     catch (Exception e) {
-                        response.message = "There was an error processing your request. Sorry about that!";
+                        response.message = "There was an error processing your request. Sorry about that! Error message: " + e.Message;
                         conn.SendMessage(response);
 
                     }
@@ -117,7 +117,7 @@ namespace Ostenvighx.Suibhne {
                         }
                     }
 
-                    catch (Exception e) {
+                    catch (Exception) {
 
                     }
 

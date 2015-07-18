@@ -140,7 +140,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Connected = true;
                 conn.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, conn);
 
-                conn.Send(Encoding.UTF32.GetBytes("{ \"responseCode\": \"extension.activate\", \"extid\": \"" + Identifier + "\" }"));
+                conn.Send(Encoding.UTF32.GetBytes("{ \"event\": \"extension.activate\", \"extid\": \"" + Identifier + "\" }"));
 
             }
 
@@ -204,7 +204,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (Event == null)
                     return;
 
-                switch (Event["responseCode"].ToString().ToLower()) {
+                switch (Event["event"].ToString().ToLower()) {
                     case "extension.details":
                         string response =
                             "[" + Identifier + "] " + Name + " (v. " + Version + ")" + " developed by " + Author;
@@ -267,26 +267,25 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         protected virtual void HandleUserEvent(JObject json) {
-            Console.WriteLine("Got user event for user: " + json["sender"]["DisplayName"] + " of type " + json["responseCode"]);
+            Console.WriteLine("Got user event for user: " + json["sender"]["DisplayName"] + " of type " + json["event"]);
         }
 
         protected virtual void HandleIncomingMessage(JObject e) { }
 
         public void SendMessage(Networks.Base.Message message) {
             JObject msg = new JObject();
-            msg.Add("responseCode", "message.send");
+            msg.Add("event", "message.send");
             msg.Add("extid", this.Identifier);
             msg.Add("contents", message.message);
 
-            JObject sender = new JObject();
             JObject location = new JObject();
-
-            sender.Add("DisplayName", this.Name);
-
             location.Add("id", message.locationID);
             location.Add("type", (byte) message.type);
+
+            if (Message.IsPrivateMessage(message)) {
+                location.Add("target", message.target.DisplayName);
+            }
             
-            msg.Add("sender", sender);
             msg.Add("location", location);
 
             conn.Send(Encoding.UTF32.GetBytes(msg.ToString()));

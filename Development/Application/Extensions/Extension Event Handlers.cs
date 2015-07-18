@@ -17,7 +17,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("Handling message event: " + m.ToString().Replace(location["Identifier"].ToString(), location["Name"].ToString()));
 
             JObject messageEvent = new JObject();
-            messageEvent.Add("responseCode", "message.recieve");
+            messageEvent.Add("event", "message.recieve");
 
             JObject l = new JObject();
             l.Add("id", m.locationID);
@@ -41,7 +41,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("Handling user " + u.DisplayName + " joining location " + location["Name"]);
 
             JObject userEvent = new JObject();
-            userEvent.Add("responseCode", "user.join");
+            userEvent.Add("event", "user.join");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -60,7 +60,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("Handling user " + u.DisplayName + " leaving location " + location["Name"]);
 
             JObject userEvent = new JObject();
-            userEvent.Add("responseCode", "user.leave");
+            userEvent.Add("event", "user.leave");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -79,7 +79,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("Handling user " + u.DisplayName + " quitting location " + location["Name"]);
 
             JObject userEvent = new JObject();
-            userEvent.Add("responseCode", "user.quit");
+            userEvent.Add("event", "user.quit");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -98,7 +98,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("Handling user " + u.LastDisplayName + " changing name to " + u.DisplayName + " on network " + location["Name"]);
 
             JObject userEvent = new JObject();
-            userEvent.Add("responseCode", "user.namechange");
+            userEvent.Add("event", "user.namechange");
             userEvent.Add("location", l);
 
             JObject user = new JObject();

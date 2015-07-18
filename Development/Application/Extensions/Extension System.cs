@@ -55,9 +55,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         protected ExtensionServer Server;
 
-        public event Events.ExtensionMapEvent OnExtensionConnected;
-        public event Events.ExtensionMapEvent OnExtensionStopped;
-
         private ExtensionSystem() {
             if (File.Exists(Core.SystemConfig.SavePath)) {
                 // Get some basic info about config file
@@ -86,7 +83,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Core.Log("Extension '" + extension.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
             JObject shutdown = new JObject();
-            shutdown.Add("responseCode", "extension.shutdown");
+            shutdown.Add("event", "extension.shutdown");
 
             extension.Send(Encoding.UTF32.GetBytes(shutdown.ToString()));
 
@@ -167,7 +164,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             catch (Exception e) {
-
+                Core.Log("Error registering extension: " + e.Message);
             }
 
             finally {
@@ -210,7 +207,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
 
                 #region Handle Code Response
-                switch (ev["responseCode"].ToString().ToLower()) {
+                switch (ev["event"].ToString().ToLower()) {
 
                     case "extension.activate":
                         Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
@@ -232,11 +229,21 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                     case "message.send":
                         try {
-                            DataRow location = Utilities.GetLocationEntry(Guid.Parse(ev["location"]["id"].ToString()));
-                            if (location == null) break;
+                            Guid locationID = ev["location"]["id"].ToObject<Guid>();
+                            
+                            DataRow location = Utilities.GetLocationEntry(locationID);
+                            if (location == null) 
+                                break;
 
-                            NetworkBot bot = Core.Networks[Guid.Parse(location["ParentId"].ToString())];
-                            Message msg = new Message( Guid.Parse(location["Identifier"].ToString()), new User(extension.Name), ev["contents"].ToString() );
+                            Message msg = new Message(locationID, new User(extension.Name), ev["contents"].ToString());
+                            NetworkBot bot;
+                            if (Message.IsPrivateMessage((Reference.MessageType) ev["location"]["type"].ToObject<byte>())) {
+                                bot = Core.Networks[locationID];
+                                msg.target = new User(ev["location"]["target"].ToString());
+                            } else {
+                                bot = Core.Networks[Guid.Parse(location["ParentId"].ToString())];
+                            }
+                            
                             msg.type = (Reference.MessageType)((byte) ev["location"]["type"]);
                             bot.SendMessage(msg);                           
                         }
@@ -249,7 +256,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                     default:
                         // Unknown response
-                        Core.Log("Recieved unknown response code: " + ev["responseCode"].ToString());
+                        Core.Log("Recieved unknown event code: " + ev["event"].ToString());
                         break;
 
                 }

@@ -143,9 +143,7 @@ namespace Ostenvighx.Suibhne {
             Console.WriteLine("{0}", message);
             Console.ResetColor();
 
-            if (OnLogMessage != null) {
-                OnLogMessage("[" + DateTime.Now + "] " + message, type);
-            }
+            if (OnLogMessage != null) OnLogMessage("[" + DateTime.Now + "] " + message, type);
         }
     }
 }

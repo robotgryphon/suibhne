@@ -29,10 +29,13 @@ namespace Ostenvighx.Suibhne {
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
 
-                return resultsTable.Rows[0];
+                if (resultsTable.Rows.Count > 0)
+                    return resultsTable.Rows[0];
+                else
+                    return null;
             }
 
-            catch (Exception e) {
+            catch (Exception) {
 
             }
 
@@ -69,7 +72,7 @@ namespace Ostenvighx.Suibhne {
                 return resultsTable.Rows[0];
             }
 
-            catch (Exception e) {
+            catch (Exception) {
 
             }
 

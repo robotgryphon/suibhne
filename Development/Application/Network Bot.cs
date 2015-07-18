@@ -136,6 +136,8 @@ namespace Ostenvighx.Suibhne {
 
         protected void HandleMessageRecieved(Message message) {
             Core.Log(message.ToString(), LogType.INCOMING);
+
+            // TODO: Make the command character configurable?
             if (message.message.StartsWith("!"))
                 HandleCommand(message);
         }

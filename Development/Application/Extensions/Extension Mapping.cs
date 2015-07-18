@@ -25,14 +25,20 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void HandleHelpCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
-                ev.Add("responseCode", "command.help");
+                ev.Add("event", "command.help");
                 ev.Add("handler", method.CommandString);
                 
                 JObject location = new JObject();
                 location.Add("id", msg.locationID);
-                location.Add("is_private", Message.IsPrivateMessage(msg));
+                location.Add("type", (byte) msg.type);
 
                 ev.Add("location", location);
+
+                JObject sender = new JObject();
+                sender.Add("DisplayName", msg.sender.DisplayName);
+                sender.Add("Username", msg.sender.Username);
+
+                ev.Add(sender);
 
                 Send(Encoding.UTF32.GetBytes(ev.ToString()));
             } else {
@@ -45,14 +51,25 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void HandleCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
-                ev.Add("responseCode", "command.recieve");
+                ev.Add("event", "command.recieve");
                 ev.Add("handler", method.CommandString);
+                if (msg.message.Split(' ').Length > 1)
+                    ev.Add("arguments", msg.message.Substring(msg.message.IndexOf(' ') + 1));
+                else
+                    ev.Add("arguments", "");
 
                 JObject location = new JObject();
                 location.Add("id", msg.locationID);
-                location.Add("is_private", Message.IsPrivateMessage(msg));
+                location.Add("type", (byte)msg.type);
 
                 ev.Add("location", location);
+
+                JObject sender = new JObject();
+                sender.Add("DisplayName", msg.sender.DisplayName);
+                sender.Add("Username", msg.sender.Username);
+
+                ev.Add("sender", sender);
+
                 Send(Encoding.UTF32.GetBytes(ev.ToString()));
             }
         }
