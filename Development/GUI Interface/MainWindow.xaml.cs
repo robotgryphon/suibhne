@@ -1,4 +1,5 @@
 ﻿using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Gui.Panels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +17,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace GUI_Interface {
+namespace Ostenvighx.Suibhne.Gui {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -24,7 +25,14 @@ namespace GUI_Interface {
         public MainWindow() {
             InitializeComponent();
 
-            
+            Core.LoadConfiguration();
+            Core.LoadNetworks();
+
+            NetworkPanel cb = new NetworkPanel();
+            Grid p = cb.GetPanel();
+            p.SetValue(Grid.RowProperty, 1);
+
+            this.WindowContainer.Children.Add(p);
         }
     }
 }

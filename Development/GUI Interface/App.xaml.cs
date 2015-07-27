@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace GUI_Interface {
+namespace Ostenvighx.Suibhne.Gui {
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>

@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Configuration Type="Network">
+
+  <Section Name="Host Settings">
+    <Field Label="Hostname" Type="Text" Key="host" />
+    <Field Label="Port Number" Type="Text" Key="port" />
+    <Field Label="Use SSL? [WIP]" Type="Checkbox" Key="useSSL" />
+    <Field Label="Server Password" Type="Password" Key="servPass" />
+  </Section>
+
+  <Section Name="Account Settings">
+    <Field Label="Username" Type="text" Key="userName" />
+    <Field Label="Nickname" Type="text" Key="displayName" />
+    <Field Label="Real Name" Type="text" Key="realName" />
+  </Section>
+
+  
+  <Section Name="Authentification">
+    <Text>Authentification is used to identify with Nickserv or similar services on the network.</Text>
+    <Field Label="Service" Type="Select" Key="service">
+      <Option>NickServ (/msg NickServ identify {password})</Option>
+      <Option>NickServ (/msg NickServ {password})</Option>
+    </Field>
+    
+    <Field Label="Password" Type="Password" Key="authPass" />
+  </Section>
+</Configuration>

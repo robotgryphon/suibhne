@@ -52,14 +52,11 @@ namespace Ostenvighx.Suibhne {
             protected set { }
         }
 
-        public static void DoStartup() {
+        public static void LoadConfiguration() {
             try {
                 Core.ConfigLastUpdate = DateTime.Now;
                 Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
                 Core.SystemConfig.CaseSensitive = false;
-
-                
-                Core.Networks = new Dictionary<Guid, NetworkBot>();
 
                 Core.SystemConfig.ExpandKeyValues();
                 Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
@@ -74,16 +71,14 @@ namespace Ostenvighx.Suibhne {
 
                 Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
                 ExtensionSystem.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/extensions.sns");
-
-                Core.Log("Database connection opened. Validating..");
-                ValidateDatabase();
             }
 
-            catch (Exception) {
-                return;
-            }
+            catch(Exception){
 
-            Scripting.Scripting.GatherScriptNodes();
+            }
+        }
+        public static void LoadNetworks() {
+            Core.Networks = new Dictionary<Guid, NetworkBot>();
 
             try {
                 String networkRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
@@ -111,12 +106,6 @@ namespace Ostenvighx.Suibhne {
             catch (Exception e) {
                 Console.WriteLine("Exception thrown: " + e);
             }
-
-            ExtensionSystem.Instance.GetActiveExtensions();
-        }
-
-        public static void ValidateDatabase() {
-
         }
 
         public static void Log(string message, LogType type = LogType.GENERAL) {

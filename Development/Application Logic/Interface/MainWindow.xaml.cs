@@ -25,7 +25,9 @@ namespace Interface_v2 {
         public MainWindow() {
             InitializeComponent();
 
-            Core.DoStartup();
+            Core.LoadConfiguration();
+            Core.LoadNetworks();
+
             Core.OnLogMessage += (m, t) => {
                 AddOutput(m.ToString());
             };
