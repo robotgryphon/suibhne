@@ -42,7 +42,17 @@ namespace Ostenvighx.Suibhne {
         public delegate void CoreLogEvent(String log, LogType type = LogType.GENERAL);
         public static event CoreLogEvent OnLogMessage;
 
-        internal static void DoStartup() {
+        public static Version SystemVersion {
+            get {
+
+                Type r = typeof(Ostenvighx.Suibhne.Networks.Base.Reference);
+                return r.Assembly.GetName().Version;
+            }
+
+            protected set { }
+        }
+
+        public static void DoStartup() {
             try {
                 Core.ConfigLastUpdate = DateTime.Now;
                 Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");

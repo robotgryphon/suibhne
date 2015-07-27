@@ -14,8 +14,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             DataRow location = Utilities.GetLocationEntry(m.locationID);
 
-            Core.Log("Handling message event: " + m.ToString().Replace(location["Identifier"].ToString(), location["Name"].ToString()));
-
             JObject messageEvent = new JObject();
             messageEvent.Add("event", "message.recieve");
 
@@ -38,7 +36,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserJoin(Guid l, User u) {
             DataRow location = Utilities.GetLocationEntry(l);
-            Core.Log("Handling user " + u.DisplayName + " joining location " + location["Name"]);
 
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.join");
@@ -57,7 +54,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserLeave(Guid l, User u) {
             DataRow location = Utilities.GetLocationEntry(l);
-            Core.Log("Handling user " + u.DisplayName + " leaving location " + location["Name"]);
 
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.leave");
@@ -76,7 +72,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserQuit(Guid l, User u) {
             DataRow location = Utilities.GetLocationEntry(l);
-            Core.Log("Handling user " + u.DisplayName + " quitting location " + location["Name"]);
 
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.quit");
@@ -95,7 +90,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserNameChange(Guid l, User u) {
             DataRow location = Utilities.GetLocationEntry(l);
-            Core.Log("Handling user " + u.LastDisplayName + " changing name to " + u.DisplayName + " on network " + location["Name"]);
 
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.namechange");
