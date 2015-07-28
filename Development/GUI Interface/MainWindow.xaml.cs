@@ -22,17 +22,47 @@ namespace Ostenvighx.Suibhne.Gui {
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window {
+
+        public Button ActiveTab;
+
         public MainWindow() {
             InitializeComponent();
 
             Core.LoadConfiguration();
             Core.LoadNetworks();
 
-            NetworkPanel cb = new NetworkPanel();
-            Grid p = cb.GetPanel();
-            p.SetValue(Grid.RowProperty, 1);
+            ActiveTab = AboutTab;
+            ActiveTab.Style = (Style)FindResource("TabButtonActive");
 
-            this.WindowContainer.Children.Add(p);
+            NetworkPanel cb = new NetworkPanel();
+            Grid p = (Grid) cb.GetPanel();
+
+            this.ContentArea.Children.Add(p);
+        }
+
+        public void HandleTabSwitch(object sender, RoutedEventArgs e) {
+            Button s = (Button)sender;
+
+            ActiveTab.Style = (Style) FindResource("TabButton");
+            ActiveTab = s;
+            ActiveTab.Style = (Style)FindResource("TabButtonActive");
+
+            ContentArea.Children.Clear();
+
+            Panel p = new StackPanel();
+            switch (ActiveTab.Name.ToLower()) {
+                case "networktab":
+                    NetworkPanel cb = new NetworkPanel();
+                    p = cb.GetPanel();
+                    break;
+
+                case "abouttab":
+                    About a = new About();
+                    p = a.GetPanel();
+                    break;
+            }
+
+            this.ContentArea.Children.Add(p);            
         }
     }
 }

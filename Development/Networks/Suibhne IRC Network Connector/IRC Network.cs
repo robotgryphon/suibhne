@@ -108,7 +108,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// Create a new IRC _conn object with the specified configuration values.
         /// </summary>
         /// <param name="config">Configuration to use to connect to the server.</param>
-        public IrcNetwork(IConfig config)
+        public IrcNetwork(IConfigSource config)
             : this() {
                 DoNetworkSetup(config);
         }
@@ -116,23 +116,22 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         public override void Setup(String configFile) {
             IniConfigSource configLoaded = new IniConfigSource(configFile);
             configLoaded.CaseSensitive = false;
-            IniConfig config = (IniConfig)configLoaded.Configs["Server"];
 
-            DoNetworkSetup(config);            
+            DoNetworkSetup(configLoaded);            
         }
 
-        private void DoNetworkSetup(IConfig config) {
+        private void DoNetworkSetup(IConfigSource config) {
             this.Me = new Base.User(
-                config.GetString("username", "user"),
-                config.GetString("authpassword", ""),
-                config.GetString("nickname", "IrcUser"));
+                config.Configs["Account Settings"].GetString("userName", "user"),
+                config.Configs["Authentification"].GetString("authPass", ""),
+                config.Configs["Account Settings"].GetString("displayName", "IrcUser"));
 
             this.Server = new Base.Location(
-                config.GetString("hostname", "localhost"),
-                config.GetString("password", ""),
+                config.Configs["Host Settings"].GetString("host", "localhost"),
+                config.Configs["Host Settings"].GetString("servPass", ""),
                 Base.Reference.LocationType.Network);
 
-            this.port = config.GetInt("port", 6667);
+            this.port = config.Configs["Host Settings"].GetInt("port", 6667);
         }
 
         /// <summary>

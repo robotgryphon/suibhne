@@ -5,7 +5,7 @@
     <Grid Name="WindowContainer">
         <Grid.RowDefinitions>
             <RowDefinition Height="40" Name="Navigation" />
-            <RowDefinition Height="*"  Name="ContentPanel" />
+            <RowDefinition Height="*"  />
         </Grid.RowDefinitions>
 
         <Grid Height="40" Width="Auto" HorizontalAlignment="Stretch" Background="#ff4d4d4d" Grid.ColumnSpan="2">
@@ -20,14 +20,17 @@
             </WrapPanel>
 
             <WrapPanel Name="NavTabs" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                <Button Content="Networks" Style="{StaticResource TabButtonActive}"></Button>
+                <Button x:Name="NetworkTab" Content="Networks" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
 
-                <Button Content="Locations" Style="{StaticResource TabButton}"></Button>
-                <Button Content="Extensions" Style="{StaticResource TabButton}"></Button>
-                <Button Content="Scripting" Style="{StaticResource TabButton}"></Button>
-                <Button Content="About" Style="{StaticResource TabButton}"></Button>
+                <Button x:Name="LocationsTab" Content="Locations" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
+                <Button x:Name="ExtensionsTab" Content="Extensions" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
+                <Button x:Name="ScriptingTab" Content="Scripting" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
+                <Button x:Name="AboutTab" Content="About" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
             </WrapPanel>
+            
         </Grid>
+        
+        <Grid Name="ContentArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="Auto" Background="White" />
     </Grid>
 
 </Window>

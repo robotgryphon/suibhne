@@ -45,7 +45,7 @@ namespace Ostenvighx.Suibhne {
         public static Version SystemVersion {
             get {
 
-                Type r = typeof(Ostenvighx.Suibhne.Networks.Base.Reference);
+                Type r = typeof(Core);
                 return r.Assembly.GetName().Version;
             }
 
