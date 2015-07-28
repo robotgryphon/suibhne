@@ -309,7 +309,7 @@ namespace Ostenvighx.Suibhne.Commands {
 
                     case "id":
                     case "identifier":
-                        DataRow location;
+                        KeyValuePair<Guid, Location> location;
                         switch(messageParts.Length) {
                             case 2:
                                 response.message = "Current identifier for location: " + msg.locationID + ". Network identifier: " + conn.Identifier;
@@ -318,11 +318,12 @@ namespace Ostenvighx.Suibhne.Commands {
 
                             case 3:
                                 // Looking up local location id
-                                location = Utilities.GetLocationEntry(conn.FriendlyName, messageParts[2].ToLower());
+                                location = Utilities.GetLocationInfo(conn.FriendlyName, messageParts[2].ToLower());
 
-                                if (location == null) {
-                                    location = Utilities.GetLocationEntry(messageParts[2].ToLower(), "");
-                                    if (location == null) {
+                                // If the location wasn't found, try to find it as a network instead
+                                if (location.Key == Guid.Empty) {
+                                    location = Utilities.GetLocationInfo(messageParts[2].ToLower(), "");
+                                    if (location.Key == Guid.Empty) {
                                         response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
                                         conn.SendMessage(response);
 
@@ -330,14 +331,14 @@ namespace Ostenvighx.Suibhne.Commands {
                                     }
                                 }
 
-                                response.message = "Current identifier for " + (location["Name"].ToString() != "" ? "location " + location["Name"] + ": " : "network " + location["Name"] + ": ") + location["Identifier"];
+                                response.message = "Current identifier for " + (location.Value.Name!= "" ? "location " + location.Value.Name + ": " : "network " + location.Value.Name + ": ") + location.Key;
                                 conn.SendMessage(response);
                                 break;
 
                             case 4:
-                                location = Utilities.GetLocationEntry(messageParts[2].ToLower(), messageParts[3].ToLower());
-                                response.message = "Current identifier for location " + location["Name"] + 
-                                    " on network " + messageParts[2] + ": " + location["Identifier"] + ".";
+                                location = Utilities.GetLocationInfo(messageParts[2].ToLower(), messageParts[3].ToLower());
+                                response.message = "Current identifier for location " + location.Value.Name + 
+                                    " on network " + messageParts[2] + ": " + location.Key + ".";
 
                                 conn.SendMessage(response);
                                 break;

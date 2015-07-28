@@ -11,7 +11,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 
 namespace Ostenvighx.Suibhne.Gui.Panels {
-    internal class About : PanelBase {
+    internal class AboutPanel : PanelBase {
 
         public override Panel GetPanel() {
 

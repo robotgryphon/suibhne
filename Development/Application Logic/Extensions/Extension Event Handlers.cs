@@ -11,9 +11,6 @@ namespace Ostenvighx.Suibhne.Extensions {
     public static class ExtensionEventHandlers {
 
         public static void HandleMessageRecieved(Message m) {
-
-            DataRow location = Utilities.GetLocationEntry(m.locationID);
-
             JObject messageEvent = new JObject();
             messageEvent.Add("event", "message.recieve");
 
@@ -35,8 +32,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public static void HandleUserJoin(Guid l, User u) {
-            DataRow location = Utilities.GetLocationEntry(l);
-
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.join");
             userEvent.Add("location", l);
@@ -53,8 +48,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public static void HandleUserLeave(Guid l, User u) {
-            DataRow location = Utilities.GetLocationEntry(l);
-
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.leave");
             userEvent.Add("location", l);
@@ -71,8 +64,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public static void HandleUserQuit(Guid l, User u) {
-            DataRow location = Utilities.GetLocationEntry(l);
-
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.quit");
             userEvent.Add("location", l);
@@ -89,8 +80,6 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public static void HandleUserNameChange(Guid l, User u) {
-            DataRow location = Utilities.GetLocationEntry(l);
-
             JObject userEvent = new JObject();
             userEvent.Add("event", "user.namechange");
             userEvent.Add("location", l);

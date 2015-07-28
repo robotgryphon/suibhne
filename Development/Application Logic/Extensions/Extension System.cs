@@ -231,7 +231,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         try {
                             Guid locationID = ev["location"]["id"].ToObject<Guid>();
                             
-                            DataRow location = Utilities.GetLocationEntry(locationID);
+                            Location location = Utilities.GetLocationInfo(locationID).Value;
                             if (location == null) 
                                 break;
 
@@ -241,7 +241,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                                 bot = Core.Networks[locationID];
                                 msg.target = new User(ev["location"]["target"].ToString());
                             } else {
-                                bot = Core.Networks[Guid.Parse(location["ParentId"].ToString())];
+                                bot = Core.Networks[location.Parent];
                             }
                             
                             msg.type = (Reference.MessageType)((byte) ev["location"]["type"]);

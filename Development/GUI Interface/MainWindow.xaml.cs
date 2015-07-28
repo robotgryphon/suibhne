@@ -31,10 +31,10 @@ namespace Ostenvighx.Suibhne.Gui {
             Core.LoadConfiguration();
             Core.LoadNetworks();
 
-            ActiveTab = AboutTab;
-            ActiveTab.Style = (Style)FindResource("TabButtonActive");
+            ActiveTab = OutputTab;
+            ActiveTab.Style = (Style) FindResource("TabButtonActive");
 
-            NetworkPanel cb = new NetworkPanel();
+            PanelBase cb = new OutputPanel();
             Grid p = (Grid) cb.GetPanel();
 
             this.ContentArea.Children.Add(p);
@@ -57,7 +57,7 @@ namespace Ostenvighx.Suibhne.Gui {
                     break;
 
                 case "abouttab":
-                    About a = new About();
+                    AboutPanel a = new AboutPanel();
                     p = a.GetPanel();
                     break;
             }

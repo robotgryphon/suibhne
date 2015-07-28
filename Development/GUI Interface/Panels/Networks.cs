@@ -11,14 +11,19 @@ using System.Xml;
 using System.Xaml;
 using Nini.Config;
 using System.Windows.Media.Imaging;
+using Ostenvighx.Suibhne.Networks.Base;
+using System.Windows.Documents;
+using System.Data;
 
 namespace Ostenvighx.Suibhne.Gui.Panels {
     internal class NetworkPanel : PanelBase {
 
         public Grid Panel;
 
+        private Guid currentNetwork;
+
         private StackPanel configPanel;
-        private StackPanel networkList;
+        private TreeView networkList;
 
         public NetworkPanel() {
             this.Panel = new Grid();
@@ -70,22 +75,37 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             Panel.Children.Add(sidebarContainer);
 
             StackPanel tools = new StackPanel();
+            tools.Orientation = Orientation.Horizontal;
             tools.SetValue(Grid.RowProperty, 0);
             tools.Height = 50;
             tools.Background = new SolidColorBrush(Colors.Sienna);
+            tools.HorizontalAlignment = HorizontalAlignment.Stretch;
+            tools.Width = 220;
+
+            Style ToolBarStyle = (Style)Application.Current.FindResource("PanelActionButton");
 
             tools.Width = sidebarContainer.Width;
             Button addBtn = new Button();
-            addBtn.Content = "+ Add New Network";
-            addBtn.Margin = new Thickness(10, 4, 10, 4);
-            addBtn.Height = tools.Height - 10;
-            addBtn.Background = new SolidColorBrush(Colors.Transparent);
-            addBtn.HorizontalAlignment = HorizontalAlignment.Stretch;
-            addBtn.SetValue(Grid.ColumnProperty, 0);
-            addBtn.VerticalAlignment = VerticalAlignment.Center;
-            addBtn.BorderThickness = new Thickness(0);
-            addBtn.Foreground = new SolidColorBrush(Colors.White);
+            addBtn.Content = "\u002B";
+            addBtn.FontSize = 20;
+
+            // Override default style to center toolbar buttons
+            addBtn.Margin = new Thickness(22.5, 5, 2.5, 5);
+            addBtn.Style = ToolBarStyle;
+
+
             tools.Children.Add(addBtn);
+
+            Button remBtn = new Button();
+            remBtn.Content = "\u2212";
+            remBtn.FontSize = 20;
+            remBtn.Style = ToolBarStyle;
+            tools.Children.Add(remBtn);
+
+            Button saveBtn = new Button();
+            saveBtn.Content = "\u2713";
+            saveBtn.Style = ToolBarStyle;
+            tools.Children.Add(saveBtn);
 
             sidebarContainer.Children.Add(tools);
 
@@ -95,69 +115,94 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             networksScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             sidebarContainer.Children.Add(networksScroller);
 
-            this.networkList = new StackPanel();
+
+            this.networkList = new TreeView();
+            networkList.BorderThickness = new Thickness(0);
             networksScroller.Content = networkList;
             networkList.Margin = new Thickness(0, 10, 0, 0);
             foreach (NetworkBot b in Core.Networks.Values) {
-                Button l = new Button();
-                l.Content = b.FriendlyName;
-                l.HorizontalAlignment = HorizontalAlignment.Stretch;
-                l.Padding = new Thickness(2);
-                l.Margin = new Thickness(10, 0, 0, 2);
-                l.Background = new SolidColorBrush(Colors.Transparent);
-                l.BorderThickness = new Thickness(0);
-                l.Name = b.Identifier.ToString().Replace("-", "_");
-                l.Click += NetworkButtonClick;
+                TreeViewItem networkListItem = new TreeViewItem();
+                networkListItem.Header = b.FriendlyName;
+                networkListItem.HorizontalAlignment = HorizontalAlignment.Stretch;
+                networkListItem.Padding = new Thickness(2);
+                networkListItem.Margin = new Thickness(10, 0, 0, 2);
+                networkListItem.Background = new SolidColorBrush(Colors.Transparent);
+                networkListItem.BorderThickness = new Thickness(0);
+                networkListItem.FontWeight = FontWeights.Bold;
+                networkListItem.Uid = b.Identifier.ToString();
+                networkListItem.Selected += this.NetworkButtonClick;
 
-                networkList.Children.Add(l);
+                Dictionary<Guid, Location> knownLocations = b.GetKnownLocations();
+                foreach (KeyValuePair<Guid, Location> l in knownLocations) {
+                    TreeViewItem locationItem = new TreeViewItem();
+                    locationItem.Header = l.Value.Name;
+                    locationItem.Uid = l.Key.ToString();
+                    locationItem.FontWeight = FontWeights.Normal;
+                    locationItem.Selected += this.LocationItemClick;
+
+                    networkListItem.Items.Add(locationItem);
+                }
+
+                networkList.Items.Add(networkListItem);
             }
             #endregion
+        }
+
+        void LocationItemClick(object sender, RoutedEventArgs e) {
+            TreeViewItem selectedLocation = (TreeViewItem)sender;
+
+            Guid locationID = Guid.Parse(selectedLocation.Uid);
+            Location locationInfo = Utilities.GetLocationInfo(locationID).Value;
+            if (locationInfo.Parent == Guid.Empty)
+                return;
+
+            NetworkBot bot = Core.Networks[locationInfo.Parent];
+            Dictionary<Guid, Location> known = bot.GetKnownLocations();
+
+            Location location = known[locationID];
+
+            configPanel.Children.Clear();
+
+            SetupEditorHeader("Editing Location: " + location.Name);
+
+            TextBlock networkInfo = new TextBlock();
+            networkInfo.Margin = new Thickness(0, 8, 0, 0);
+
+            networkInfo.Inlines.Add(new Bold(new Run("Location Identifier: ")));
+            networkInfo.Inlines.Add(locationID.ToString());
+
+            configPanel.Children.Add(networkInfo);
+
+            e.Handled = true;
+        }
+
+        private void SetupEditorHeader(string headerText) {
+            Label stackHeader = new Label();
+            stackHeader.Margin = new Thickness(0);
+            stackHeader.FontSize = 30;
+            stackHeader.Content = headerText;
+            stackHeader.Foreground = new SolidColorBrush(Colors.White);
+            stackHeader.Background = new SolidColorBrush(Colors.Sienna);
+            stackHeader.Height = 50;
+
+            configPanel.Children.Add(stackHeader);
         }
 
         private void LoadNetworkConfig(NetworkBot b, IniConfigSource config, String filename) {
 
             configPanel.Children.Clear();
 
-            Grid stackHeaderContainer = new Grid();
-            stackHeaderContainer.ColumnDefinitions.Add(new ColumnDefinition());
+            SetupEditorHeader("Editing Network: " + b.FriendlyName);
 
-            ColumnDefinition toolbarHeaderContainer = new ColumnDefinition();
-            toolbarHeaderContainer.Width = new GridLength(120);
-            stackHeaderContainer.ColumnDefinitions.Add(toolbarHeaderContainer);
+            TextBlock networkInfo = new TextBlock();
+            networkInfo.Margin = new Thickness(10, 8, 0, 0);
 
-            configPanel.Children.Add(stackHeaderContainer);
-            
-            Label stackHeader = new Label();
-            stackHeader.SetValue(Grid.ColumnProperty, 0);
-            stackHeader.FontSize = 30;
-            stackHeader.Content = "Editing Network: " + b.FriendlyName;
-            stackHeader.Foreground = new SolidColorBrush(Colors.White);
-            stackHeader.Background = new SolidColorBrush(Colors.Sienna);
-            stackHeader.Height = 50;
-            stackHeaderContainer.Children.Add(stackHeader);
+            networkInfo.Inlines.Add(new Bold(new Run("Network Identifier: ")));
+            networkInfo.Inlines.Add(b.Identifier.ToString() + " (");
+            networkInfo.Inlines.Add(new Italic(new Run("Last modified on ")));
+            networkInfo.Inlines.Add(File.GetLastWriteTime(Core.ConfigDirectory + "/Networks/" + b.FriendlyName + "/" + b.FriendlyName + ".ini") + ")");
 
-            WrapPanel networkOptionsPanel = new WrapPanel();
-            networkOptionsPanel.SetValue(Grid.ColumnProperty, 1);
-            networkOptionsPanel.Background = new SolidColorBrush(Colors.Sienna);
-            stackHeaderContainer.Children.Add(networkOptionsPanel);
-
-            Button saveNetworkBtn = new Button();
-            saveNetworkBtn.Width = 40;
-            saveNetworkBtn.Background = new ImageBrush(new BitmapImage(new Uri("pack://application:,,,/GUI Interface;component/Images/save.png", UriKind.Absolute)));
-            saveNetworkBtn.Height = 40;
-            saveNetworkBtn.Margin = new Thickness(0, 5, 0, 5);
-
-            networkOptionsPanel.Children.Add(saveNetworkBtn);
-
-
-            Button delNetworkBtn = new Button();
-            delNetworkBtn.Width = 40;
-            delNetworkBtn.Height = 40;
-            delNetworkBtn.Background = new ImageBrush(new BitmapImage(new Uri("pack://application:,,,/GUI Interface;component/Images/trash.png", UriKind.Absolute)));
-            delNetworkBtn.BorderThickness = new Thickness(0);
-            delNetworkBtn.Margin = new Thickness(5);
-
-            networkOptionsPanel.Children.Add(delNetworkBtn);
+            configPanel.Children.Add(networkInfo);
 
             try {
                 String stackText = File.ReadAllText(filename);
@@ -174,7 +219,15 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                 Console.WriteLine(e);
             }
 
-            
+
+        }
+
+        private void SaveNetworkConfig(object sender, RoutedEventArgs e) {
+            NetworkBot network = Core.Networks[currentNetwork];
+
+            network.Disconnect();
+
+
         }
 
         public override Panel GetPanel() {
@@ -186,18 +239,10 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             // Get network details
             // Load in network config file for network type
             // Load in existing config data
-            Button networkButton = (Button) sender;
+            TreeViewItem networkButton = (TreeViewItem)sender;
 
-            foreach (object o in networkList.Children) {
-                Button netBtn = (Button)o;
-                netBtn.Foreground = new SolidColorBrush(Colors.Black);
-                netBtn.Background = new SolidColorBrush(Colors.Transparent);
-            }
-
-            networkButton.Background = new SolidColorBrush(Colors.SlateGray);
-            networkButton.Foreground = new SolidColorBrush(Colors.White);
-
-            NetworkBot b = Core.Networks[Guid.Parse(networkButton.Name.Replace("_", "-"))];
+            NetworkBot b = Core.Networks[Guid.Parse(networkButton.Uid)];
+            currentNetwork = b.Identifier;
 
             IniConfigSource config = new IniConfigSource(Core.ConfigDirectory + @"Networks\" + b.FriendlyName + @"\" + b.FriendlyName + ".ini");
 
@@ -271,7 +316,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                             foreach (XmlNode childNode in n.ChildNodes) {
                                 ComboBoxItem cbi = new ComboBoxItem();
                                 cbi.Content = childNode.InnerText;
-                                
+
                                 select.Items.Add(cbi);
                             }
 

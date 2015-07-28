@@ -20,9 +20,8 @@
             </WrapPanel>
 
             <WrapPanel Name="NavTabs" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                <Button x:Name="NetworkTab" Content="Networks" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-
-                <Button x:Name="LocationsTab" Content="Locations" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
+                <Button x:Name="OutputTab" Content="Output Log" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
+                <Button x:Name="NetworkTab" Content="Location Editor" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
                 <Button x:Name="ExtensionsTab" Content="Extensions" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
                 <Button x:Name="ScriptingTab" Content="Scripting" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
                 <Button x:Name="AboutTab" Content="About" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>

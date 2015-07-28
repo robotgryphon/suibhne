@@ -57,7 +57,7 @@ namespace Ostenvighx.Suibhne {
             config.CaseSensitive = false;
 
 
-            this.Identifier = Guid.Parse((String) Utilities.GetLocationEntry(FriendlyName)["Identifier"]);
+            this.Identifier = Utilities.GetLocationInfo(FriendlyName).Key;
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -90,14 +90,30 @@ namespace Ostenvighx.Suibhne {
             this.Status = Networks.Base.Reference.ConnectionStatus.Disconnected;
         }
 
-        public bool IsListeningTo(Guid g) {
-            foreach (Guid listened in _network.Listened.Keys) {
-                if (listened == g) {
-                    return true;
+        public Dictionary<Guid, Location> GetKnownLocations() {
+            Dictionary<Guid, Location> locations = new Dictionary<Guid, Location>();
+
+            string[] locationDirs = Directory.GetDirectories(Core.ConfigDirectory + "/Networks/" + this.FriendlyName + "/Locations/");
+
+            foreach (String locationDir in locationDirs) {
+                try {
+                    String locationName = locationDir.Substring(locationDir.LastIndexOf("/") + 1);
+                    IniConfigSource locConfig = new IniConfigSource(locationDir + "/" + locationName + ".ini");
+                    Ostenvighx.Suibhne.Networks.Base.Location location = new Ostenvighx.Suibhne.Networks.Base.Location(
+                        locConfig.Configs["Location"].GetString("Name", "#Location"),
+                        Networks.Base.Reference.LocationType.Public);
+
+                    Guid newLocationID = Utilities.GetLocationInfo(FriendlyName, location.Name).Key;
+
+                    locations.Add(newLocationID, location);
+                }
+
+                catch (Exception e) {
+                    Core.Log("Location loading failed: " + e.Message, LogType.ERROR);
                 }
             }
 
-            return false;
+            return locations;
         }
 
         public void SendMessage(Message m) {
@@ -107,17 +123,12 @@ namespace Ostenvighx.Suibhne {
         protected void AutoJoinLocations(String configDir) {
             String[] locations = Directory.GetDirectories(configDir + "/Locations/");
 
-            foreach (String location in locations) {
-                try {
-                    String locationName = location.Substring(location.LastIndexOf("/") + 1);
-                    IniConfigSource locConfig = new IniConfigSource(location + "/" + locationName + ".ini");
-                    Ostenvighx.Suibhne.Networks.Base.Location loc = new Ostenvighx.Suibhne.Networks.Base.Location(
-                        locConfig.Configs["Location"].GetString("Name", "#Location"),
-                        Networks.Base.Reference.LocationType.Public);
+            Dictionary<Guid, Location> KnownLocations = GetKnownLocations();
 
-                    Guid newLocationID = Guid.Parse((String) Utilities.GetLocationEntry(FriendlyName, loc.Name)["Identifier"]);
-                    
-                    _network.JoinLocation(newLocationID, loc);
+            foreach (KeyValuePair<Guid, Location> l in KnownLocations) {
+                try {
+                    Guid newLocationID = Utilities.GetLocationInfo(FriendlyName, l.Value.Name).Key;
+                    _network.JoinLocation(newLocationID, l.Value);
                 }
 
                 catch (Exception e) {

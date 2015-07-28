@@ -10,14 +10,18 @@ using Newtonsoft.Json.Linq;
 
 using System.Data;
 using System.Data.SQLite;
+using Ostenvighx.Suibhne.Networks.Base;
 
 namespace Ostenvighx.Suibhne {
     public class Utilities {
 
-        public static DataRow GetLocationEntry(Guid id) {
+        public static KeyValuePair<Guid, Location> GetLocationInfo(Guid id) {
+
+            Location returned = new Location("");
+
             if (Core.Database == null) {
                 // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
-                return null;
+                return new KeyValuePair<Guid, Location>(Guid.Empty, null);
             }
 
             try {
@@ -29,10 +33,13 @@ namespace Ostenvighx.Suibhne {
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
 
-                if (resultsTable.Rows.Count > 0)
-                    return resultsTable.Rows[0];
-                else
-                    return null;
+                if (resultsTable.Rows.Count > 0) {
+                    DataRow result = resultsTable.Rows[0];
+                    returned.Name = result["Name"].ToString();
+                    returned.Parent = Guid.Parse(result["ParentId"].ToString());
+                    returned.Password = result["Password"].ToString();
+                } else
+                    returned = null;
             }
 
             catch (Exception) {
@@ -43,13 +50,13 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Close();
             }
 
-            return null;
+            return new KeyValuePair<Guid,Location>(id, returned);
         }
 
-        public static DataRow GetLocationEntry(string network, string location = "") {
+        public static KeyValuePair<Guid, Location> GetLocationInfo(string network, string location = "") {
             if (Core.Database == null) {
                 // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
-                return null;
+                return new KeyValuePair<Guid,Location>(Guid.Empty, null);
             }
 
             try {
@@ -69,7 +76,11 @@ namespace Ostenvighx.Suibhne {
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
 
-                return resultsTable.Rows[0];
+                Guid id = Guid.Parse( resultsTable.Rows[0]["Identifier"].ToString() );
+                Location l = GetLocationInfo(id).Value;
+                KeyValuePair<Guid, Location> returned = new KeyValuePair<Guid,Location>(id, l);
+
+                return returned;
             }
 
             catch (Exception) {
@@ -80,7 +91,7 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Close();
             }
 
-            return null;
+            return new KeyValuePair<Guid, Location>(Guid.Empty, null);
         }
 
         public static void SaveToSystemFile(JObject j) {
