@@ -1,19 +1,14 @@
-﻿using System;
+﻿using Nini.Config;
+using Ostenvighx.Suibhne.Networks.Base;
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Xml;
-using System.Xaml;
-using Nini.Config;
-using System.Windows.Media.Imaging;
-using Ostenvighx.Suibhne.Networks.Base;
-using System.Windows.Documents;
-using System.Data;
 
 namespace Ostenvighx.Suibhne.Gui.Panels {
     internal class NetworkPanel : PanelBase {
@@ -21,9 +16,12 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
         public Grid Panel;
 
         private Guid currentNetwork;
+        private String networkType;
 
         private StackPanel configPanel;
         private TreeView networkList;
+
+        private Dictionary<String, FrameworkElement> Fields;
 
         public NetworkPanel() {
             this.Panel = new Grid();
@@ -92,7 +90,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             // Override default style to center toolbar buttons
             addBtn.Margin = new Thickness(22.5, 5, 2.5, 5);
             addBtn.Style = ToolBarStyle;
-
+            addBtn.Click += Toolbar_AddNetwork;
 
             tools.Children.Add(addBtn);
 
@@ -105,6 +103,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             Button saveBtn = new Button();
             saveBtn.Content = "\u2713";
             saveBtn.Style = ToolBarStyle;
+            saveBtn.Click += Toolbar_SaveNetwork;
             tools.Children.Add(saveBtn);
 
             sidebarContainer.Children.Add(tools);
@@ -122,23 +121,23 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             networkList.Margin = new Thickness(0, 10, 0, 0);
             foreach (NetworkBot b in Core.Networks.Values) {
                 TreeViewItem networkListItem = new TreeViewItem();
-                networkListItem.Header = b.FriendlyName;
-                networkListItem.HorizontalAlignment = HorizontalAlignment.Stretch;
+
+                Location networkLocation = LocationManager.GetLocationInfo(b.Identifier).Value;
+
+                networkListItem.Header =  networkLocation.Name;
                 networkListItem.Padding = new Thickness(2);
                 networkListItem.Margin = new Thickness(10, 0, 0, 2);
-                networkListItem.Background = new SolidColorBrush(Colors.Transparent);
-                networkListItem.BorderThickness = new Thickness(0);
                 networkListItem.FontWeight = FontWeights.Bold;
                 networkListItem.Uid = b.Identifier.ToString();
-                networkListItem.Selected += this.NetworkButtonClick;
+                networkListItem.Selected += this.LocationList_ClickNetworkItem;
 
-                Dictionary<Guid, Location> knownLocations = b.GetKnownLocations();
-                foreach (KeyValuePair<Guid, Location> l in knownLocations) {
+                DataTable knownChildren = LocationManager.GetChildLocations(b.Identifier);
+                foreach (DataRow l in knownChildren.Rows) {
                     TreeViewItem locationItem = new TreeViewItem();
-                    locationItem.Header = l.Value.Name;
-                    locationItem.Uid = l.Key.ToString();
+                    locationItem.Header = l["Name"].ToString();
+                    locationItem.Uid = l["Identifier"].ToString();
                     locationItem.FontWeight = FontWeights.Normal;
-                    locationItem.Selected += this.LocationItemClick;
+                    locationItem.Selected += this.LocationList_ClickLocationItem;
 
                     networkListItem.Items.Add(locationItem);
                 }
@@ -148,33 +147,66 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             #endregion
         }
 
-        void LocationItemClick(object sender, RoutedEventArgs e) {
-            TreeViewItem selectedLocation = (TreeViewItem)sender;
+        private void Toolbar_AddNetwork(object sender, RoutedEventArgs e) {
+            currentNetwork = Guid.Empty;
+            
+            string[] networkTypes = Directory.GetFiles(Core.ConfigDirectory + "/NetworkTypes", "*.xml");
 
-            Guid locationID = Guid.Parse(selectedLocation.Uid);
-            Location locationInfo = Utilities.GetLocationInfo(locationID).Value;
-            if (locationInfo.Parent == Guid.Empty)
+            Window chooser = new Window();
+            chooser.Title = "Choose Network Type";
+
+            StackPanel chooserDialogContainer = new StackPanel();
+            chooserDialogContainer.Margin = new Thickness(10);
+
+            Label help = new Label();
+            help.Content = "Choose a network type:";
+
+            chooserDialogContainer.Children.Add(help);
+
+            ComboBox typechooser = new ComboBox();
+
+            Button confirm = new Button();
+            confirm.Margin = new Thickness(0, 10, 0, 0);
+            confirm.Content = "Add Network";
+            confirm.Background = new SolidColorBrush(Colors.Transparent);
+            confirm.BorderBrush = new SolidColorBrush(Colors.Black);
+            confirm.BorderThickness = new Thickness(1);
+            confirm.Click += (A, B) => {
+                if (typechooser.SelectedItem == null)
+                    MessageBox.Show("You need to select a network type to continue.");
+                else
+                    chooser.Close();
+            };
+
+
+            foreach (String networkType in networkTypes) {
+                typechooser.Items.Add(new FileInfo(networkType).Name.Split('.')[0]);
+            }
+
+            chooserDialogContainer.Children.Add(typechooser);
+            chooserDialogContainer.Children.Add(confirm);
+
+            chooser.Content = chooserDialogContainer;
+            chooser.Width = 400;
+            chooser.Height = 145;
+
+            chooser.ShowDialog();
+
+            // If they didn't select an item, cancel
+            if (typechooser.SelectedItem == null)
                 return;
 
-            NetworkBot bot = Core.Networks[locationInfo.Parent];
-            Dictionary<Guid, Location> known = bot.GetKnownLocations();
+            this.networkType = typechooser.SelectedItem.ToString();
 
-            Location location = known[locationID];
+            IniConfigSource ini = new IniConfigSource();
 
             configPanel.Children.Clear();
 
-            SetupEditorHeader("Editing Location: " + location.Name);
+            SetupEditorHeader("New Network");
 
-            TextBlock networkInfo = new TextBlock();
-            networkInfo.Margin = new Thickness(0, 8, 0, 0);
-
-            networkInfo.Inlines.Add(new Bold(new Run("Location Identifier: ")));
-            networkInfo.Inlines.Add(locationID.ToString());
-
-            configPanel.Children.Add(networkInfo);
-
-            e.Handled = true;
+            LoadNetworkFields(this.networkType, ini);
         }
+
 
         private void SetupEditorHeader(string headerText) {
             Label stackHeader = new Label();
@@ -188,53 +220,209 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             configPanel.Children.Add(stackHeader);
         }
 
-        private void LoadNetworkConfig(NetworkBot b, IniConfigSource config, String filename) {
+        private void Toolbar_SaveNetwork(object sender, RoutedEventArgs e) {
 
-            configPanel.Children.Clear();
+            // Figure out if location or network selected
+            TreeViewItem selected = (TreeViewItem) networkList.SelectedItem;
 
-            SetupEditorHeader("Editing Network: " + b.FriendlyName);
+            Location lData = LocationManager.GetLocationInfo(Guid.Parse(selected.Uid)).Value;
+            switch (lData.Type) {
+                case Reference.LocationType.Network:
+                    if (currentNetwork != Guid.Empty) {
+                        NetworkBot network = Core.Networks[currentNetwork];
 
-            TextBlock networkInfo = new TextBlock();
-            networkInfo.Margin = new Thickness(10, 8, 0, 0);
+                        // First, disconnect network to make sure settings are reloaded properly
+                        network.Disconnect();
 
-            networkInfo.Inlines.Add(new Bold(new Run("Network Identifier: ")));
-            networkInfo.Inlines.Add(b.Identifier.ToString() + " (");
-            networkInfo.Inlines.Add(new Italic(new Run("Last modified on ")));
-            networkInfo.Inlines.Add(File.GetLastWriteTime(Core.ConfigDirectory + "/Networks/" + b.FriendlyName + "/" + b.FriendlyName + ".ini") + ")");
+                        // Then, save the network settings for that network
+                        SaveNetworkSettings(network.Identifier);
 
-            configPanel.Children.Add(networkInfo);
 
-            try {
-                String stackText = File.ReadAllText(filename);
-                XmlDocument xml = new XmlDocument();
-                xml.LoadXml(stackText);
+                        // After that, reload the network's settings fromt he net object
+                        network.ReloadConfiguration();
 
-                // Load in all the nodes to generate the config editor
-                foreach (XmlNode node in xml.ChildNodes[1].ChildNodes) {
-                    ParseNode(configPanel, config, node);
-                }
+                        // Reconnect to network again.
+                        network.Connect();
+                    } else {
+
+                        // Saving NEW network item
+                        SaveNetworkSettings(Guid.NewGuid());
+                    }
+                    break;
+
+                case Reference.LocationType.Public:
+                    MessageBox.Show("Location editing not yet implemented");
+                    break;
+
+                default:
+                    // Not handled
+                    break;
             }
 
-            catch (Exception e) {
-                Console.WriteLine(e);
-            }
+            
 
 
         }
 
-        private void SaveNetworkConfig(object sender, RoutedEventArgs e) {
-            NetworkBot network = Core.Networks[currentNetwork];
+        private void SaveNetworkSettings(Guid id) {
 
-            network.Disconnect();
+            Boolean newNetwork = false;
 
+            if (id == currentNetwork) {
+                // Saving over file
 
+                MessageBoxResult res = MessageBox.Show("Warning: By confirming this save, you're letting the network configuration " + 
+                    "file be rewritten in its entirety by the data you specified here. Any custom content WILL be removed. Press okay " + 
+                    "to confirm." + "\n\n" + 
+                    "If you'd like to make notes, feel free to create new files of your own in the network folder. They won't be removed unless YOU do it.",
+
+                    "Confirm config file overwrite?",
+                    MessageBoxButton.OKCancel);
+
+                if (res != MessageBoxResult.OK)
+                    return;
+            } else {
+
+                id = Guid.NewGuid();
+
+                // Insert into database
+                LocationManager.AddNewNetwork(id, "Unnamed Network");
+
+                // Create directories
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id);
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id + "/Locations");
+
+                newNetwork = true;
+            }
+
+            IniConfigSource networkConfig = new IniConfigSource();
+            networkConfig.Save( Core.ConfigDirectory + "/Networks/" + id + "/network.ini" );
+
+            // Add in a little warning for the people that like to hand-edit stuff
+            String[] fileOverwriteComment = new string[]{
+                        "# Warning: This is an automatically generated configuration file. All edits will not be saved here when the editor is used.",
+                        "# To avoid loss of notes, create a different file in this directory with the notes.",
+                        "",
+                        ""
+                    };
+
+            File.WriteAllLines(networkConfig.SavePath, fileOverwriteComment);
+
+            // Okay. Now, let's get to saving stuff.
+            // First, open that structure file back up.
+            String stackText = File.ReadAllText(Core.ConfigDirectory + "/NetworkTypes/" + this.networkType + ".xml");
+            XmlDocument structure = new XmlDocument();
+            structure.LoadXml(stackText);
+
+            #region Save Network Config File
+            networkConfig.AddConfig("Network");
+            networkConfig.Configs["Network"].Set("type", this.networkType);
+
+            foreach (XmlNode section in structure.ChildNodes[1].ChildNodes) {
+                String sectionName = section.Attributes["Name"].Value;
+                networkConfig.AddConfig(sectionName);
+
+                foreach (XmlNode field in section.ChildNodes) {
+                    if (field.Attributes["Type"] != null && field.Name.ToLower() == "field") {
+                        String fieldKey = field.Attributes["Key"].Value;
+                        switch (field.Attributes["Type"].Value.ToLower()) {
+                            case "text":
+                                networkConfig.Configs[sectionName].Set(fieldKey, ((TextBox)Fields[fieldKey]).Text);
+                                break;
+
+                            case "password":
+                                networkConfig.Configs[sectionName].Set(fieldKey, ((PasswordBox)Fields[fieldKey]).Password);
+                                break;
+
+                            case "select":
+                                networkConfig.Configs[sectionName].Set(fieldKey, ((ComboBox)Fields[fieldKey]).SelectedValue.ToString());
+                                break;
+                        }
+                    }
+                }
+
+            }
+
+            networkConfig.Save();
+            #endregion
+
+            if (newNetwork) {
+                TreeViewItem networkListItem = new TreeViewItem();
+                networkListItem.Header = "New Network";
+                networkListItem.Padding = new Thickness(2);
+                networkListItem.Margin = new Thickness(10, 0, 0, 2);
+                networkListItem.FontWeight = FontWeights.Bold;
+                networkListItem.Uid = id.ToString();
+                networkListItem.IsSelected = true;
+
+                networkListItem.Selected += this.LocationList_ClickNetworkItem;
+
+                networkList.Items.Add(networkListItem);
+
+            }
         }
 
         public override Panel GetPanel() {
             return Panel;
         }
+        
+        /// <summary>
+        /// Handles a click on a location item in the location list.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LocationList_ClickLocationItem(object sender, RoutedEventArgs e) {
+            TreeViewItem selectedLocation = (TreeViewItem)sender;
 
-        void NetworkButtonClick(object sender, RoutedEventArgs e) {
+            configPanel.Children.Clear();
+            SetupEditorHeader("Editing Location: " + selectedLocation.Header);
+
+
+            Guid locationID = Guid.Parse(selectedLocation.Uid);
+            Location locationInfo = LocationManager.GetLocationInfo(locationID).Value;
+            if (locationInfo == null || locationInfo.Parent == Guid.Empty)
+                return;
+
+            TextBlock infoBlock = new TextBlock();
+            infoBlock.Margin = new Thickness(0, 8, 0, 0);
+
+            infoBlock.Inlines.Add(new Bold(new Run("Location Identifier: ")));
+            infoBlock.Inlines.Add(locationID.ToString());
+
+            configPanel.Children.Add(infoBlock);
+
+            // TODO: Add location fields
+
+            e.Handled = true;
+        }
+
+        void LoadNetworkFields(string networkType, IniConfigSource config) {
+            String netConfigTemplateFilename = Core.ConfigDirectory + @"NetworkTypes\" + networkType + ".xml";
+
+            try {
+                String stackText = File.ReadAllText(netConfigTemplateFilename);
+                XmlDocument xml = new XmlDocument();
+                xml.LoadXml(stackText);
+
+                this.Fields = new Dictionary<string, FrameworkElement>();
+
+                // Load in all the nodes to generate the config editor
+                foreach (XmlNode node in xml.ChildNodes[1].ChildNodes) {
+                    ParseConfigStructure(configPanel, config, node);
+                }
+            }
+
+            catch (Exception netEx) {
+                Console.WriteLine(netEx);
+            }
+        }
+
+        /// <summary>
+        /// Handles when a network item is selected from the location list.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LocationList_ClickNetworkItem(object sender, RoutedEventArgs e) {
             // Clear network panel
             // Get network details
             // Load in network config file for network type
@@ -244,24 +432,49 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             NetworkBot b = Core.Networks[Guid.Parse(networkButton.Uid)];
             currentNetwork = b.Identifier;
 
-            IniConfigSource config = new IniConfigSource(Core.ConfigDirectory + @"Networks\" + b.FriendlyName + @"\" + b.FriendlyName + ".ini");
+            Location networkAsLocation = LocationManager.GetLocationInfo(b.Identifier).Value;
 
-            String networkType = config.Configs["Network"].GetString("Type");
+            IniConfigSource config = new IniConfigSource(Core.ConfigDirectory + @"Networks\" + b.Identifier + @"\network.ini");
+            config.CaseSensitive = false;
+
+            this.networkType = config.Configs["Network"].GetString("type");
 
             if (networkType != null && networkType != "") {
-                String netConfigTemplateFilename = Core.ConfigDirectory + @"NetworkTypes\" + networkType + ".xml";
-                LoadNetworkConfig(b, config, netConfigTemplateFilename);
+                
+
+                configPanel.Children.Clear();
+
+                SetupEditorHeader("Editing Network: " + networkAsLocation.Name);
+
+                TextBlock networkInfo = new TextBlock();
+                networkInfo.Margin = new Thickness(10, 8, 0, 0);
+
+                networkInfo.Inlines.Add(new Bold(new Run("Network Identifier: ")));
+                networkInfo.Inlines.Add(b.Identifier.ToString() + " (");
+                networkInfo.Inlines.Add(new Italic(new Run("Last modified on ")));
+                networkInfo.Inlines.Add(File.GetLastWriteTime(Core.ConfigDirectory + "/Networks/" + b.Identifier + "/network.ini") + ")");
+
+                configPanel.Children.Add(networkInfo);
+
+                LoadNetworkFields(networkType, config);
             }
         }
 
-        private void ParseNode(StackPanel configPanel, IniConfigSource config, XmlNode n) {
+        /// <summary>
+        /// Parses a single node in a configuration structure file. This is for network and ocation files.
+        /// </summary>
+        /// <param name="configPanel"></param>
+        /// <param name="config"></param>
+        /// <param name="n"></param>
+        private void ParseConfigStructure(StackPanel configPanel, IniConfigSource config, XmlNode n) {
             switch (n.Name.ToLower()) {
                 case "field":
                     WrapPanel fieldPanel = new WrapPanel();
                     if (n.Attributes["Type"] == null) return;
 
                     String sectionName = n.ParentNode.Attributes["Name"].Value;
-                    IConfig section = config.Configs[sectionName];
+                    IConfig section = null;
+                    if(config != null) section = config.Configs[sectionName];
 
                     if (n.Attributes["Label"] != null) {
                         Label fieldLabel = new Label();
@@ -278,7 +491,9 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                             tb.MinWidth = 400;
                             tb.Name = n.Attributes["Key"].Value;
 
-                            if (section.Contains(n.Attributes["Key"].Value)) {
+                            this.Fields.Add(tb.Name, tb);
+
+                            if (config != null && section != null && section.Contains(n.Attributes["Key"].Value)) {
                                 tb.Text = section.GetString(n.Attributes["Key"].Value);
                             }
 
@@ -290,8 +505,9 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                             cb.Margin = new Thickness(0, 5, 0, 5);
                             cb.Name = n.Attributes["Key"].Value;
                             fieldPanel.Children.Add(cb);
+                            this.Fields.Add(cb.Name, cb);
 
-                            if (section.Contains(n.Attributes["Key"].Value)) {
+                            if (config != null && section != null && section.Contains(n.Attributes["Key"].Value)) {
                                 cb.IsChecked = section.GetBoolean(n.Attributes["Key"].Value);
                             }
                             break;
@@ -303,8 +519,9 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                             p.MinWidth = 400;
                             p.Name = n.Attributes["Key"].Value;
                             fieldPanel.Children.Add(p);
+                            this.Fields.Add(p.Name, p);
 
-                            if (section.Contains(n.Attributes["Key"].Value)) {
+                            if (config != null && section != null && section.Contains(n.Attributes["Key"].Value)) {
                                 p.Password = section.GetString(n.Attributes["Key"].Value);
                             }
                             break;
@@ -313,6 +530,8 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                             ComboBox select = new ComboBox();
                             select.Width = 400;
                             select.Name = n.Attributes["Key"].Value;
+                            this.Fields.Add(select.Name, select);
+
                             foreach (XmlNode childNode in n.ChildNodes) {
                                 ComboBoxItem cbi = new ComboBoxItem();
                                 cbi.Content = childNode.InnerText;
@@ -341,7 +560,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                     configPanel.Children.Add(l);
 
                     foreach (XmlNode childNode in n.ChildNodes) {
-                        ParseNode(configPanel, config, childNode);
+                        ParseConfigStructure(configPanel, config, childNode);
                     }
                     break;
 

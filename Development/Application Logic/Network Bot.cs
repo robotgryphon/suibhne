@@ -5,6 +5,7 @@ using System.IO;
 using Nini.Config;
 using Ostenvighx.Suibhne.Networks.Base;
 using System.Reflection;
+using System.Data;
 
 namespace Ostenvighx.Suibhne {
     public class NetworkBot : IComparable {
@@ -28,10 +29,7 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public String FriendlyName {
-            get;
-            private set;
-        }
+        // public String FriendlyName { get; private set; }
 
         public User Me {
             get { return _network.Me; }
@@ -46,18 +44,25 @@ namespace Ostenvighx.Suibhne {
         #endregion
 
         public NetworkBot(String configDir){
-            this.FriendlyName = configDir.Substring(configDir.LastIndexOf("/") + 1);
+            try {
+                this.Identifier = Guid.Parse(configDir.Substring(configDir.LastIndexOf("/") + 1));
+            }
 
-            if (!File.Exists(configDir + "/" + FriendlyName + ".ini")) {
-                Core.Log("Could not load network information file: " + configDir + "/" + FriendlyName + ".ini");
+            catch (Exception) {
                 return;
             }
 
-            IniConfigSource config = new IniConfigSource(configDir + "/" + FriendlyName + ".ini");
+
+            if (!File.Exists(configDir + "/network.ini")) {
+                Core.Log("Could not load network information file: " + configDir + "/network.ini");
+                return;
+            }
+
+            IniConfigSource config = new IniConfigSource(configDir + "/network.ini");
             config.CaseSensitive = false;
 
-
-            this.Identifier = Utilities.GetLocationInfo(FriendlyName).Key;
+            if (config.Configs["Network"] == null || config.Configs["Network"].Get("type") == null)
+                throw new KeyNotFoundException("Network configuration file missing network section. Cannot continue.");
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
@@ -81,39 +86,27 @@ namespace Ostenvighx.Suibhne {
                     }
                 }
 
-                foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
-                    _network.Listened[Identifier].AccessLevels.Add(opIdentifier, (byte) config.Configs["Operators"].GetInt(opIdentifier));
-
-                }
+                // TODO: Tear this out of here, check in database instead
+                // foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
+                //    _network.Listened[Identifier].AccessLevels.Add(opIdentifier, (byte) config.Configs["Operators"].GetInt(opIdentifier));
+                // }
             }
 
             this.Status = Networks.Base.Reference.ConnectionStatus.Disconnected;
         }
 
-        public Dictionary<Guid, Location> GetKnownLocations() {
-            Dictionary<Guid, Location> locations = new Dictionary<Guid, Location>();
+        public void ReloadConfiguration() {
+            try {
+                String file = Core.ConfigDirectory + "/Networks/" + this.Identifier + "/network.ini";
 
-            string[] locationDirs = Directory.GetDirectories(Core.ConfigDirectory + "/Networks/" + this.FriendlyName + "/Locations/");
-
-            foreach (String locationDir in locationDirs) {
-                try {
-                    String locationName = locationDir.Substring(locationDir.LastIndexOf("/") + 1);
-                    IniConfigSource locConfig = new IniConfigSource(locationDir + "/" + locationName + ".ini");
-                    Ostenvighx.Suibhne.Networks.Base.Location location = new Ostenvighx.Suibhne.Networks.Base.Location(
-                        locConfig.Configs["Location"].GetString("Name", "#Location"),
-                        Networks.Base.Reference.LocationType.Public);
-
-                    Guid newLocationID = Utilities.GetLocationInfo(FriendlyName, location.Name).Key;
-
-                    locations.Add(newLocationID, location);
-                }
-
-                catch (Exception e) {
-                    Core.Log("Location loading failed: " + e.Message, LogType.ERROR);
-                }
+                _network.Setup(file);
             }
 
-            return locations;
+            catch (Exception) {
+                Core.Log("There was an error processing the configuration reload for network " + this.Identifier);
+                return;
+            }
+
         }
 
         public void SendMessage(Message m) {
@@ -123,12 +116,15 @@ namespace Ostenvighx.Suibhne {
         protected void AutoJoinLocations(String configDir) {
             String[] locations = Directory.GetDirectories(configDir + "/Locations/");
 
-            Dictionary<Guid, Location> KnownLocations = GetKnownLocations();
+            
 
-            foreach (KeyValuePair<Guid, Location> l in KnownLocations) {
+            foreach (DataRow l in LocationManager.GetChildLocations(this.Identifier).Rows) {
                 try {
-                    Guid newLocationID = Utilities.GetLocationInfo(FriendlyName, l.Value.Name).Key;
-                    _network.JoinLocation(newLocationID, l.Value);
+                    Guid newLocationID = Guid.Parse(l["Identifier"].ToString());
+
+                    Location loc = LocationManager.GetLocationInfo(newLocationID).Value;
+
+                    _network.JoinLocation(newLocationID, loc);
                 }
 
                 catch (Exception e) {
@@ -157,15 +153,15 @@ namespace Ostenvighx.Suibhne {
             _network.Connect();
         }
 
-        public void Disconnect() {
-            _network.Disconnect("Suibhne system shutdown.");
+        public void Disconnect(string reason = "Suibhne system shutting down.") {
+            _network.Disconnect(reason);
         }
 
         public int CompareTo(object obj) {
             if (obj.GetType() != typeof(NetworkBot))
                 throw new ArgumentException("Object is not a network");
 
-            return ((NetworkBot)obj).FriendlyName.CompareTo(this.FriendlyName);
+            return ((NetworkBot)obj).Identifier.CompareTo(this.Identifier);
         }
     }
 }

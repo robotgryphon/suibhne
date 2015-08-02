@@ -24,6 +24,11 @@ namespace Ostenvighx.Suibhne.Gui {
     public partial class MainWindow : Window {
 
         public Button ActiveTab;
+        private OutputPanel Output;
+        private NetworkPanel Editor;
+        // private ExtensionsPanel Extensions;
+        // private ScriptEditor Scripting;
+        private AboutPanel About;
 
         public MainWindow() {
             InitializeComponent();
@@ -34,8 +39,11 @@ namespace Ostenvighx.Suibhne.Gui {
             ActiveTab = OutputTab;
             ActiveTab.Style = (Style) FindResource("TabButtonActive");
 
-            PanelBase cb = new OutputPanel();
-            Grid p = (Grid) cb.GetPanel();
+            Output = new OutputPanel();
+            Editor = new NetworkPanel();
+            About = new AboutPanel();
+
+            Panel p = Output.GetPanel();
 
             this.ContentArea.Children.Add(p);
         }
@@ -51,14 +59,16 @@ namespace Ostenvighx.Suibhne.Gui {
 
             Panel p = new StackPanel();
             switch (ActiveTab.Name.ToLower()) {
+                case "outputtab":
+                    p = Output.GetPanel();
+                    break;
+
                 case "networktab":
-                    NetworkPanel cb = new NetworkPanel();
-                    p = cb.GetPanel();
+                    p = Editor.GetPanel();
                     break;
 
                 case "abouttab":
-                    AboutPanel a = new AboutPanel();
-                    p = a.GetPanel();
+                    p = About.GetPanel();
                     break;
             }
 

@@ -8,8 +8,16 @@ using System.Windows.Controls;
 namespace Ostenvighx.Suibhne.Gui.Panels {
     internal class OutputPanel : PanelBase {
 
+        Grid layout;
+
+        public OutputPanel() {
+            layout = new Grid();
+        }
         public override System.Windows.Controls.Panel GetPanel() {
-            return new Grid();
+            Grid container = new Grid();
+
+            return container;
+
         }
     }
 }

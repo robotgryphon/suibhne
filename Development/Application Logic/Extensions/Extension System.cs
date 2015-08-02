@@ -231,7 +231,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         try {
                             Guid locationID = ev["location"]["id"].ToObject<Guid>();
                             
-                            Location location = Utilities.GetLocationInfo(locationID).Value;
+                            Location location = LocationManager.GetLocationInfo(locationID).Value;
                             if (location == null) 
                                 break;
 

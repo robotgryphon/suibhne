@@ -318,11 +318,11 @@ namespace Ostenvighx.Suibhne.Commands {
 
                             case 3:
                                 // Looking up local location id
-                                location = Utilities.GetLocationInfo(conn.FriendlyName, messageParts[2].ToLower());
+                                location = LocationManager.GetLocationInfo(conn.Identifier, messageParts[2].ToLower());
 
                                 // If the location wasn't found, try to find it as a network instead
                                 if (location.Key == Guid.Empty) {
-                                    location = Utilities.GetLocationInfo(messageParts[2].ToLower(), "");
+                                    location = LocationManager.GetLocationInfo(messageParts[2].ToLower(), "");
                                     if (location.Key == Guid.Empty) {
                                         response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
                                         conn.SendMessage(response);
@@ -336,7 +336,7 @@ namespace Ostenvighx.Suibhne.Commands {
                                 break;
 
                             case 4:
-                                location = Utilities.GetLocationInfo(messageParts[2].ToLower(), messageParts[3].ToLower());
+                                location = LocationManager.GetLocationInfo(messageParts[2].ToLower(), messageParts[3].ToLower());
                                 response.message = "Current identifier for location " + location.Value.Name + 
                                     " on network " + messageParts[2] + ": " + location.Key + ".";
 

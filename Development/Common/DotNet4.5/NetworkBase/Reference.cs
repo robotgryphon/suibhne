@@ -91,6 +91,10 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// Can be a location, query, notice.. etc.
         /// </summary>
         public enum LocationType : byte {
+            /// <summary>
+            /// Location is a serverwide broadcast.
+            /// </summary>
+            Network = 1,
 
             /// <summary>
             /// Location is a locationID.
@@ -106,11 +110,6 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             /// Location is a notice recieved by a user or locationID.
             /// </summary>
             Notice = 4,
-
-            /// <summary>
-            /// Location is a serverwide broadcast.
-            /// </summary>
-            Network = 1,
 
             /// <summary>
             /// Use if not sure. You really should be sure, though.

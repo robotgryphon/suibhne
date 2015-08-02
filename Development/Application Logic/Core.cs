@@ -73,38 +73,41 @@ namespace Ostenvighx.Suibhne {
                 ExtensionSystem.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/extensions.sns");
             }
 
-            catch(Exception){
+            catch (Exception) {
 
             }
         }
         public static void LoadNetworks() {
             Core.Networks = new Dictionary<Guid, NetworkBot>();
 
-            try {
-                String networkRootDirectory = Core.SystemConfig.Configs["Directories"].GetString("NetworkRootDirectory", Environment.CurrentDirectory + "/Configuration/Networks/");
-                String[] networkDirectories = Directory.GetDirectories(networkRootDirectory);
+            String[] networkDirectories = Directory.GetDirectories(Core.ConfigDirectory + "/Networks/");
 
-                foreach (String networkDirectory in networkDirectories) {
-
-
+            foreach (String networkDirectory in networkDirectories) {
+                try {
                     NetworkBot network = new NetworkBot(networkDirectory);
                     Core.Networks.Add(network.Identifier, network);
+                }
 
-                    if (File.Exists(networkDirectory + "/disabled"))
-                        continue;
+                catch (FileNotFoundException fnfe) {
+                    Console.WriteLine("Network configuration file not found: " + fnfe.Message);
+                }
 
-                    if (network.Status == Ostenvighx.Suibhne.Networks.Base.Reference.ConnectionStatus.Disconnected) {
-                        network.Connect();
-                    }
+                catch (KeyNotFoundException) {
+                    // Network unable to process correctly
+                }
+
+                catch (Exception e) {
+                    Console.WriteLine("Exception thrown: " + e);
                 }
             }
+        }
 
-            catch (FileNotFoundException fnfe) {
-                Console.WriteLine("Network configuration file not found: " + fnfe.Message);
-            }
+        public static void StartNetworks() {
+            foreach (NetworkBot network in Core.Networks.Values) {
+                if (File.Exists(Core.ConfigDirectory + "/Networks/" + network.Identifier + "/disabled"))
+                    continue;
 
-            catch (Exception e) {
-                Console.WriteLine("Exception thrown: " + e);
+                network.Connect();
             }
         }
 
