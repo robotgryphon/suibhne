@@ -3,15 +3,40 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <Style x:Key="ContextMenu" TargetType="ContextMenu">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#99000000" />
+            <Setter Property="Padding" Value="2, 8, 2, 8" />
+            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        
         <Style x:Key="PanelActionButton" TargetType="Button">
-            <Setter Property="Width" Value="50" />
+            <Setter Property="Width" Value="200" />
+            <Setter Property="Foreground" Value="White" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Margin" Value="2.5, 5, 2.5, 5" />
+            <Setter Property="Margin" Value="10, 5, 10, 5" />
             <Setter Property="Height" Value="30" />
-            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Center" />
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}" BorderThickness="0,0,0,1" BorderBrush="{TemplateBinding BorderBrush}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="Lime" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
         
         <Style x:Key="TabButton" TargetType="Button">            
