@@ -114,6 +114,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         }
 
         public override void Setup(String configFile) {
+
+            DirectoryInfo di = new DirectoryInfo(configFile);
+
+            // Get config root by going up a couple of levels (ROOT/Networks/Identifier/)
+            this.ConfigRoot = di.Parent.Parent.Parent.FullName;
+
             IniConfigSource configLoaded = new IniConfigSource(configFile);
             configLoaded.CaseSensitive = false;
 
@@ -266,8 +272,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 OnDataRecieved(this, line);
             }
             
-            Console.WriteLine(line);
-
             String[] dataChunks = line.Split(new char[] { ' ' });
             try {
                 switch (dataChunks[1].ToLower()) {
@@ -372,7 +376,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         break;
 
                     default:
-                        Console.WriteLine(line);
+                        Console.WriteLine("Data recieved: " + line);
                         break;
                 }
             }
@@ -418,25 +422,33 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="locationID">Public (as an Location) to join.</param>
         public override void JoinLocation(Guid locationID, Networks.Base.Location location) {
             if (Status == Base.Reference.ConnectionStatus.Connected) {
-                if (location.Name != null) {
-                    Guid loc = GetLocationIdByName(location.Name);
+                if (locationID != Guid.Empty && !this.Listened.ContainsKey(locationID) && location != null) {
 
-                    // Guid.Empty means location not found - Aka not being listened on yet
-                    if (loc == Guid.Empty) {
-                        if (location.Password != "") {
-                            SendRaw("JOIN " + location.Name + " " + location.Password);
-                        } else {
-                            SendRaw("JOIN " + location.Name);
-                        }
+                    // Load location information
+                    IniConfigSource l = new IniConfigSource(ConfigRoot + "/Networks/" + this.Identifier + "/Locations/" + locationID + "/location.ini");
+                    l.CaseSensitive = false;
 
-                        location.Parent = this.Identifier;
-                        Listened.Add(locationID, location);
+                    String locationName = "";
+                    if (l.Configs["Location"] != null && l.Configs["Location"].GetString("Name") != null) {
+                        locationName = l.Configs["Location"].GetString("name");
+                    } else {
+                        return;
+                    }
 
-                        SendRaw("WHO " + location.Name);
+                    if (location.Password != "") {
+                        SendRaw("JOIN " + locationName + " " + location.Password);
+                    } else {
+                        SendRaw("JOIN " + locationName);
+                    }
 
-                        if (this.OnListeningStart != null) {
-                            OnListeningStart(this, locationID);
-                        }
+                    location.Name = locationName;
+                    location.Parent = this.Identifier;
+                    Listened.Add(locationID, location);
+
+                    SendRaw("WHO " + locationName);
+
+                    if (this.OnListeningStart != null) {
+                        OnListeningStart(this, locationID);
                     }
                 }
             }

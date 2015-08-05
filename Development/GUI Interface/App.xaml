@@ -3,6 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <Style x:Key="FlatButton" TargetType="Button">
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="Background" Value="#FF86D3FF" />
+            <Setter Property="Padding" Value="2, 8, 2, 8" />
+            <Setter Property="BorderBrush" Value="#FF86D3FF" />
+            <Setter Property="BorderThickness" Value="0, 0, 0, 0" />
+        </Style>
+        
         <Style x:Key="ContextMenu" TargetType="ContextMenu">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="Background" Value="#99000000" />

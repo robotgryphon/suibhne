@@ -163,8 +163,8 @@ namespace Ostenvighx.Suibhne {
                 string connType = messageParts[2];
                 response.message = "Connection type recieved: " + connType;
 
-                if (File.Exists(Core.ConfigDirectory + "NetworkTypes/" + connType + ".dll")) {
-                    Assembly networkTypeAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "NetworkTypes/" + connType + ".dll");
+                if (File.Exists(Core.ConfigDirectory + "Connectors/" + connType + "/" + connType + ".dll")) {
+                    Assembly networkTypeAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "Connectors/" + connType + "/" + connType + ".dll");
                     response.message = "Assembly information: " +
                         ((AssemblyTitleAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title +
                         " written by " +

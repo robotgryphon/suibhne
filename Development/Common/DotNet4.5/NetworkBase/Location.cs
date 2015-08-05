@@ -9,7 +9,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public Guid Parent;
 
         /// <summary>
-        /// A lowercased form of the location in question. A locationID name or user DisplayName.
+        /// A unique location name.
         /// </summary>
         public String Name;
 

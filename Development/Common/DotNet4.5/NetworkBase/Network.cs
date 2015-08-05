@@ -7,6 +7,11 @@ namespace Ostenvighx.Suibhne.Networks.Base {
     public abstract class Network {
 
         /// <summary>
+        /// The root configuration directory. Passed in from the main application.
+        /// </summary>
+        protected String ConfigRoot;
+
+        /// <summary>
         /// A value that indicates what status the connection is in.
         /// See the Base.Reference.ConnectionStatus enum.
         /// </summary>

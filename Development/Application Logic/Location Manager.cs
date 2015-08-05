@@ -15,6 +15,36 @@ using Ostenvighx.Suibhne.Networks.Base;
 namespace Ostenvighx.Suibhne {
     public class LocationManager {
 
+        public static bool RenameLocation(Guid id, string name) {
+
+            // Update in database
+            if (Core.Database == null || GetLocationInfo(id).Key == Guid.Empty) {
+                // Location does not exist, or database not ready
+                return false;
+            }
+
+            try {
+                Core.Database.Open();
+
+                SQLiteCommand update = Core.Database.CreateCommand();
+                update.CommandText = "UPDATE Identifiers SET Name='" + name + "' WHERE Identifier='" + id + "';";
+                int result = update.ExecuteNonQuery();
+
+                if (result == 1) {
+                    return true;
+                }
+
+            }
+
+            catch (Exception) { }
+
+            finally {
+                Core.Database.Close();
+            }
+
+            return false;
+        }
+
         public static void AddNewNetwork(Guid id, String name) {
 
             if (Core.Database == null)

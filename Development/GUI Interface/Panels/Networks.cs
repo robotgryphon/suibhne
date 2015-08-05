@@ -71,7 +71,47 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
         }
 
         private void Context_RenameItem(object sender, RoutedEventArgs e) {
-            
+
+            MenuItem rename = (MenuItem)sender;
+            ContextMenu menu = (ContextMenu)rename.Parent;
+            TreeViewItem item = (TreeViewItem)menu.PlacementTarget;
+
+            KeyValuePair<Guid, Location> location = LocationManager.GetLocationInfo(Guid.Parse(item.Uid));
+
+            Window prompt = new Window();
+            prompt.Title = "Renaming: " + location.Value.Name;
+            prompt.Width = 400;
+            prompt.Height = 120;
+            prompt.WindowStyle = WindowStyle.None;
+            prompt.ResizeMode = ResizeMode.NoResize;
+
+            StackPanel container = new StackPanel();
+            prompt.Content = container;
+            container.Margin = new Thickness(10);
+
+            TextBlock help = new TextBlock();
+            help.Text = "Enter a new name for " + location.Value.Name;
+            container.Children.Add(help);
+
+            TextBox entry = new TextBox();
+            entry.Text = location.Value.Name;
+            container.Children.Add(entry);
+
+            Button confirm = new Button();
+            container.Children.Add(confirm);
+            confirm.Content = "Rename";
+            confirm.Margin = new Thickness(0, 6, 0, 0);
+            confirm.Style = (Style)Application.Current.FindResource("FlatButton");
+
+            confirm.Click += (A, B) => {
+                // Change location name in database
+                LocationManager.RenameLocation(location.Key, entry.Text);
+                item.Header = entry.Text;
+
+                prompt.Close();
+            };
+
+            prompt.ShowDialog();
 
         }
 
@@ -125,7 +165,8 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
 
             Panel.ColumnDefinitions.Add(new ColumnDefinition());
 
-            #region Sidebar
+
+            #region Toolbar
             Grid sidebarContainer = new Grid();
 
             RowDefinition toolbar = new RowDefinition();
@@ -146,11 +187,13 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             saveBtn.Content = "\u2713 Save settings";
             saveBtn.Style = (Style)Application.Current.FindResource("PanelActionButton");
 
-            saveBtn.Click += Toolbar_SaveNetwork;
+            saveBtn.Click += SaveItemHandler;
             tools.Children.Add(saveBtn);
 
             sidebarContainer.Children.Add(tools);
+            #endregion
 
+            #region Network and Location List
             ScrollViewer networksScroller = new ScrollViewer();
             networksScroller.SetValue(Grid.RowProperty, 1);
             networksScroller.Margin = new Thickness(0, 0, 10, 0);
@@ -162,10 +205,41 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             networkList.BorderThickness = new Thickness(0);
             networksScroller.Content = networkList;
             networkList.Margin = new Thickness(0, 10, 0, 0);
+
+            RefreshLocationList();
+            #endregion
+            
+            #region Context Menu
+            ContextMenu sideBarMenu = new ContextMenu();
+            sideBarMenu.Style = Application.Current.FindResource("ContextMenu") as Style;
+
+            MenuItem addNewNetwork = new MenuItem();
+            addNewNetwork.Header = "Add New Network";
+            addNewNetwork.Click += this.AddNetworkHandler;
+            addNewNetwork.Foreground = new SolidColorBrush(Colors.White);
+            sideBarMenu.Items.Add(addNewNetwork);
+
+            MenuItem refreshList = new MenuItem();
+            refreshList.Header = "Refresh Locations";
+            refreshList.Foreground = new SolidColorBrush(Colors.Tan);
+            refreshList.Click += (sender, evt) => {
+                RefreshLocationList();
+            };
+            sideBarMenu.Items.Add(refreshList);
+
+            networkList.ContextMenu = sideBarMenu;
+            #endregion
+        }
+
+        private void RefreshLocationList() {
+            networkList.Items.Clear();
             foreach (NetworkBot b in Core.Networks.Values) {
                 TreeViewItem networkListItem = new TreeViewItem();
 
                 Location networkLocation = LocationManager.GetLocationInfo(b.Identifier).Value;
+
+                if (networkLocation == null)
+                    return;
 
                 networkListItem.Header = networkLocation.Name;
                 networkListItem.Padding = new Thickness(2);
@@ -189,13 +263,12 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                 networkList.Items.Add(networkListItem);
 
             }
-            #endregion
         }
 
-        private void Toolbar_AddNetwork(object sender, RoutedEventArgs e) {
+        private void AddNetworkHandler(object sender, RoutedEventArgs e) {
             currentItem = Guid.Empty;
 
-            string[] networkTypes = Directory.GetFiles(Core.ConfigDirectory + "/NetworkTypes", "*.xml");
+            string[] networkTypes = Directory.GetDirectories(Core.ConfigDirectory + "/Connectors");
 
             Window chooser = new Window();
             chooser.Title = "Choose Network Type";
@@ -250,6 +323,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
 
             SetupEditorHeader("New Network");
 
+            this.currentItem = Guid.Empty;
             LoadNetworkFields(this.networkType, ini);
         }
 
@@ -266,39 +340,33 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
             configPanel.Children.Add(stackHeader);
         }
 
-        private void Toolbar_SaveNetwork(object sender, RoutedEventArgs e) {
+        private void SaveItemHandler(object sender, RoutedEventArgs e) {
 
-            if (currentItem == Guid.Empty) {
-                MessageBox.Show("Please select a network to save first.");
+            KeyValuePair<Guid, Location> lData = LocationManager.GetLocationInfo(currentItem);
+            if (lData.Key == Guid.Empty) {
+                SaveNetworkSettings(Guid.NewGuid());
                 return;
             }
 
             // Figure out if location or network selected
             TreeViewItem selected = (TreeViewItem)networkList.SelectedItem;
 
-            Location lData = LocationManager.GetLocationInfo(currentItem).Value;
-            switch (lData.Type) {
+            switch (lData.Value.Type) {
                 case Reference.LocationType.Network:
-                    if (currentItem != Guid.Empty) {
-                        NetworkBot network = Core.Networks[currentItem];
+                    NetworkBot network = Core.Networks[currentItem];
 
-                        // First, disconnect network to make sure settings are reloaded properly
-                        network.Disconnect();
+                    // First, disconnect network to make sure settings are reloaded properly
+                    network.Disconnect();
 
-                        // Then, save the network settings for that network
-                        SaveNetworkSettings(network.Identifier);
+                    // Then, save the network settings for that network
+                    SaveNetworkSettings(network.Identifier);
 
 
-                        // After that, reload the network's settings fromt he net object
-                        network.ReloadConfiguration();
+                    // After that, reload the network's settings fromt he net object
+                    network.ReloadConfiguration();
 
-                        // Reconnect to network again.
-                        network.Connect();
-                    } else {
-
-                        // Saving NEW network item
-                        SaveNetworkSettings(Guid.NewGuid());
-                    }
+                    // Reconnect to network again.
+                    network.Connect();
                     break;
 
                 case Reference.LocationType.Public:
@@ -334,8 +402,6 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                     return;
             } else {
 
-                id = Guid.NewGuid();
-
                 // Insert into database
                 LocationManager.AddNewNetwork(id, "Unnamed Network");
 
@@ -361,7 +427,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
 
             // Okay. Now, let's get to saving stuff.
             // First, open that structure file back up.
-            String stackText = File.ReadAllText(Core.ConfigDirectory + "/NetworkTypes/" + this.networkType + ".xml");
+            String stackText = File.ReadAllText(Core.ConfigDirectory + "/Connectors/" + this.networkType + "/Network.xml");
             XmlDocument structure = new XmlDocument();
             structure.LoadXml(stackText);
 
@@ -405,7 +471,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
                 networkListItem.FontWeight = FontWeights.Bold;
                 networkListItem.Uid = id.ToString();
                 networkListItem.IsSelected = true;
-
+                networkListItem.ContextMenu = LocationMenu;
                 networkListItem.Selected += this.ClickItem;
 
                 networkList.Items.Add(networkListItem);
@@ -434,7 +500,7 @@ namespace Ostenvighx.Suibhne.Gui.Panels {
         }
 
         void LoadNetworkFields(string networkType, IniConfigSource config) {
-            String netConfigTemplateFilename = Core.ConfigDirectory + @"NetworkTypes\" + networkType + ".xml";
+            String netConfigTemplateFilename = Core.ConfigDirectory + @"Connectors\" + networkType + "\\Network.xml";
 
             try {
                 String stackText = File.ReadAllText(netConfigTemplateFilename);

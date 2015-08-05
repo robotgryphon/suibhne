@@ -66,13 +66,10 @@ namespace Ostenvighx.Suibhne {
 
             string networkType = config.Configs["Network"].GetString("type", "unknown");
 
-            if (networkType != "unknown") {
-
-                String networkBase = Directory.GetParent(configDir).Parent.FullName + @"\NetworkTypes\";
-                string[] files = Directory.GetFiles(networkBase + "/", networkType + ".dll");
+            if (networkType != null && networkType != "" && networkType != "unknown") {
                 
                 // First file should be network dll
-                Assembly networkAssembly = Assembly.LoadFrom(files[0]);
+                Assembly networkAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "/Connectors/" + networkType + "/" + networkType + ".dll");
                 Type[] types = networkAssembly.GetTypes();
                 foreach (Type t in types) {
                     if (t.IsSubclassOf(typeof(Network))) {
@@ -81,7 +78,7 @@ namespace Ostenvighx.Suibhne {
                         _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
                         _network.OnConnectionComplete += (conn) => {
-                            AutoJoinLocations(configDir);
+                            AutoJoinLocations();
                         };
                     }
                 }
@@ -113,13 +110,14 @@ namespace Ostenvighx.Suibhne {
             this._network.SendMessage(m);
         }
 
-        protected void AutoJoinLocations(String configDir) {
-            String[] locations = Directory.GetDirectories(configDir + "/Locations/");
+        protected void AutoJoinLocations() {
+            DataTable locations = LocationManager.GetChildLocations(this.Identifier);
 
-            
-
-            foreach (DataRow l in LocationManager.GetChildLocations(this.Identifier).Rows) {
+            foreach (DataRow l in locations.Rows) {
                 try {
+
+                    Core.Log("Attempting to join " + l["Name"].ToString() + " on network.");
+
                     Guid newLocationID = Guid.Parse(l["Identifier"].ToString());
 
                     Location loc = LocationManager.GetLocationInfo(newLocationID).Value;
@@ -142,8 +140,6 @@ namespace Ostenvighx.Suibhne {
         }
 
         protected void HandleMessageRecieved(Message message) {
-            Core.Log(message.ToString(), LogType.INCOMING);
-
             // TODO: Make the command character configurable?
             if (message.message.StartsWith("!"))
                 HandleCommand(message);

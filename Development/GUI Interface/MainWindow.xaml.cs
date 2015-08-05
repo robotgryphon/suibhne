@@ -46,6 +46,8 @@ namespace Ostenvighx.Suibhne.Gui {
             Panel p = Output.GetPanel();
 
             this.ContentArea.Children.Add(p);
+
+            Core.StartNetworks();
         }
 
         public void HandleTabSwitch(object sender, RoutedEventArgs e) {
