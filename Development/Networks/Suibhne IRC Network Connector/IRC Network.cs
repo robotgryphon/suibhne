@@ -420,32 +420,32 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// password as well, if it is defined it will use it.
         /// </summary>
         /// <param name="locationID">Public (as an Location) to join.</param>
-        public override void JoinLocation(Guid locationID, Networks.Base.Location location) {
+        public override void JoinLocation(Guid locationID) {
             if (Status == Base.Reference.ConnectionStatus.Connected) {
-                if (locationID != Guid.Empty && !this.Listened.ContainsKey(locationID) && location != null) {
+                if (locationID != Guid.Empty && !this.Listened.ContainsKey(locationID)) {
 
                     // Load location information
                     IniConfigSource l = new IniConfigSource(ConfigRoot + "/Networks/" + this.Identifier + "/Locations/" + locationID + "/location.ini");
                     l.CaseSensitive = false;
 
-                    String locationName = "";
+                    Base.Location location = new Base.Location("");
                     if (l.Configs["Location"] != null && l.Configs["Location"].GetString("Name") != null) {
-                        locationName = l.Configs["Location"].GetString("name");
+                        location.Name = l.Configs["Location"].GetString("name");
                     } else {
                         return;
                     }
 
+                    location.Password = l.Configs["Location"].GetString("Password", "");
                     if (location.Password != "") {
-                        SendRaw("JOIN " + locationName + " " + location.Password);
+                        SendRaw("JOIN " + location.Name + " " + location.Password);
                     } else {
-                        SendRaw("JOIN " + locationName);
+                        SendRaw("JOIN " + location.Name);
                     }
 
-                    location.Name = locationName;
                     location.Parent = this.Identifier;
                     Listened.Add(locationID, location);
 
-                    SendRaw("WHO " + locationName);
+                    SendRaw("WHO " + location.Name);
 
                     if (this.OnListeningStart != null) {
                         OnListeningStart(this, locationID);
@@ -544,8 +544,11 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         }
 
         protected override void HandleUserLeave(Guid l, Base.User u) {
+            // Make sure we only send a new names list if it's not US that left.
+            if (u.DisplayName.ToLower() != Me.DisplayName.ToLower())
+                SendRaw("WHO " + Listened[l].Name);
+
             base.HandleUserLeave(l, u);
-            SendRaw("WHO " + Listened[l].Name);
         }
 
         /// <summary>

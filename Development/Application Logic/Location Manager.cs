@@ -69,6 +69,41 @@ namespace Ostenvighx.Suibhne {
 
         }
 
+        /// <summary>
+        /// Deletes a location and all child locations.
+        /// </summary>
+        /// <param name="id"></param>
+        public static void DeleteLocation(Guid id) {
+            if (Core.Database == null)
+                return;
+
+            try {
+                Core.Database.Open();
+
+                if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + id))
+                    Directory.Delete(Core.ConfigDirectory + "/Networks/" + id, true);
+                else {
+                    KeyValuePair<Guid, Location> parentID = GetLocationInfo(id);
+                    if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + parentID.Key + "/" + id))
+                        Directory.Delete(Core.ConfigDirectory + "/Networks/" + parentID.Key + "/" + id, true);
+                }
+
+                SQLiteCommand command = Core.Database.CreateCommand();
+                command.CommandText = "DELETE FROM Identifiers WHERE Identifier = '" + id + "' OR ParentId = '" + id + "';";
+                command.ExecuteNonQuery();
+
+                if (Core.Networks.ContainsKey(id))
+                    Core.Networks.Remove(id);
+
+            }
+
+            catch (Exception) { }
+
+            finally {
+                Core.Database.Close();
+            }
+        }
+
         public static DataTable GetChildLocations(Guid parent) {
             if (Core.Database == null) {
                 // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..

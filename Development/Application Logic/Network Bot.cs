@@ -112,6 +112,8 @@ namespace Ostenvighx.Suibhne {
 
         protected void AutoJoinLocations() {
             DataTable locations = LocationManager.GetChildLocations(this.Identifier);
+            if (locations == null)
+                return;
 
             foreach (DataRow l in locations.Rows) {
                 try {
@@ -119,10 +121,7 @@ namespace Ostenvighx.Suibhne {
                     Core.Log("Attempting to join " + l["Name"].ToString() + " on network.");
 
                     Guid newLocationID = Guid.Parse(l["Identifier"].ToString());
-
-                    Location loc = LocationManager.GetLocationInfo(newLocationID).Value;
-
-                    _network.JoinLocation(newLocationID, loc);
+                    _network.JoinLocation(newLocationID);
                 }
 
                 catch (Exception e) {
