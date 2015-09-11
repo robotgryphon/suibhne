@@ -1,4 +1,5 @@
 ﻿using Ostenvighx.Suibhne;
+using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Gui.Panels;
 using System;
 using System.Collections.Generic;
@@ -26,7 +27,7 @@ namespace Ostenvighx.Suibhne.Gui {
         public Button ActiveTab;
         private OutputPanel Output;
         private NetworkPanel Editor;
-        // private ExtensionsPanel Extensions;
+        private ExtensionsPanel Extensions;
         // private ScriptEditor Scripting;
         private AboutPanel About;
 
@@ -36,12 +37,16 @@ namespace Ostenvighx.Suibhne.Gui {
             Core.LoadConfiguration();
             Core.LoadNetworks();
 
+            ExtensionSystem.Instance.Start();
+            Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
+
             ActiveTab = OutputTab;
             ActiveTab.Style = (Style) FindResource("TabButtonActive");
 
             Output = new OutputPanel();
             Editor = new NetworkPanel();
             About = new AboutPanel();
+            Extensions = new ExtensionsPanel();
 
             Panel p = Output.GetPanel();
 
@@ -67,6 +72,10 @@ namespace Ostenvighx.Suibhne.Gui {
 
                 case "networktab":
                     p = Editor.GetPanel();
+                    break;
+
+                case "extensionstab":
+                    p = Extensions.GetPanel();
                     break;
 
                 case "abouttab":

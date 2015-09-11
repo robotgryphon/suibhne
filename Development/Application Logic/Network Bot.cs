@@ -145,6 +145,9 @@ namespace Ostenvighx.Suibhne {
         }
 
         public void Connect() {
+            if (this._network == null)
+                return;
+
             _network.Connect();
         }
 

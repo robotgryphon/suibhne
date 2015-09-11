@@ -32,6 +32,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         protected byte[] GlobalBuffer;
         #endregion
 
+        protected String unfinishedData;
+
         internal Guid Identifier {
             get { return GetLocationIdByName("<network>"); }
             private set { }
@@ -84,6 +86,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this.port = 6667;
 
             this.TempUserAccessLevels = new Dictionary<string, Dictionary<string, byte>>();
+            this.unfinishedData = "";
         }
 
         /// <summary>
@@ -213,30 +216,9 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                 String text = Encoding.UTF8.GetString(btemp);
 
-                String[] lines = text.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (String line in lines) {
-                    String lineTrimmed = line.TrimEnd(new char[] { '\r' }).TrimStart(new char[] { ':' });
+                HandleDataPacket(text);
 
-                    if (line.EndsWith('\r'.ToString())) {
-                        String[] dataChunks = lineTrimmed.Split(new char[] { ' ' });
-
-                        switch (dataChunks.Length) {
-                            case 2:
-                                if (dataChunks[0].ToLower() == "ping") {
-                                    HandlePing(lineTrimmed);
-                                }
-
-                                break;
-
-                            default:
-                                HandleData(lineTrimmed);
-                                break;
-                        }
-                    } else {
-                        byte[] lineBytes = Encoding.UTF8.GetBytes(line);
-                        Array.Copy(lineBytes, GlobalBuffer, lineBytes.Length);
-                    }
-                }
+                
 
                 recievedOn.BeginReceive(GlobalBuffer, 0, GlobalBuffer.Length, SocketFlags.None, DataRecievedCallback, recievedOn);
 
@@ -249,6 +231,41 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
             catch (Exception e) {
                 Console.WriteLine(e);
+            }
+        }
+
+        internal void HandleDataPacket(String data) {
+
+            if (unfinishedData != "") {
+                String newData = data.Split('\n')[0];
+                data = data.Remove(0, newData.Length + 1);
+                Console.WriteLine("Next data: " + newData);
+
+                unfinishedData += newData;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Finished line: " + unfinishedData);
+                Console.ForegroundColor = ConsoleColor.White;
+
+                this.HandleData(unfinishedData);
+                unfinishedData = "";
+            }
+
+            String[] lines = data.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (String line in lines) {
+                
+                String lineTrimmed = line.TrimStart(new char[] { ':' }).TrimEnd('\r');
+                if (line.EndsWith("\r")) {
+
+                    if (lineTrimmed.ToLower().StartsWith("ping"))
+                        HandlePing(lineTrimmed);
+                    else
+                        HandleData(lineTrimmed);
+                } else {
+                    // Unfinished line
+                    Console.WriteLine("Unfinished line: " + line);
+                    unfinishedData = lineTrimmed;
+                }
+                
             }
         }
 

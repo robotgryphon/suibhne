@@ -45,6 +45,27 @@ namespace Ostenvighx.Suibhne {
             return false;
         }
 
+        public static void AddNewLocation(Guid parent, Guid id, String name) {
+            if (Core.Database == null)
+                return;
+
+            try {
+                Core.Database.Open();
+
+                SQLiteCommand command = Core.Database.CreateCommand();
+                command.CommandText = "INSERT INTO Identifiers VALUES ('" + id.ToString() + "', '" + parent.ToString() + "', '" + name + "', 2);";
+                command.ExecuteNonQuery();
+
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + parent + "/Locations/" + id);
+            }
+
+            catch (Exception) { }
+
+            finally {
+                Core.Database.Close();
+            }
+        }
+
         public static void AddNewNetwork(Guid id, String name) {
 
             if (Core.Database == null)
@@ -59,6 +80,9 @@ namespace Ostenvighx.Suibhne {
 
                 NetworkBot b = new NetworkBot(Core.ConfigDirectory + "/Networks/" + id);
                 Core.Networks.Add(id, b);
+
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id);
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id + "/Locations");
             }
 
             catch (Exception) { }
@@ -159,8 +183,8 @@ namespace Ostenvighx.Suibhne {
                     returned.Name = result["Name"].ToString();
                     returned.Parent = Guid.Parse(result["ParentId"].ToString());
 
-                    byte locationType = (byte)result["LocationType"];
-                    returned.Type = (Reference.LocationType)locationType;
+                    int locationType = int.Parse(result["LocationType"].ToString());
+                    returned.Type = (Reference.LocationType) ((byte) locationType);
 
                     return new KeyValuePair<Guid, Location>(Guid.Parse(result["Identifier"].ToString()), returned);
                 } else
@@ -186,7 +210,7 @@ namespace Ostenvighx.Suibhne {
             }
 
             try {
-                Core.Database.Open();
+                if(Core.Database.State != ConnectionState.Open) Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
                 c.CommandText = "SELECT * FROM Identifiers WHERE Identifier = '" + id + "';";
@@ -199,8 +223,9 @@ namespace Ostenvighx.Suibhne {
                     returned.Name = result["Name"].ToString();
                     if(result["ParentId"].ToString() != "")
                         returned.Parent = Guid.Parse(result["ParentId"].ToString());
-                    
-                    returned.Type = (Reference.LocationType) byte.Parse(result["LocationType"].ToString());
+
+                    int locationType = int.Parse(result["LocationType"].ToString());
+                    returned.Type = (Reference.LocationType)((byte)locationType);
                 } else
                     returned = null;
             }

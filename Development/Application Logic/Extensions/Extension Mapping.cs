@@ -38,7 +38,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 sender.Add("DisplayName", msg.sender.DisplayName);
                 sender.Add("Username", msg.sender.Username);
 
-                ev.Add(sender);
+                ev.Add("sender", sender);
 
                 Send(Encoding.UTF32.GetBytes(ev.ToString()));
             } else {

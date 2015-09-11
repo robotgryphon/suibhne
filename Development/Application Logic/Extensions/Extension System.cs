@@ -34,8 +34,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static SQLiteConnection Database;
 
-        public static String ConfigRoot;
-
         public static ExtensionSystem Instance {
             get {
                 if (instance == null) {
@@ -61,21 +59,19 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
             }
 
-            ConfigRoot = Core.SystemConfig.Configs["Directories"].GetString("ExtensionsRootDirectory", Environment.CurrentDirectory + "/Extensions/");
-
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
             this.UserEventHandlers = new List<Guid>();
             this.MessageHandlers = new List<Guid>();
-
-            LoadExtensionData();
-            CommandManager.Instance.MapCommands();
-
-            AutostartExtensions();
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
             Server.OnSocketCrash += ShutdownExtension;
             Server.Start();
+        }
+
+        public void Start() {
+            LoadExtensionData();
+            AutostartExtensions();
         }
 
         internal void ShutdownExtension(Guid id) {
@@ -110,7 +106,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         protected void AutostartExtensions() {
-            foreach (String extDir in Directory.GetDirectories(ConfigRoot)) {
+            foreach (String extDir in Directory.GetDirectories(Core.ConfigDirectory + "/Extensions/")) {
                 // Start extension
                 DirectoryInfo di = new DirectoryInfo(extDir);
 
@@ -266,6 +262,49 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Core.Log("Extension error: " + e.Message, LogType.ERROR);
                 Console.WriteLine(e);
             }
+        }
+
+        /// <summary>
+        /// Returns a list of all the extensions registered inside the database.
+        /// </summary>
+        /// <returns></returns>
+        public static ExtensionMap[] GetExtensionList() {
+            List<ExtensionMap> maps = new List<ExtensionMap>();
+
+            try {
+                DataTable results = new DataTable();
+                if (Database.State != ConnectionState.Open) Database.Open();
+
+                SQLiteCommand get = Database.CreateCommand();
+                get.CommandText = "SELECT * FROM Extensions;";
+                SQLiteDataReader dr = get.ExecuteReader();
+                results.Load(dr);
+
+                foreach (DataRow ex in results.Rows) {
+                    ExtensionMap em = new ExtensionMap();
+                    em.Name = ex["Name"].ToString();
+                    em.Identifier = Guid.Parse(ex["Identifier"].ToString());
+
+                    if (Instance.Extensions.ContainsKey(em.Identifier)) {
+                        em = Instance.Extensions[em.Identifier];
+                    } else {
+                        em.Ready = false;
+                        em.Socket = null;
+                    }
+
+                    maps.Add(em);
+                }
+            }
+
+            catch (Exception e) {
+               
+            }
+
+            finally {
+                Database.Close();
+            }
+
+            return maps.ToArray();
         }
 
         /// <summary>

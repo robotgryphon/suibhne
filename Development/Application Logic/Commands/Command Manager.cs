@@ -312,41 +312,50 @@ namespace Ostenvighx.Suibhne.Commands {
                         KeyValuePair<Guid, Location> location;
                         switch(messageParts.Length) {
                             case 2:
-                                response.message = "Current identifier for location: " + msg.locationID + ". Network identifier: " + conn.Identifier;
-                                conn.SendMessage(response);
-                                break;
-
-                            case 3:
-                                // Looking up local location id
-                                location = LocationManager.GetLocationInfo(conn.Identifier, messageParts[2].ToLower());
-
-                                // If the location wasn't found, try to find it as a network instead
-                                if (location.Key == Guid.Empty) {
-                                    location = LocationManager.GetLocationInfo(messageParts[2].ToLower(), "");
-                                    if (location.Key == Guid.Empty) {
-                                        response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
-                                        conn.SendMessage(response);
-
-                                        break;
-                                    }
-                                }
-
-                                response.message = "Current identifier for " + (location.Value.Name!= "" ? "location " + location.Value.Name + ": " : "network " + location.Value.Name + ": ") + location.Key;
-                                conn.SendMessage(response);
-                                break;
-
-                            case 4:
-                                location = LocationManager.GetLocationInfo(messageParts[2].ToLower(), messageParts[3].ToLower());
-                                response.message = "Current identifier for location " + location.Value.Name + 
-                                    " on network " + messageParts[2] + ": " + location.Key + ".";
-
+                                location = LocationManager.GetLocationInfo(msg.locationID);
+                                
+                                response.message = "Current identifier for location \"" + location.Value.Name + "\": " + msg.locationID + ". Network identifier: " + conn.Identifier;
                                 conn.SendMessage(response);
                                 break;
 
                             default:
 
-                                break;
+                                String param = msg.message.Split(new char[]{ ' ' }, 3)[2];
 
+                                if (param.Contains(':')) {
+
+                                    // Network and locaiton lookup
+                                    String networkName = param.Split(':')[0].Trim();
+                                    String locationName = param.Split(':')[1].Trim();
+
+                                    location = LocationManager.GetLocationInfo(networkName, locationName);
+                                    response.message = "Current identifier for location " + location.Value.Name +
+                                        " on network " + networkName+ ": " + location.Key + ".";
+
+                                    conn.SendMessage(response);
+
+                                } else {
+                                    
+                                    // Local location lookup
+                                    location = LocationManager.GetLocationInfo(conn.Identifier, param);
+
+                                    // If the location wasn't found, try to find it as a network instead
+                                    if (location.Key == Guid.Empty) {
+                                        location = LocationManager.GetLocationInfo(param, "");
+                                        if (location.Key == Guid.Empty) {
+                                            response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
+                                            conn.SendMessage(response);
+
+                                            break;
+                                        }
+                                    }
+
+                                    response.message = "Current identifier for " + location.Value.Name + ": " + location.Key;
+                                    conn.SendMessage(response);
+
+                                }
+
+                                break;
                         }
                         
                         break;
