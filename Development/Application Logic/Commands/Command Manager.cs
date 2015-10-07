@@ -309,12 +309,11 @@ namespace Ostenvighx.Suibhne.Commands {
 
                     case "id":
                     case "identifier":
-                        KeyValuePair<Guid, Location> location;
                         switch(messageParts.Length) {
                             case 2:
-                                location = LocationManager.GetLocationInfo(msg.locationID);
+                                Location location = LocationManager.GetLocationInfo(msg.locationID);
                                 
-                                response.message = "Current identifier for location \"" + location.Value.Name + "\": " + msg.locationID + ". Network identifier: " + conn.Identifier;
+                                response.message = "Current identifier for location \"" + location.Name + "\": " + msg.locationID + ". Network identifier: " + conn.Identifier;
                                 conn.SendMessage(response);
                                 break;
 
@@ -328,21 +327,21 @@ namespace Ostenvighx.Suibhne.Commands {
                                     String networkName = param.Split(':')[0].Trim();
                                     String locationName = param.Split(':')[1].Trim();
 
-                                    location = LocationManager.GetLocationInfo(networkName, locationName);
-                                    response.message = "Current identifier for location " + location.Value.Name +
-                                        " on network " + networkName+ ": " + location.Key + ".";
+                                    KeyValuePair<Guid, Location> l = LocationManager.GetLocationInfo(networkName, locationName);
+                                    response.message = "Current identifier for location " + l.Value.Name +
+                                        " on network " + networkName + ": " + l.Key + ".";
 
                                     conn.SendMessage(response);
 
                                 } else {
                                     
                                     // Local location lookup
-                                    location = LocationManager.GetLocationInfo(conn.Identifier, param);
+                                    KeyValuePair<Guid, Location> l = LocationManager.GetLocationInfo(conn.Identifier, param);
 
                                     // If the location wasn't found, try to find it as a network instead
-                                    if (location.Key == Guid.Empty) {
-                                        location = LocationManager.GetLocationInfo(param, "");
-                                        if (location.Key == Guid.Empty) {
+                                    if (l.Key == Guid.Empty) {
+                                        l = LocationManager.GetLocationInfo(param, "");
+                                        if (l.Key == Guid.Empty) {
                                             response.message = "Could not find information for that location. Make sure you spelled everythign correctly.";
                                             conn.SendMessage(response);
 
@@ -350,7 +349,7 @@ namespace Ostenvighx.Suibhne.Commands {
                                         }
                                     }
 
-                                    response.message = "Current identifier for " + location.Value.Name + ": " + location.Key;
+                                    response.message = "Current identifier for " + l.Value.Name + ": " + l.Key;
                                     conn.SendMessage(response);
 
                                 }

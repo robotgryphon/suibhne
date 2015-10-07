@@ -24,15 +24,10 @@ namespace Ostenvighx.Suibhne.Gui {
     /// </summary>
     public partial class MainWindow : Window {
 
-        public Button ActiveTab;
-        private OutputPanel Output;
-        private NetworkPanel Editor;
-        private ExtensionsPanel Extensions;
-        // private ScriptEditor Scripting;
-        private AboutPanel About;
-
         public MainWindow() {
             InitializeComponent();
+
+            // TODO: Make fancier loading icon for startup process
 
             Core.LoadConfiguration();
             Core.LoadNetworks();
@@ -40,50 +35,27 @@ namespace Ostenvighx.Suibhne.Gui {
             ExtensionSystem.Instance.Start();
             Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
 
-            ActiveTab = OutputTab;
-            ActiveTab.Style = (Style) FindResource("TabButtonActive");
 
-            Output = new OutputPanel();
-            Editor = new NetworkPanel();
-            About = new AboutPanel();
-            Extensions = new ExtensionsPanel();
+            MenuItem extensionsMain = (MenuItem) this.FindName("extensionsMenu");
 
-            Panel p = Output.GetPanel();
+            foreach (ExtensionMap em in ExtensionSystem.GetExtensionList()) {
+                MenuItem newExtensionItem = new MenuItem();
+                newExtensionItem.Uid = "extensionMenuItem " + em.Identifier;
+                newExtensionItem.Header = em.Name;
 
-            this.ContentArea.Children.Add(p);
-
-            Core.StartNetworks();
+                extensionsMain.Items.Add(newExtensionItem);
+            }
+            // DO STARTUP AFTER DASHBOARD CREATED: Core.StartNetworks();
         }
 
-        public void HandleTabSwitch(object sender, RoutedEventArgs e) {
-            Button s = (Button)sender;
+        private void ExitApplication(object sender, RoutedEventArgs e) {
+            // DoShutdown();
+            Application.Current.Shutdown();
+        }
 
-            ActiveTab.Style = (Style) FindResource("TabButton");
-            ActiveTab = s;
-            ActiveTab.Style = (Style)FindResource("TabButtonActive");
-
-            ContentArea.Children.Clear();
-
-            Panel p = new StackPanel();
-            switch (ActiveTab.Name.ToLower()) {
-                case "outputtab":
-                    p = Output.GetPanel();
-                    break;
-
-                case "networktab":
-                    p = Editor.GetPanel();
-                    break;
-
-                case "extensionstab":
-                    p = Extensions.GetPanel();
-                    break;
-
-                case "abouttab":
-                    p = About.GetPanel();
-                    break;
-            }
-
-            this.ContentArea.Children.Add(p);            
+        private void click_LocationsEditor(object sender, RoutedEventArgs e) {
+            Windows.Locations win = new Windows.Locations();
+            win.ShowDialog();
         }
     }
 }

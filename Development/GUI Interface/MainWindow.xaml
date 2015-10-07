@@ -8,28 +8,37 @@
             <RowDefinition Height="*"  />
         </Grid.RowDefinitions>
 
-        <Grid Height="40" Width="Auto" HorizontalAlignment="Stretch" Background="#ff4d4d4d" Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Grid Background="#ff4d4d4d">
+            <Menu Height="40" Width="Auto" VerticalAlignment="Center" Background="#ff4d4d4d" HorizontalAlignment="Center">
+                <MenuItem Header="Suibhne" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Foreground="#FF6CFFF2">
+                    <MenuItem Header="Manage Locations" Click="click_LocationsEditor"/>
+                    <Separator />
+                    <MenuItem Header="About Suibhne" />
+                    <MenuItem Header="Exit Application" Click="ExitApplication"/>
 
-            <WrapPanel Name="GotoPanel" Grid.Column="0" Width="200" Height="30" VerticalAlignment="Center" Margin="10,5,10,5">
-                <TextBox Name="GotoField" Height="20" Width="180" BorderThickness="0,0,0,1" BorderBrush="#FF8D8D8D" Background="{x:Null}" Foreground="#FFB9FFB9" VerticalAlignment="Bottom" HorizontalAlignment="Left" FontSize="14" />
-                <Button Name="GotoBtn" Height="30" Width="20" Content="»" Background="{x:Null}" Foreground="White" BorderBrush="{x:Null}" FontWeight="Bold" FontSize="16" />
-            </WrapPanel>
-
-            <WrapPanel Name="NavTabs" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                <Button x:Name="OutputTab" Content="Output Log" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-                <Button x:Name="NetworkTab" Content="Location Editor" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-                <Button x:Name="ExtensionsTab" Content="Extensions" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-                <Button x:Name="ScriptingTab" Content="Scripting" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-                <Button x:Name="AboutTab" Content="About" Style="{StaticResource TabButton}" Click="HandleTabSwitch"></Button>
-            </WrapPanel>
-            
+                    <MenuItem.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </MenuItem.ItemsPanel>
+                </MenuItem>
+                <MenuItem Header="Extensions" Name="extensionsMenu" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Foreground="#FFFF9943">
+                    <MenuItem Header="Manage..." />
+                    <Separator />
+                </MenuItem>
+                <MenuItem Header="Scripting" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Height="20" Foreground="#FFC66AF1">
+                    <MenuItem Header="Manage Scripts" />
+                </MenuItem>
+            </Menu>
         </Grid>
-        
-        <Grid Name="ContentArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="Auto" Background="White" />
+
+        <Grid Name="ContentArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="Auto" Background="White">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="8*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+        </Grid>
     </Grid>
 
 </Window>

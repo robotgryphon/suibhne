@@ -111,17 +111,15 @@ namespace Ostenvighx.Suibhne {
         }
 
         protected void AutoJoinLocations() {
-            DataTable locations = LocationManager.GetChildLocations(this.Identifier);
+            Dictionary<Guid, Location> locations = LocationManager.GetChildLocations(this.Identifier);
             if (locations == null)
                 return;
 
-            foreach (DataRow l in locations.Rows) {
+            foreach (KeyValuePair<Guid, Location> l in locations) {
                 try {
 
-                    Core.Log("Attempting to join " + l["Name"].ToString() + " on network.");
-
-                    Guid newLocationID = Guid.Parse(l["Identifier"].ToString());
-                    _network.JoinLocation(newLocationID);
+                    Core.Log("Attempting to join " + l.Value.Name + " on network.");
+                    _network.JoinLocation(l.Key);
                 }
 
                 catch (Exception e) {

@@ -18,7 +18,7 @@ namespace Ostenvighx.Suibhne {
         public static bool RenameLocation(Guid id, string name) {
 
             // Update in database
-            if (Core.Database == null || GetLocationInfo(id).Key == Guid.Empty) {
+            if (Core.Database == null || GetLocationInfo(id) == null) {
                 // Location does not exist, or database not ready
                 return false;
             }
@@ -107,9 +107,9 @@ namespace Ostenvighx.Suibhne {
                 if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + id))
                     Directory.Delete(Core.ConfigDirectory + "/Networks/" + id, true);
                 else {
-                    KeyValuePair<Guid, Location> parentID = GetLocationInfo(id);
-                    if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + parentID.Key + "/" + id))
-                        Directory.Delete(Core.ConfigDirectory + "/Networks/" + parentID.Key + "/" + id, true);
+                    Location location = GetLocationInfo(id);
+                    if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + location.Parent + "/" + id))
+                        Directory.Delete(Core.ConfigDirectory + "/Networks/" + location.Parent + "/" + id, true);
                 }
 
                 SQLiteCommand command = Core.Database.CreateCommand();
@@ -128,13 +128,16 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public static DataTable GetChildLocations(Guid parent) {
+        public static Dictionary<Guid, Location> GetChildLocations(Guid parent) {
             if (Core.Database == null) {
                 // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
                 return null;
             }
 
             try {
+                Dictionary<Guid, Location> children = new Dictionary<Guid, Location>();
+
+
                 Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
@@ -143,7 +146,19 @@ namespace Ostenvighx.Suibhne {
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
 
-                return resultsTable;
+                foreach (DataRow row in resultsTable.Rows) {
+                    Location l = new Location("location");
+                    Guid id = Guid.Parse(row["Identifier"].ToString());
+                    l.Name = row["Name"].ToString();
+                    l.Parent = parent;
+
+                    int locationType = int.Parse(row["LocationType"].ToString());
+                    l.Type = (Reference.LocationType)((byte)locationType);
+
+                    children.Add(id, l);
+                }
+
+                return children;
             }
 
             catch (Exception) {
@@ -200,13 +215,13 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public static KeyValuePair<Guid, Location> GetLocationInfo(Guid id) {
+        public static Location GetLocationInfo(Guid id) {
 
             Location returned = new Location("");
 
             if (Core.Database == null) {
                 // This shouldn't happen- the ValidateDatabase should be creating the table. But just in case..
-                return new KeyValuePair<Guid, Location>(Guid.Empty, null);
+                return null;
             }
 
             try {
@@ -221,13 +236,13 @@ namespace Ostenvighx.Suibhne {
                 if (resultsTable.Rows.Count > 0) {
                     DataRow result = resultsTable.Rows[0];
                     returned.Name = result["Name"].ToString();
-                    if(result["ParentId"].ToString() != "")
+                    if (result["ParentId"].ToString() != "")
                         returned.Parent = Guid.Parse(result["ParentId"].ToString());
 
                     int locationType = int.Parse(result["LocationType"].ToString());
                     returned.Type = (Reference.LocationType)((byte)locationType);
                 } else
-                    returned = null;
+                    return null;
             }
 
             catch (Exception) {
@@ -238,7 +253,7 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Close();
             }
 
-            return new KeyValuePair<Guid,Location>(id, returned);
+            return returned;
         }
 
         public static KeyValuePair<Guid, Location> GetLocationInfo(string network, string location = "") {
@@ -265,7 +280,7 @@ namespace Ostenvighx.Suibhne {
                 resultsTable.Load(resultsReader);
 
                 Guid id = Guid.Parse( resultsTable.Rows[0]["Identifier"].ToString() );
-                Location l = GetLocationInfo(id).Value;
+                Location l = GetLocationInfo(id);
                 KeyValuePair<Guid, Location> returned = new KeyValuePair<Guid,Location>(id, l);
 
                 return returned;
