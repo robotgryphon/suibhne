@@ -1,6 +1,5 @@
 ﻿using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Suibhne.Gui.Panels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,14 +35,27 @@ namespace Ostenvighx.Suibhne.Gui {
             Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
 
 
-            MenuItem extensionsMain = (MenuItem) this.FindName("extensionsMenu");
+            
 
             foreach (ExtensionMap em in ExtensionSystem.GetExtensionList()) {
-                MenuItem newExtensionItem = new MenuItem();
-                newExtensionItem.Uid = "extensionMenuItem " + em.Identifier;
-                newExtensionItem.Header = em.Name;
+                Grid ExtensionsPanel = new Grid();
+                ExtensionsPanel.Height = 30; ExtensionsPanel.Width = 150;
+                ExtensionsPanel.Background = new SolidColorBrush(Colors.GhostWhite);
+                ExtensionsPanel.Margin = new Thickness(5);
 
-                extensionsMain.Items.Add(newExtensionItem);
+                RowDefinition panelLabel = new RowDefinition();
+                panelLabel.Height = new GridLength(30); 
+                
+                ExtensionsPanel.RowDefinitions.Add(panelLabel);
+
+                Button label = new Button();
+                label.BorderBrush = new SolidColorBrush(Colors.Black);
+                label.BorderThickness = new Thickness(1);
+                label.Content = em.Name;
+                label.SetValue(Grid.RowProperty, 1);
+                ExtensionsPanel.Children.Add(label);
+
+                extensionsContainer.Children.Add(ExtensionsPanel);
             }
             // DO STARTUP AFTER DASHBOARD CREATED: Core.StartNetworks();
         }

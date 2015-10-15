@@ -11,10 +11,10 @@
         <Grid Background="#ff4d4d4d">
             <Menu Height="40" Width="Auto" VerticalAlignment="Center" Background="#ff4d4d4d" HorizontalAlignment="Center">
                 <MenuItem Header="Suibhne" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Foreground="#FF6CFFF2">
-                    <MenuItem Header="Manage Locations" Click="click_LocationsEditor"/>
+                    <MenuItem Header="Manage Locations" Click="click_LocationsEditor" Foreground="Black"/>
                     <Separator />
-                    <MenuItem Header="About Suibhne" />
-                    <MenuItem Header="Exit Application" Click="ExitApplication"/>
+                    <MenuItem Header="About Suibhne" Foreground="Black" />
+                    <MenuItem Header="Exit Application" Click="ExitApplication" Foreground="Black"/>
 
                     <MenuItem.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -23,21 +23,41 @@
                     </MenuItem.ItemsPanel>
                 </MenuItem>
                 <MenuItem Header="Extensions" Name="extensionsMenu" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Foreground="#FFFF9943">
-                    <MenuItem Header="Manage..." />
+                    <MenuItem Header="Manage..." Background="{x:Null}" Foreground="Black" />
                     <Separator />
                 </MenuItem>
                 <MenuItem Header="Scripting" Style="{StaticResource MenuBarItem}" Template="{DynamicResource MenuItemMain}" Height="20" Foreground="#FFC66AF1">
-                    <MenuItem Header="Manage Scripts" />
+                    <MenuItem Header="Manage Scripts" Foreground="Black" />
                 </MenuItem>
             </Menu>
         </Grid>
 
-        <Grid Name="ContentArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="Auto" Background="White">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="8*" />
-                <ColumnDefinition Width="1*" />
-            </Grid.ColumnDefinitions>
+        <Grid Name="ContentArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="Auto" Background="#FFAEAEAE">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Margin="50,0">
+                    
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <Label FontSize="30" Content="Networks" />
+                        <ScrollViewer VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto">
+                            <StackPanel Orientation="Horizontal" Height="160" Name="networksContainer">
+
+                            </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="1">
+                        <Label FontSize="30" Content="Extensions" />
+                        <ScrollViewer VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto">
+                            <WrapPanel Orientation="Horizontal" Name="extensionsContainer" />
+                        </ScrollViewer>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
         </Grid>
     </Grid>
 

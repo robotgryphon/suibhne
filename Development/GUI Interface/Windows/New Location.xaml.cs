@@ -12,12 +12,12 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace Ostenvighx.Suibhne.Interface {
+namespace Ostenvighx.Suibhne.Gui.Windows {
     /// <summary>
-    /// Interaction logic for Raw_Log.xaml
+    /// Interaction logic for New_Location.xaml
     /// </summary>
-    public partial class Raw_Log : Window {
-        public Raw_Log() {
+    public partial class New_Location : Window {
+        public New_Location() {
             InitializeComponent();
         }
     }

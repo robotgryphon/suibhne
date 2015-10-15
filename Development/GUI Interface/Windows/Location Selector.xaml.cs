@@ -74,7 +74,11 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
         }
 
         private void Add(object sender, RoutedEventArgs e) {
+            // First check if there's a network selected
+            // If so, add child, prompt for name.
+            // If not, add network, prompt for network connector and name.
 
+            // Load up editor, profit
         }
 
         private void Delete(object sender, RoutedEventArgs e) {

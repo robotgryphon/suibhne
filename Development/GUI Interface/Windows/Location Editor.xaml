@@ -1,7 +1,7 @@
 ﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Windows.LocationEditor"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Location Editor" Height="500" Width="600">
+        Title="Location Editor" Height="500" Width="600" MaxWidth="600">
     <Grid>
         <TabControl>
             <TabItem Header="Location Configuration" Name="locationConfigTab">
@@ -22,12 +22,12 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="1">
-                                <Button Grid.Column="1" Content="&#xE161;" FontSize="20" FontFamily="/GUI Interface;component/font/#Material Icons" Background="Transparent" BorderBrush="Transparent" Click="SaveDataToDisk_Handler"/>
+                                <Button Grid.Column="1" Content="&#xE161;" FontSize="20" Background="Transparent" BorderBrush="Transparent" Click="SaveDataToDisk_Handler" Foreground="#FF282D95" FontFamily="/GUI Interface;component/Assets/font/#Material Icons"/>
                                 <Label FontSize="15">Save</Label>
                             </StackPanel>
 
                             <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                <Button Content="&#xE5D5;" FontSize="20" FontFamily="/GUI Interface;component/font/#Material Icons" Background="Transparent" BorderBrush="Transparent" Click="RefreshFromDisk_Handler"/>
+                                <Button Content="&#xE5D5;" FontSize="20" FontFamily="/GUI Interface;component/Assets/font/#Material Icons" Background="Transparent" BorderBrush="Transparent" Click="RefreshFromDisk_Handler"/>
                                 <Label FontSize="15">Reload from Disk</Label>
                             </StackPanel>
                         </Grid>

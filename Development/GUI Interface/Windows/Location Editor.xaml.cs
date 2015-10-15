@@ -25,28 +25,31 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
         // Location information
         private Guid id;
         private Location location;
-        private String networkType;
+        private String connector;
         private Dictionary<String, FrameworkElement> fields;
 
         private LocationEditor() {
             InitializeComponent();
+            this.id = Guid.Empty;
+            this.fields = new Dictionary<string, FrameworkElement>();
         }
 
-        public LocationEditor(Guid id, bool newLocation = false)
+        /// <summary>
+        /// Call when editing an existing location.
+        /// </summary>
+        /// <param name="id"></param>
+        public LocationEditor(Guid id)
             : this() {
             this.id = id;
             this.location = LocationManager.GetLocationInfo(id);
-            this.fields = new Dictionary<string, FrameworkElement>();
-
             this.Title += " - " + location.Name;
 
-            LoadNetworkInformation();
+            LoadConnectorInformation();
             LoadConfigFields();
-            if (!newLocation)
-                LoadExistingData();
+            LoadExistingData();
         }
 
-        private void LoadNetworkInformation() {
+        private void LoadConnectorInformation() {
             String path = "";
             if (location.Type != Reference.LocationType.Network) {
                 if (location.Parent != Guid.Empty) {
@@ -71,7 +74,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                     this.Close();
                 }
 
-                this.networkType = config.Configs["Network"].GetString("type");
+                this.connector = config.Configs["Network"].GetString("type");
             }
 
             catch (Exception) {
@@ -83,7 +86,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
         private void LoadConfigFields() {
             XmlDocument xml = new XmlDocument();
             try {
-                String netConfigTemplateFilename = Core.ConfigDirectory + @"Connectors\" + networkType + "\\Config.xml";
+                String netConfigTemplateFilename = Core.ConfigDirectory + @"Connectors\" + connector + "\\Config.xml";
                 String stackText = File.ReadAllText(netConfigTemplateFilename);
                 xml.LoadXml(stackText);
             }
@@ -227,7 +230,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
             try {
                 IniConfigSource config = new IniConfigSource(configFilePath);
                 XmlDocument xml = new XmlDocument();
-                xml.Load(Core.ConfigDirectory + "/Connectors/" + networkType + "/Config.xml");
+                xml.Load(Core.ConfigDirectory + "/Connectors/" + connector + "/Config.xml");
 
                 foreach(XmlNode node in xml.ChildNodes[1].SelectSingleNode(location.Type == Reference.LocationType.Network ? "Network" : "Location")){
                     LoadDataWithXml(node, config);
@@ -282,7 +285,92 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
 
         #region Event Handling
         private void SaveDataToDisk_Handler(object sender, RoutedEventArgs e) {
+            MessageBoxResult res = MessageBox.Show("Warning: By confirming this save, you're letting the existing configuration " +
+                    "file be rewritten in its entirety by the data you specified here. Any custom content WILL be removed. Press okay " +
+                    "to confirm." + "\n\n" +
+                    "If you'd like to make notes, feel free to create new files of your own in the location folder. They won't be removed unless YOU do it.",
 
+                    "Confirm config file overwrite?",
+                    MessageBoxButton.OKCancel);
+
+            if (res != MessageBoxResult.OK)
+                return;
+
+            #region Config File Setup
+            IniConfigSource configuration = new IniConfigSource();
+
+            // Depending on location type, get proper save path and recreate file
+            switch (location.Type) {
+                case Reference.LocationType.Network:
+                    // Saving network information
+                    configuration.Save(Core.ConfigDirectory + "/Networks/" + id + "/network.ini");
+
+                    break;
+
+                case Reference.LocationType.Public:
+                    // Saving location information
+                    configuration.Save(Core.ConfigDirectory + "/Networks/" + location.Parent + "/Locations/" + id + "/location.ini");
+                    break;
+
+            }
+
+            // Add in a little warning for the people that like to hand-edit stuff
+            String[] fileOverwriteComment = new string[]{
+                        "# Warning: This is an automatically generated configuration file. All edits will not be saved here when the editor is used.",
+                        "# To avoid loss of notes, create a different file in this directory with the notes.",
+                        "",
+                        ""
+                    };
+
+            File.WriteAllLines(configuration.SavePath, fileOverwriteComment);
+            #endregion
+
+            #region Save Configuration File
+            // Okay. Now, let's get to saving stuff.
+            // First, open that structure file back up.
+            String stackText = File.ReadAllText(Core.ConfigDirectory + "/Connectors/" + this.connector + "/Config.xml");
+            XmlDocument structure = new XmlDocument();
+            structure.LoadXml(stackText);
+
+            String configType = location.Type == Reference.LocationType.Network ? "Network" : "Location";
+
+            // If it's a network, write in the type of network into the file
+            if (location.Type == Reference.LocationType.Network) {
+                configuration.AddConfig("Network");
+                configuration.Configs["Network"].Set("type", this.connector);
+            }
+
+            foreach (XmlNode section in structure.ChildNodes[1].SelectSingleNode(configType).ChildNodes) {
+                String sectionName = section.Attributes["Name"].Value;
+                configuration.AddConfig(sectionName);
+
+                foreach (XmlNode field in section.ChildNodes) {
+                    if (field.Attributes["Type"] != null && field.Name.ToLower() == "field") {
+                        String fieldKey = field.Attributes["Key"].Value;
+                        switch (field.Attributes["Type"].Value.ToLower()) {
+                            case "text":
+                                configuration.Configs[sectionName].Set(fieldKey, ((TextBox) fields[fieldKey]).Text);
+                                break;
+
+                            case "password":
+                                configuration.Configs[sectionName].Set(fieldKey, ((PasswordBox) fields[fieldKey]).Password);
+                                break;
+
+                            case "checkbox":
+                                configuration.Configs[sectionName].Set(fieldKey, ((CheckBox)fields[fieldKey]).IsChecked);
+                                break;
+
+                            case "select":
+                                configuration.Configs[sectionName].Set(fieldKey, ((ComboBox) fields[fieldKey]).SelectedValue.ToString());
+                                break;
+                        }
+                    }
+                }
+
+            }
+
+            configuration.Save();
+            #endregion
         }
 
         private void RefreshFromDisk_Handler(object sender, RoutedEventArgs e) {
