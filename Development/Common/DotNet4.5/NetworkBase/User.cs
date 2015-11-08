@@ -22,7 +22,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// <summary>
         /// The user's Username. This is usually the first bit of their hostmask.
         /// </summary>
-        public String Username;
+        public String UniqueName;
 
         /// <summary>
         /// The user's last known DisplayName.
@@ -44,7 +44,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
 
             JObject thisAsJson = JObject.Parse(decoded);
-            this.Username = thisAsJson["Username"].ToString();
+            this.UniqueName = thisAsJson["Username"].ToString();
             this.LastDisplayName = thisAsJson["LastDisplayName"].ToString();
             this.DisplayName = thisAsJson["DisplayName"].ToString();
         }
@@ -61,7 +61,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public User(String username, String last_displayname, String current_displayname) {
             this.NetworkAuthLevel = (byte)User.AccessLevel.Basic; 
             this.LocalAuthLevel = (byte)User.AccessLevel.Basic;
-            this.Username = username;
+            this.UniqueName = username;
             this.LastDisplayName = last_displayname;
             this.DisplayName = current_displayname;
         }
@@ -70,7 +70,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
             JObject thisAsJson = new JObject();
             thisAsJson.Add("DisplayName", this.DisplayName);
             thisAsJson.Add("LastDisplayName", this.LastDisplayName);
-            thisAsJson.Add("Username", this.Username);
+            thisAsJson.Add("Username", this.UniqueName);
 
             String json = thisAsJson.ToString();
             byte[] data = Encoding.UTF8.GetBytes(json);
@@ -92,7 +92,7 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
         public override bool Equals(object obj) {
             if (obj.GetType() == typeof(User)) {
-                return ((User)obj).Username == this.Username;
+                return ((User)obj).UniqueName == this.UniqueName;
             }
 
             return false;

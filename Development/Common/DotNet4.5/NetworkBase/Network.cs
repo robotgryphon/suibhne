@@ -91,6 +91,11 @@ namespace Ostenvighx.Suibhne.Networks.Base {
 
         public abstract void Setup(string configFile);
 
+        #region Event Methods
+        public abstract bool IsEventSupported(String eventName);
+        public abstract String[] GetSupportedEvents();
+        #endregion
+
         #region Connection Methods
         public abstract void Connect();
         public abstract void Disconnect(String reason);

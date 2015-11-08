@@ -1,37 +1,17 @@
-﻿using Nini.Config;
-using Ostenvighx.Suibhne.Extensions;
+﻿using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Data;
+using System.Data.SQLite;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-using Ostenvighx.Suibhne.Commands;
-using System.Data.SQLite;
-using System.Data;
+namespace Ostenvighx.Suibhne.System_Commands {
+    internal partial class SysCommands {
 
-namespace Ostenvighx.Suibhne {
-    public class SystemCommands {
-
-        public static void HandleCommandsCommand(NetworkBot conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
-            if (Message.IsPrivateMessage(response))
-                response.type = Networks.Base.Reference.MessageType.PrivateAction;
-            else
-                response.type = Networks.Base.Reference.MessageType.PublicAction;
-
-            response.message = "figures you have access to these commands: ";
-
-            String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender, false);
-
-            response.message += String.Join(", ", AvailableCommands);
-            conn.SendMessage(response);
-        }
-
-        public static void HandleExtensionsCommand(NetworkBot conn, Message msg) {
+        public static void Extensions(NetworkBot conn, Message msg) {
             Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
             ExtensionMap workingExtension = new ExtensionMap();
@@ -124,7 +104,7 @@ namespace Ostenvighx.Suibhne {
                     finally {
                         ExtensionSystem.Database.Close();
                     }
-                    
+
                     break;
 
                 case "reload":
@@ -138,51 +118,5 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public static void HandleVersionCommand(NetworkBot conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
-            if (Message.IsPrivateMessage(response))
-                response.type = Networks.Base.Reference.MessageType.PrivateAction;
-            else
-                response.type = Networks.Base.Reference.MessageType.PublicAction;
-
-            response.message = "is currently running version: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            conn.SendMessage(response);
-        }
-
-        public static void HandleNetworkInfoCommand(NetworkBot conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
-            String[] messageParts = msg.message.Split(' ');
-
-            if (messageParts.Length != 3) {
-                response.message = "Invalid Parameters. Format: !sys netinfo [connectionType]";
-                conn.SendMessage(response);
-                return;
-            }
-
-            try {
-                string connType = messageParts[2];
-                response.message = "Connection type recieved: " + connType;
-
-                if (File.Exists(Core.ConfigDirectory + "Connectors/" + connType + "/" + connType + ".dll")) {
-                    Assembly networkTypeAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "Connectors/" + connType + "/" + connType + ".dll");
-                    response.message = "Assembly information: " +
-                        ((AssemblyTitleAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyTitleAttribute))).Title +
-                        " written by " +
-                        ((AssemblyCompanyAttribute)networkTypeAssembly.GetCustomAttribute(typeof(AssemblyCompanyAttribute))).Company +
-                        " (v" + networkTypeAssembly.GetName().Version + ")";
-
-                    conn.SendMessage(response);
-                } else {
-                    response.message = "I couldn't find that network connector's file. Check spelling and capitaliation.";
-                    conn.SendMessage(response);
-                }
-
-            }
-
-            catch (Exception e) {
-                response.message = "There was an error processing the command. (" + e.GetType().Name + ")";
-                conn.SendMessage(response);
-            }
-        }
     }
 }

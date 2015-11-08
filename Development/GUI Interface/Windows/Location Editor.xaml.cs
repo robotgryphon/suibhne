@@ -16,7 +16,7 @@ using System.Windows.Shapes;
 using System.Xml;
 using Nini.Config;
 
-namespace Ostenvighx.Suibhne.Gui.Windows {
+namespace Ostenvighx.Suibhne.Gui.Wins {
     /// <summary>
     /// Interaction logic for LocationEditor.xaml
     /// </summary>
@@ -91,9 +91,10 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                 xml.LoadXml(stackText);
             }
 
-            catch (Exception) {
+            catch (Exception e) {
 
                 MessageBox.Show("There was an error loading the configuration fields. Looks like the xml document containing the network config structure had a problem loading.");
+                Core.Log(e.Message, LogType.ERROR);
                 this.Close();
             }
 
@@ -242,6 +243,12 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                 this.Close();
             }
 
+            catch (FileNotFoundException) {
+                Core.Log("File not created yet for location " + location.Name + " (" + id + "). Creating it now.", LogType.ERROR);
+
+                Save();
+            }
+
             catch (Exception e) {
                 Core.Log("Exception caught: " + e.Message, LogType.ERROR);
             }
@@ -296,6 +303,10 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
             if (res != MessageBoxResult.OK)
                 return;
 
+            Save();
+        }
+
+        internal void Save() {
             #region Config File Setup
             IniConfigSource configuration = new IniConfigSource();
 
@@ -349,11 +360,11 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                         String fieldKey = field.Attributes["Key"].Value;
                         switch (field.Attributes["Type"].Value.ToLower()) {
                             case "text":
-                                configuration.Configs[sectionName].Set(fieldKey, ((TextBox) fields[fieldKey]).Text);
+                                configuration.Configs[sectionName].Set(fieldKey, ((TextBox)fields[fieldKey]).Text);
                                 break;
 
                             case "password":
-                                configuration.Configs[sectionName].Set(fieldKey, ((PasswordBox) fields[fieldKey]).Password);
+                                configuration.Configs[sectionName].Set(fieldKey, ((PasswordBox)fields[fieldKey]).Password);
                                 break;
 
                             case "checkbox":
@@ -361,7 +372,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                                 break;
 
                             case "select":
-                                configuration.Configs[sectionName].Set(fieldKey, ((ComboBox) fields[fieldKey]).SelectedValue.ToString());
+                                configuration.Configs[sectionName].Set(fieldKey, ((ComboBox)fields[fieldKey]).SelectedValue.ToString());
                                 break;
                         }
                     }
@@ -372,7 +383,6 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
             configuration.Save();
             #endregion
         }
-
         private void RefreshFromDisk_Handler(object sender, RoutedEventArgs e) {
             LoadExistingData();
         }

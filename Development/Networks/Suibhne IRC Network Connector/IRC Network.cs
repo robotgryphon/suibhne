@@ -152,7 +152,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (Status == Base.Reference.ConnectionStatus.Connected && nickname != null && nickname != "" && nickname != Me.DisplayName) {
                 SendRaw("NICK :" + nickname);
 
-                Base.User tmpMe = new Base.User(Me.Username, log ? Me.DisplayName : Me.LastDisplayName, nickname);
+                Base.User tmpMe = new Base.User(Me.UniqueName, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
 
                 HandleUserDisplayNameChange(Identifier, Me);
@@ -187,7 +187,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                 client.BeginReceive(GlobalBuffer, 0, GlobalBuffer.Length, SocketFlags.None, DataRecievedCallback, client);
 
-                SendRaw(String.Format("USER {0} 8 * :{0}", Me.Username));
+                SendRaw(String.Format("USER {0} 8 * :{0}", Me.UniqueName));
 
                 Thread.Sleep(100);
 
@@ -302,6 +302,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     case "315":
                         // End of WHO response
                         ParseWhoList(line);
+
+                        // TODO: FireEvent("user_list_update", whoList);
                         break;
 
 
@@ -580,7 +582,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             changer.DisplayName = dataChunks[2].TrimStart(':');
                 
             if (changer.LastDisplayName == Me.DisplayName) {
-                Base.User me = new Base.User(Me.Username, Me.DisplayName, changer.DisplayName);
+                Base.User me = new Base.User(Me.UniqueName, Me.DisplayName, changer.DisplayName);
                 Me = me;
             }
 
@@ -627,7 +629,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             String[] bits = line.Split(new char[] { ' ' });
             Guid locationGuid = GetLocationIdByName(bits[3]);
             User u = new User();
-            u.Username = bits[4].TrimStart(new char[]{'~'});
+            u.UniqueName = bits[4].TrimStart(new char[]{'~'});
             u.DisplayName = bits[7];
 
             String userHost = bits[5];
@@ -679,6 +681,26 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             }
 
             TempUserAccessLevels.Clear();
+        }
+
+        // TODO: More work on the event support - this should be customizable through a config file instead
+        public override bool IsEventSupported(string eventName) {
+            string[] customEvents = new string[] {
+                "user_list_updated",
+                "topic_changed"
+            };
+
+            if (customEvents.Contains(eventName.ToLower()))
+                return true;
+
+            return false;
+        }
+
+        public override string[] GetSupportedEvents() {
+            return new string[] {
+                "user_list_updated",
+                "topic_changed"
+            };
         }
     }
 }

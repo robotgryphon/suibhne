@@ -45,6 +45,38 @@ namespace Ostenvighx.Suibhne {
             return false;
         }
 
+        public static Guid[] GetNetworks() {
+            if (Core.Database == null)
+                return null;
+
+            try {
+                Core.Database.Open();
+
+                List<Guid> networks = new List<Guid>();
+                SQLiteCommand command = Core.Database.CreateCommand();
+                command.CommandText = "SELECT * FROM Identifiers WHERE LocationType=1;";
+
+                DataTable resultsTable = new DataTable();
+                SQLiteDataReader resultsReader = command.ExecuteReader();
+                resultsTable.Load(resultsReader);
+                
+                foreach(DataRow dr in resultsTable.Rows) {
+                    networks.Add(Guid.Parse(dr["Identifier"] as String));
+                }
+
+                return networks.ToArray();
+            }
+
+            catch (Exception) {
+
+                return null;
+            }
+
+            finally {
+                Core.Database.Close();
+            }
+        }
+
         public static void AddNewLocation(Guid parent, Guid id, String name) {
             if (Core.Database == null)
                 return;
@@ -66,7 +98,12 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public static void AddNewNetwork(Guid id, String name) {
+        /// <summary>
+        /// Creates a new network.
+        /// </summary>
+        /// <param name="id">The new network's identifier.</param>
+        /// <param name="name">The new network's name.</param>
+        public static void AddNewNetwork(Guid id, String type, String name) {
 
             if (Core.Database == null)
                 return;
@@ -78,19 +115,35 @@ namespace Ostenvighx.Suibhne {
                 command.CommandText = "INSERT INTO Identifiers VALUES ('" + id.ToString() + "', '', '" + name + "', 1);";
                 command.ExecuteNonQuery();
 
-                NetworkBot b = new NetworkBot(Core.ConfigDirectory + "/Networks/" + id);
-                Core.Networks.Add(id, b);
-
                 Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id);
                 Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id + "/Locations");
+
+                
             }
 
-            catch (Exception) { }
+            catch (Exception) {
+                
+            }
 
             finally {
                 Core.Database.Close();
             }
 
+            #region Creating basic network file
+            try {
+                String newConfigFile = Core.ConfigDirectory + "/Networks/" + id + "/network.ini";
+
+                IniConfigSource config = new IniConfigSource();
+
+                config.AddConfig("Network");
+                config.Configs["Network"].Set("type", type);
+                config.Save(newConfigFile);
+            }
+
+            catch(Exception e) {
+                Core.Log(e.Message, LogType.ERROR);
+            }
+            #endregion
         }
 
         /// <summary>
@@ -102,15 +155,24 @@ namespace Ostenvighx.Suibhne {
                 return;
 
             try {
-                Core.Database.Open();
-
-                if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + id))
-                    Directory.Delete(Core.ConfigDirectory + "/Networks/" + id, true);
+                if (Directory.Exists(@Core.ConfigDirectory + @"Networks/" + id))
+                    Directory.Delete(Core.ConfigDirectory + @"Networks/" + id, true);
                 else {
                     Location location = GetLocationInfo(id);
-                    if (Directory.Exists(Core.ConfigDirectory + "/Networks/" + location.Parent + "/" + id))
-                        Directory.Delete(Core.ConfigDirectory + "/Networks/" + location.Parent + "/" + id, true);
+                    String dir = Core.ConfigDirectory + @"Networks/" + location.Parent + @"/Locations/" + id;
+
+                    if(Directory.Exists(dir))
+                        Directory.Delete(dir, true);
                 }
+            }
+
+            catch(Exception) {
+
+            }
+
+            try {
+                if(Core.Database.State != ConnectionState.Open)
+                    Core.Database.Open();
 
                 SQLiteCommand command = Core.Database.CreateCommand();
                 command.CommandText = "DELETE FROM Identifiers WHERE Identifier = '" + id + "' OR ParentId = '" + id + "';";
@@ -121,7 +183,10 @@ namespace Ostenvighx.Suibhne {
 
             }
 
-            catch (Exception) { }
+            catch (Exception e) {
+                Core.Log(e.StackTrace);
+                Core.Log(e.Message);
+            }
 
             finally {
                 Core.Database.Close();

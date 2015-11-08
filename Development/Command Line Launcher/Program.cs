@@ -12,11 +12,13 @@ namespace CLI {
         static void Main(string[] args) {
 
             Core.LoadConfiguration();
-            Core.LoadNetworks();
+            if (true || Core.RequiresUpdate) {
+                String[] events = Management.GetAvailableEventsFromConnectors();
+                Core.Log("Loaded all events: " + String.Join("; ", events), LogType.EXTENSIONS);
+            }
 
-            ExtensionSystem.Instance.Start();
-            Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
-            Core.StartNetworks();
+            // Core.LoadNetworks();
+
 
             Console.ReadLine();
         }

@@ -22,7 +22,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject user = new JObject();
             user.Add("DisplayName", m.sender.DisplayName);
-            user.Add("Username", m.sender.Username);
+            user.Add("Username", m.sender.UniqueName);
 
             messageEvent.Add("user", user);
 
@@ -38,7 +38,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject user = new JObject();
             user.Add("DisplayName", u.DisplayName);
-            user.Add("Username", u.Username);
+            user.Add("Username", u.UniqueName);
 
             userEvent.Add("user", user);
 
@@ -54,7 +54,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject user = new JObject();
             user.Add("DisplayName", u.DisplayName);
-            user.Add("Username", u.Username);
+            user.Add("Username", u.UniqueName);
 
             userEvent.Add("user", user);
 
@@ -70,7 +70,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject user = new JObject();
             user.Add("DisplayName", u.DisplayName);
-            user.Add("Username", u.Username);
+            user.Add("Username", u.UniqueName);
 
             userEvent.Add("user", user);
 
@@ -87,7 +87,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             JObject user = new JObject();
             user.Add("LastDisplayName", u.LastDisplayName);
             user.Add("DisplayName", u.DisplayName);
-            user.Add("Username", u.Username);
+            user.Add("Username", u.UniqueName);
 
             userEvent.Add("user", user);
 

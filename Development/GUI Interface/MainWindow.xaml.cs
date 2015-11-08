@@ -66,7 +66,12 @@ namespace Ostenvighx.Suibhne.Gui {
         }
 
         private void click_LocationsEditor(object sender, RoutedEventArgs e) {
-            Windows.Locations win = new Windows.Locations();
+            Wins.Locations win = new Wins.Locations();
+            win.ShowDialog();
+        }
+
+        private void click_NewLocation(object sender, RoutedEventArgs e) {
+            Wins.New_Location win = new Wins.New_Location();
             win.ShowDialog();
         }
     }

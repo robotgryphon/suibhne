@@ -34,14 +34,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (userMatch.Success) {
                 if (userMatch.Groups["username"].Value != "") {
                     user.DisplayName = userMatch.Groups["nickname"].Value;
-                    user.Username = userMatch.Groups["username"].Value;
+                    user.UniqueName = userMatch.Groups["username"].Value;
                 } else {
                     user.DisplayName = "<server>";
-                    user.Username = "<server>";
+                    user.UniqueName = "<server>";
                 }
             } else {
                 user.DisplayName = "<unknown>";
-                user.Username = "<unknown>";
+                user.UniqueName = "<unknown>";
             }
 
             return user;

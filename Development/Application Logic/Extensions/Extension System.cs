@@ -129,6 +129,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
+        // TODO: Fix event registration in here
         protected void LoadExtensionData() {
             DataTable extensions = new DataTable();
             try {
@@ -296,7 +297,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 }
             }
 
-            catch (Exception e) {
+            catch (Exception) {
                
             }
 

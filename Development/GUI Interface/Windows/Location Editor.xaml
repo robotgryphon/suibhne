@@ -1,4 +1,4 @@
-﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Windows.LocationEditor"
+﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Wins.LocationEditor"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Location Editor" Height="500" Width="600" MaxWidth="600">

@@ -13,6 +13,7 @@ using Ostenvighx.Suibhne.Extensions;
 using System.Data;
 using System.Data.SQLite;
 using System.Text.RegularExpressions;
+using Ostenvighx.Suibhne.System_Commands;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -168,7 +169,7 @@ namespace Ostenvighx.Suibhne.Commands {
 
             switch (command) {
                 case "commands":
-                    SystemCommands.HandleCommandsCommand(conn, message);
+                    SysCommands.Commands(conn, message);
                     break;
 
                 case "sys":
@@ -224,17 +225,9 @@ namespace Ostenvighx.Suibhne.Commands {
 
             if (messageParts.Length > 1 && subCommand != "") {
                 switch (subCommand) {
-                    case "test":
-                        ExtensionSystem es = ExtensionSystem.Instance;
-
-                        Core.Log(es.ToString());
-                        break;
-
                     case "exts":
                     case "extensions":
-                        #region Extensions System Handling
-                        SystemCommands.HandleExtensionsCommand(conn, msg);
-                        #endregion
+                        SysCommands.Extensions(conn, msg);
                         break;
 
                     case "reload":
@@ -287,11 +280,11 @@ namespace Ostenvighx.Suibhne.Commands {
                         break;
 
                     case "version":
-                        SystemCommands.HandleVersionCommand(conn, msg);
+                        SysCommands.Version(conn, msg);
                         break;
 
                     case "netinfo":
-                        SystemCommands.HandleNetworkInfoCommand(conn, msg);
+                        SysCommands.NetworkInfo(conn, msg);
                         break;
 
                     case "uptime":

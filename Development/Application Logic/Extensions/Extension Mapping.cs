@@ -36,7 +36,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 JObject sender = new JObject();
                 sender.Add("DisplayName", msg.sender.DisplayName);
-                sender.Add("Username", msg.sender.Username);
+                sender.Add("Username", msg.sender.UniqueName);
 
                 ev.Add("sender", sender);
 
@@ -66,7 +66,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 JObject sender = new JObject();
                 sender.Add("DisplayName", msg.sender.DisplayName);
-                sender.Add("Username", msg.sender.Username);
+                sender.Add("Username", msg.sender.UniqueName);
 
                 ev.Add("sender", sender);
 

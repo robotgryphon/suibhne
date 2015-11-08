@@ -1,20 +1,10 @@
 ﻿using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
-namespace Ostenvighx.Suibhne.Gui.Windows {
+namespace Ostenvighx.Suibhne.Gui.Wins {
     /// <summary>
     /// Interaction logic for Locations.xaml
     /// </summary>
@@ -22,31 +12,51 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
 
         public Locations() {
             InitializeComponent();
+            GenerateContextMenu();
             PopulateLocationList();
         }
 
+        private void GenerateContextMenu() {
+            ContextMenu cm = new ContextMenu();
+
+            MenuItem RefreshOption = new MenuItem();
+            RefreshOption.Header = "Refresh List";
+            RefreshOption.Click += RefreshListHandler;
+
+            cm.Items.Add(RefreshOption);
+
+            this.ContextMenu = cm;
+        }
+
+        private void RefreshListHandler(object sender, RoutedEventArgs e) {
+            PopulateLocationList();
+
+            e.Handled = true;
+        }
+
+
         internal void PopulateLocationList() {
             itemsList.Items.Clear();
-            foreach (NetworkBot b in Core.Networks.Values) {
+            foreach (Guid g in LocationManager.GetNetworks()) {
                 TreeViewItem networkListItem = new TreeViewItem();
 
-                Location networkLocation = LocationManager.GetLocationInfo(b.Identifier);
+                Location networkLocation = LocationManager.GetLocationInfo(g);
 
                 if (networkLocation == null)
                     return;
 
                 networkListItem.Header = networkLocation.Name;
                 networkListItem.Padding = new Thickness(2);
-                networkListItem.Margin = new Thickness(10, 0, 0, 2);
+                networkListItem.Margin = new Thickness(10, 4, 4, 2);
                 networkListItem.FontWeight = FontWeights.Bold;
-                networkListItem.Uid = b.Identifier.ToString();
-                Dictionary<Guid, Location> knownChildren = LocationManager.GetChildLocations(b.Identifier);
+                networkListItem.Uid = g.ToString();
+
+                Dictionary<Guid, Location> knownChildren = LocationManager.GetChildLocations(g);
                 foreach (KeyValuePair<Guid, Location> location in knownChildren) {
                     TreeViewItem locationItem = new TreeViewItem();
                     locationItem.Header = location.Value.Name;
                     locationItem.Uid = location.Key.ToString();
                     locationItem.FontWeight = FontWeights.Normal;
-
                     networkListItem.Items.Add(locationItem);
                 }
 
@@ -73,16 +83,47 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
             le.Show();
         }
 
-        private void Add(object sender, RoutedEventArgs e) {
-            // First check if there's a network selected
-            // If so, add child, prompt for name.
-            // If not, add network, prompt for network connector and name.
+        protected void Add(object sender, RoutedEventArgs e) {
+            New_Location n = new New_Location();
+            n.ShowDialog();            
+        }
 
-            // Load up editor, profit
+        protected void Rename(object sender, RoutedEventArgs e) {
+
         }
 
         private void Delete(object sender, RoutedEventArgs e) {
+            TreeViewItem selectedItem = (TreeViewItem)itemsList.SelectedItem;
+            if (selectedItem == null || selectedItem.Uid == null || selectedItem.Uid == Guid.Empty.ToString()) {
+                MessageBox.Show("Please select an item to delete.");
+                return;
+            }
 
+            Guid locationID = Guid.Parse(selectedItem.Uid);
+            Location locationInfo = LocationManager.GetLocationInfo(locationID);
+            if (locationInfo == null)
+                return;
+
+            MessageBoxResult result = MessageBox.Show("Are you SURE you want to delete '" + locationInfo.Name + "? This process will also delete any children.", "Comfirm Deletion", MessageBoxButton.YesNo);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            Core.Log("Deleting item " + locationInfo.Name + " with id " + locationID + ".");
+            switch (locationInfo.Type) {
+                case Reference.LocationType.Network:
+                    ((TreeView) selectedItem.Parent).Items.Remove(selectedItem);
+                    break;
+
+                case Reference.LocationType.Public:
+                case Reference.LocationType.Private:
+                    ((TreeViewItem)selectedItem.Parent).Items.Remove(selectedItem);
+                    break;
+
+            }
+
+            itemsList.Items.Refresh();
+
+            LocationManager.DeleteLocation(locationID);
         }
     }
 }
