@@ -31,7 +31,9 @@ namespace Ostenvighx.Suibhne.Gui {
             Core.LoadConfiguration();
             Core.LoadNetworks();
 
-            ExtensionSystem.Instance.Start();
+            Events.EventManager.Initialize();
+            ExtensionSystem.Initialize();
+
             Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
 
 

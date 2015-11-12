@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 
 using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Extensions;
+using Ostenvighx.Suibhne.Events;
 
 namespace CLI {
     class Program {
         static void Main(string[] args) {
 
             Core.LoadConfiguration();
-            if (true || Core.RequiresUpdate) {
-                String[] events = Management.GetAvailableEventsFromConnectors();
-                Core.Log("Loaded all events: " + String.Join("; ", events), LogType.EXTENSIONS);
-            }
+            Core.LoadNetworks();
+
+            EventManager.Initialize();
+            ExtensionSystem.Initialize();
 
             // Core.LoadNetworks();
 

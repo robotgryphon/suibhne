@@ -20,6 +20,10 @@ using Ostenvighx.Suibhne.Commands;
 using System.Data;
 using System.Data.SQLite;
 
+// TODO: Remove windows dependency here?
+using System.Windows.Threading;
+using System.Threading.Tasks;
+
 namespace Ostenvighx.Suibhne.Extensions {
 
     [Script("extensions")]
@@ -34,6 +38,9 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static SQLiteConnection Database;
 
+        // Used for timing stuffs
+        private Timer t;
+
         public static ExtensionSystem Instance {
             get {
                 if (instance == null) {
@@ -47,6 +54,8 @@ namespace Ostenvighx.Suibhne.Extensions {
             get { return Instance.GetType().GUID; }
         }
 
+        public int ConnectedExtensions { get; private set; }
+
         internal Dictionary<Guid, ExtensionMap> Extensions;
         internal List<Guid> UserEventHandlers;
         internal List<Guid> MessageHandlers;
@@ -59,6 +68,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
             }
 
+            this.ConnectedExtensions = 0;
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
             this.UserEventHandlers = new List<Guid>();
             this.MessageHandlers = new List<Guid>();
@@ -67,11 +77,14 @@ namespace Ostenvighx.Suibhne.Extensions {
             Server.OnDataRecieved += HandleIncomingData;
             Server.OnSocketCrash += ShutdownExtension;
             Server.Start();
+
+            LoadExtensionData();
+            StartExtensions();
         }
 
-        public void Start() {
-            LoadExtensionData();
-            AutostartExtensions();
+        public static void Initialize() {
+            if (instance == null)
+                instance = new ExtensionSystem();
         }
 
         internal void ShutdownExtension(Guid id) {
@@ -105,7 +118,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        protected void AutostartExtensions() {
+        protected void StartExtensions() {
             foreach (String extDir in Directory.GetDirectories(Core.ConfigDirectory + "/Extensions/")) {
                 // Start extension
                 DirectoryInfo di = new DirectoryInfo(extDir);
@@ -127,9 +140,19 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 Process.Start(psi);
             }
+
+            
+            Core.Log("All extensions have been asked to start. Counter initialized.", LogType.EXTENSIONS);
+
+            t = null;
+
+            // Start a timer to check the progress of extension activation in 45 seconds
+            t = new Timer((obj) => {
+                CheckExtensionsStatus();
+                t.Dispose();
+            }, null, 45000, System.Threading.Timeout.Infinite);
         }
 
-        // TODO: Fix event registration in here
         protected void LoadExtensionData() {
             DataTable extensions = new DataTable();
             try {
@@ -171,7 +194,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
 
             // If we have any event handlers
-            if (UserEventHandlers.Count > 0) {
+            if (UserEventHandlers.Count > 0 && Core.Networks != null) {
                 foreach (NetworkBot b in Core.Networks.Values) {
                     b.Network.OnUserJoin += ExtensionEventHandlers.HandleUserJoin;
                     b.Network.OnUserLeave += ExtensionEventHandlers.HandleUserLeave;
@@ -192,6 +215,54 @@ namespace Ostenvighx.Suibhne.Extensions {
             CommandManager.Instance.HandleCommand(conn, msg);
         }
 
+        private void HandleExtensionActivation(Guid id, Socket sock) {
+
+            if (!Extensions.ContainsKey(id))
+                return;
+
+            ExtensionMap extension = Extensions[id];
+            ConnectedExtensions++;
+            Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
+
+            if (extension.Socket == null) {
+                extension.Socket = sock;
+            }
+
+            extension.Ready = true;
+
+            Extensions[extension.Identifier] = extension;
+
+            if(Extensions.Count == ConnectedExtensions) {
+                FinishConnectionProcess();
+            }
+        }
+
+        /// <summary>
+        /// Checks if all the extensions have started.
+        /// If not, then this accepts that not all of them has started, throws off an error,
+        /// then continues with what it has.
+        /// </summary>
+        private void CheckExtensionsStatus() {
+            if(Extensions.Count != ConnectedExtensions) {
+                Core.Log("Error: It's been a while and not all the extensions have responded. Hunting those down now, but continuing without them.", LogType.EXTENSIONS);
+
+                // TODO: Figure out which extensions haven't started here, retry hooking them later
+            }
+
+            FinishConnectionProcess();
+        }
+
+        private void FinishConnectionProcess() {
+
+            // Make sure the timer is stopped
+            if(t != null)
+                t.Dispose();
+
+            Core.Log("All of the extensions are now connected.");
+
+        }
+
+
         protected void HandleIncomingData(Socket sock, byte[] data) {               
 
             // Get the extension suite off the returned Identifier first
@@ -202,20 +273,11 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 ExtensionMap extension = Extensions[ev["extid"].ToObject<Guid>()];
 
-
                 #region Handle Code Response
                 switch (ev["event"].ToString().ToLower()) {
 
                     case "extension.activate":
-                        Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
-
-                        if (extension.Socket == null) {
-                            extension.Socket = sock;
-                        }
-
-                        extension.Ready = true;
-
-                        Extensions[extension.Identifier] = extension;
+                        HandleExtensionActivation(ev["extid"].ToObject<Guid>(), sock);
                         break;
 
                     case "extension.shutdown":
