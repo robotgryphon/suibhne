@@ -76,33 +76,18 @@ namespace Ostenvighx.Suibhne.System_Commands {
 
                     workingExtension.Name = msg.message.Split(new char[] { ' ' }, 4)[3];
 
-                    // DB query to fetch extension ID
                     try {
-                        ExtensionSystem.Database.Open();
-                        SQLiteCommand extensionIdFetchCommand = ExtensionSystem.Database.CreateCommand();
-                        extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
+                        workingExtension.Identifier = ExtensionSystem.FindByName(workingExtension.Name);
 
-                        SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
-                        DataTable results = new DataTable();
-                        results.Load(r);
+                        ExtensionSystem.ShutdownExtension(workingExtension.Identifier);
 
-                        workingExtension.Identifier = Guid.Parse(results.Rows[0]["Identifier"].ToString());
-
-                        if (ExtensionSystem.Instance.Extensions.ContainsKey(workingExtension.Identifier)) {
-                            ExtensionSystem.Instance.ShutdownExtension(workingExtension.Identifier);
-                            response.message = "Disabled extension: " + workingExtension.Name;
-                            conn.SendMessage(response);
-                        } else {
-                            response.message = "That extension does not exist in the list. Please check the identifier and try again.";
-                        }
+                        response.message = "Disabled extension: " + workingExtension.Name;
+                        conn.SendMessage(response);
                     }
 
-                    catch (Exception) {
-
-                    }
-
-                    finally {
-                        ExtensionSystem.Database.Close();
+                    catch (Exception e) {
+                        response.message = "There was a problem disabling that extension. Message: " + e.Message;
+                        conn.SendMessage(response);
                     }
 
                     break;

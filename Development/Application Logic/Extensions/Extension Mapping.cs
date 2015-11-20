@@ -12,6 +12,19 @@ namespace Ostenvighx.Suibhne.Extensions {
     
     public struct ExtensionMap {
 
+        public static ExtensionMap None {
+            get {
+                return new ExtensionMap() {
+                    Identifier = Guid.Empty,
+                    Socket = null,
+                    Name = "Invalid Extension",
+                    Ready = false
+                };
+            }
+
+            private set { }
+        }
+
         public Guid Identifier;
         public Socket Socket;
         public String Name;
