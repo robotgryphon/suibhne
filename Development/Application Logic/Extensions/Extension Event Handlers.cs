@@ -10,30 +10,9 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.Extensions {
     public static class ExtensionEventHandlers {
 
-        public static void HandleMessageRecieved(Message m) {
-            JObject messageEvent = new JObject();
-            messageEvent.Add("event", "message.recieve");
-
-            JObject l = new JObject();
-            l.Add("id", m.locationID);
-            l.Add("type", (byte)m.type);
-
-            messageEvent.Add("location", l);
-
-            JObject user = new JObject();
-            user.Add("DisplayName", m.sender.DisplayName);
-            user.Add("Username", m.sender.UniqueName);
-
-            messageEvent.Add("user", user);
-
-            foreach (Guid em in ExtensionSystem.Instance.MessageHandlers) {
-                ExtensionSystem.Instance.Extensions[em].Send(Encoding.UTF32.GetBytes(messageEvent.ToString()));
-            }
-        }
-
         public static void HandleUserJoin(Guid l, User u) {
             JObject userEvent = new JObject();
-            userEvent.Add("event", "user.join");
+            userEvent.Add("event", "user_joined");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -49,7 +28,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserLeave(Guid l, User u) {
             JObject userEvent = new JObject();
-            userEvent.Add("event", "user.leave");
+            userEvent.Add("event", "user_left");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -65,7 +44,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserQuit(Guid l, User u) {
             JObject userEvent = new JObject();
-            userEvent.Add("event", "user.quit");
+            userEvent.Add("event", "user_quit");
             userEvent.Add("location", l);
 
             JObject user = new JObject();
@@ -81,8 +60,9 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public static void HandleUserNameChange(Guid l, User u) {
             JObject userEvent = new JObject();
-            userEvent.Add("event", "user.namechange");
+            userEvent.Add("event", "user_changed");
             userEvent.Add("location", l);
+            userEvent.Add("change_type", "display_name");
 
             JObject user = new JObject();
             user.Add("LastDisplayName", u.LastDisplayName);

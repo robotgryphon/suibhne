@@ -7,6 +7,11 @@ namespace Ostenvighx.Suibhne.Networks.Base {
     public abstract class Network {
 
         /// <summary>
+        /// The identifier used to locate this network.
+        /// </summary>
+        public Guid Identifier;
+
+        /// <summary>
         /// The root configuration directory. Passed in from the main application.
         /// </summary>
         protected String ConfigRoot;
@@ -33,12 +38,12 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         /// <summary>
         /// Occurs when a connection is complete and data is ready to be served.
         /// </summary>
-        public event Events.NetworkConnectionEvent OnConnectionComplete;
+        public event Events.NetworkEvent OnConnectionComplete;
 
         /// <summary>
         /// Occurs when a connection is completely terminated.
         /// </summary>
-        public event Events.NetworkConnectionEvent OnDisconnectComplete;
+        public event Events.NetworkEvent OnDisconnectComplete;
 
         #region User Events
         /// <summary>
@@ -67,6 +72,11 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public event Events.UserEvent OnBotNickChange;
 
         #endregion
+
+        #region Custom Events Handling
+        public event Events.CustomEventDelegate OnCustomEventFired;
+        #endregion
+
         /// <summary>
         /// Includes known information about the bot as an Networks.Base User.
         /// Use DisplayName and similar information here.
@@ -92,7 +102,12 @@ namespace Ostenvighx.Suibhne.Networks.Base {
         public abstract void Setup(string configFile);
 
         #region Event Methods
-        public abstract bool IsEventSupported(String eventName);
+        protected virtual void FireEvent(String json) {
+            if(this.OnCustomEventFired != null) {
+                OnCustomEventFired(Identifier, json);
+            }
+        }
+
         public abstract String[] GetSupportedEvents();
         #endregion
 

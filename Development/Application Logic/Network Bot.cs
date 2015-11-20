@@ -6,6 +6,7 @@ using Nini.Config;
 using Ostenvighx.Suibhne.Networks.Base;
 using System.Reflection;
 using System.Data;
+using Ostenvighx.Suibhne.Events;
 
 namespace Ostenvighx.Suibhne {
     public class NetworkBot : IComparable {
@@ -75,11 +76,14 @@ namespace Ostenvighx.Suibhne {
                     if (t.IsSubclassOf(typeof(Network))) {
                         this._network = (Network)Activator.CreateInstance(t);
                         _network.Setup(config.SavePath);
+                        _network.Identifier = Identifier;
                         _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
                         _network.OnMessageRecieved += this.HandleMessageRecieved;
                         _network.OnConnectionComplete += (conn) => {
                             AutoJoinLocations();
                         };
+
+                        EventManager.HookEventHandler(_network);
                     }
                 }
 

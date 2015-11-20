@@ -124,18 +124,23 @@ namespace Ostenvighx.Suibhne.Extensions {
             String[] directories = Directory.GetDirectories(Core.ConfigDirectory + "Extensions/");
             try {
                 foreach (String extensionDir in directories) {
-                    Guid extID = Guid.Parse(extensionDir.Replace(Core.ConfigDirectory + "Extensions/", ""));
+                    Core.Log("Loading directory.. " + extensionDir, LogType.DEBUG);
+
+                    Guid extID = Guid.Parse(new DirectoryInfo(extensionDir).Name);
 
                     Core.Log("Loading information for extension: " + extID, LogType.EXTENSIONS);
+
                     this.Extensions.Add(extID, new ExtensionMap() { Identifier = extID });
                 }
             }
 
-            catch (FormatException) {
+            catch (FormatException fe) {
                 // extension directory not named for guid
+                Core.Log(fe.StackTrace, LogType.DEBUG);
             }
 
             Core.Log("All extensions primed.", LogType.EXTENSIONS);
+            Core.Log("", LogType.EXTENSIONS);
         }
 
         protected void StartExtensions() {
@@ -154,7 +159,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (filename == "")
                     continue;
 
-                Core.Log("Trying to start " + di.Name + ".", LogType.EXTENSIONS);
+                Core.Log("Trying to start " + filename, LogType.DEBUG);
 
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.WorkingDirectory = extDir;
@@ -251,23 +256,41 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
 
-        protected void HandleIncomingData(Socket sock, byte[] data) {               
+        protected void HandleIncomingData(Socket sock, byte[] data) {
 
-            // Get the extension suite off the returned Identifier first
+            JObject ev;
+            #region Set up decode
             try {
 
                 string json = Encoding.UTF32.GetString(data);
-                JObject ev = JObject.Parse(json);
+                ev = JObject.Parse(json);
+            }
 
-                ExtensionMap extension = Extensions[ev["extid"].ToObject<Guid>()];
+            catch (Exception) {
+                Core.Log("Error parsing data from extension.", LogType.ERROR);
+                return;
+            }
+            #endregion
 
+            try {
+                if(ev["event"].ToString().ToLower() == "extension_activation") {
+                    HandleExtensionActivation(ev, sock);
+                    return;
+                }
+
+                string[] eventNameParts = ev["event"].ToString().ToLower().Split('_');
+                string eventHandler = "";
+                foreach(string eventPart in eventNameParts)
+                    eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
+
+                Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
+                object handler = Activator.CreateInstance(t);
+
+                (handler as Suibhne.Events.Handlers.EventHandler).HandleEvent(ev);
+
+                /*
                 #region Handle Code Response
                 switch (ev["event"].ToString().ToLower()) {
-
-                    case "extension_activation":
-                        HandleExtensionActivation(ev, sock);
-                        break;
-
                     case "extension_shutdown":
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
@@ -308,6 +331,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 }
                 #endregion
+                */
             }
             catch (Exception e) {
                 Core.Log("Extension error: " + e.Message, LogType.ERROR);
@@ -322,38 +346,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         public static ExtensionMap[] GetExtensionList() {
             List<ExtensionMap> maps = new List<ExtensionMap>();
 
-            try {
-                DataTable results = new DataTable();
-                if (Database.State != ConnectionState.Open) Database.Open();
-
-                SQLiteCommand get = Database.CreateCommand();
-                get.CommandText = "SELECT * FROM Extensions;";
-                SQLiteDataReader dr = get.ExecuteReader();
-                results.Load(dr);
-
-                foreach (DataRow ex in results.Rows) {
-                    ExtensionMap em = new ExtensionMap();
-                    em.Name = ex["Name"].ToString();
-                    em.Identifier = Guid.Parse(ex["Identifier"].ToString());
-
-                    if (Instance.Extensions.ContainsKey(em.Identifier)) {
-                        em = Instance.Extensions[em.Identifier];
-                    } else {
-                        em.Ready = false;
-                        em.Socket = null;
-                    }
-
-                    maps.Add(em);
-                }
-            }
-
-            catch (Exception) {
-               
-            }
-
-            finally {
-                Database.Close();
-            }
+            //TODO: REIMPLEMENT WITH NEW/OLD SYSTEM
 
             return maps.ToArray();
         }

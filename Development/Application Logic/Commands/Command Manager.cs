@@ -72,7 +72,7 @@ namespace Ostenvighx.Suibhne.Commands {
                 // Loop through requested commands (!<command>)
                 foreach (DataRow commandEntry in results.Rows) {
 
-                    Core.Log(">>> Attempting to map command " + commandEntry["Command"] + " to extension " + commandEntry["Extension"] + " (handler: " + commandEntry["Handler"] + ")", LogType.EXTENSIONS);
+                    Core.Log(">>> Attempting to map command " + commandEntry["Command"] + " to extension " + commandEntry["Extension"] + " (handler: " + commandEntry["Handler"] + ")", LogType.DEBUG);
 
                     CommandMap cm = new CommandMap();
                     cm.Handler = commandEntry["Handler"].ToString();

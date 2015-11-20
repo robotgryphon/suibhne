@@ -18,7 +18,9 @@ namespace Ostenvighx.Suibhne {
         ERROR,
         EXTENSIONS,
         OUTGOING,
-        INCOMING
+        INCOMING,
+
+        DEBUG
     }
 
     [Script("core")]
@@ -28,7 +30,7 @@ namespace Ostenvighx.Suibhne {
 
         public static DateTime ConfigLastUpdate;
 
-        public static Boolean RequiresUpdate = false;
+        public static Boolean DEBUG;
 
         /// <summary>
         /// Base configuration directory. Will always have a trailing slash. ALWAYS.
@@ -73,6 +75,9 @@ namespace Ostenvighx.Suibhne {
 
                 Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
                 ExtensionSystem.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/extensions.sns");
+
+                if(Core.SystemConfig.Configs["System"] != null)
+                    Core.DEBUG = Core.SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
             }
 
             catch (Exception) {
@@ -115,6 +120,10 @@ namespace Ostenvighx.Suibhne {
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
 
+            // If we are debugging but not in debug mode, exit
+            if (type == LogType.DEBUG && !DEBUG)
+                return;
+
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write("[{0}] ", DateTime.Now);
 
@@ -137,6 +146,10 @@ namespace Ostenvighx.Suibhne {
 
                 case LogType.EXTENSIONS:
                     Console.ForegroundColor = ConsoleColor.Magenta;
+                    break;
+
+                case LogType.DEBUG:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     break;
 
                 default:

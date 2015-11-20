@@ -11,6 +11,7 @@ using System.Reflection;
 using Ostenvighx.Suibhne.Networks.Base;
 
 using Newtonsoft.Json.Linq;
+using System.Runtime.InteropServices;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -20,7 +21,15 @@ namespace Ostenvighx.Suibhne.Extensions {
     /// </summary>
     public abstract class Extension {
 
-        public Guid Identifier;
+        public Guid Identifier {
+            get {
+                return Guid.Parse(
+                    ((GuidAttribute) GetType().Assembly.GetCustomAttribute(typeof(GuidAttribute))).Value
+                  );
+            }
+
+            private set { }
+        }
 
         protected Socket conn;
         protected byte[] buffer;
@@ -30,7 +39,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
 
-        public delegate void CommandHandler(Extension e, JObject json);
+        public delegate void CommandHandler(Extension e, String json);
         public delegate void ExtensionEvent(Extension e);
 
         protected Dictionary<String, CommandHandler> CommandHandlers;
@@ -65,31 +74,9 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public void Start() {
-            LoadConfig();
-
-            Console.WriteLine("Loaded id: " + Identifier);
+            Console.WriteLine("Starting extension as " + Identifier);
             MapCommandMethods();
             Connect();
-        }
-
-        public void LoadConfig() {
-            String systemFile = Environment.CurrentDirectory + @"\extension.sns";
-            if (File.Exists(systemFile)) {
-
-                string encodedFile = File.ReadAllText(systemFile);
-                string decodedFile = Encoding.UTF8.GetString(Convert.FromBase64String(encodedFile));
-                JObject config = JObject.Parse(decodedFile);
-
-                if (config == null)
-                    return;
-
-                this.Identifier = new Guid((String)config.GetValue("Identifier"));
-
-            } else {
-
-                // Terminate, extension not installed properly
-                throw new FileNotFoundException("System information file not found. Please re-install the extension.");
-            }
         }
 
         private void MapCommandMethods() {
@@ -105,7 +92,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         ParameterInfo[] commandMethodParams = method.GetParameters();
 
                         if (commandMethodParams.Length != 2 || (
-                            commandMethodParams[0].ParameterType != typeof(Extension) || commandMethodParams[1].ParameterType != typeof(JObject))
+                            commandMethodParams[0].ParameterType != typeof(Extension) || commandMethodParams[1].ParameterType != typeof(String))
                         )
                             throw new Exception("Invalid method signature for command handler: " + method.DeclaringType.FullName + ":" + method.Name);
 
@@ -124,10 +111,16 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             catch (Exception e) {
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Red;
+
                 Console.WriteLine("Failed to start extension.");
-                Console.WriteLine(e);
+                Console.WriteLine("Reason: " + e.Message);
+
                 if (this.OnServerDisconnect != null)
                     OnServerDisconnect(this);
+
+                this.Connected = false;
             }
 
         }
@@ -143,11 +136,16 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
 
             catch (SocketException se) {
-                Console.WriteLine("Socket failed. Extension not started.");
-                Console.WriteLine(se);
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Red;
+
+                Console.WriteLine("Failed to start extension- the connection failed.");
+                Console.WriteLine("Reason: " + se.Message);
 
                 if (this.OnExtensionExit != null)
                     OnExtensionExit(this);
+
+                this.Connected = false;
             }
         }
 
@@ -214,7 +212,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                     return;
 
                 switch (Event["event"].ToString().ToLower()) {
-                    case "extension.details":
+                    case "extension_details":
                         string response =
                             "[" + Identifier + "] " + Name + " (v. " + Version + ")" + " developed by " + Author;
 
@@ -224,7 +222,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case "command_recieved":
                         if (Event["handler"] != null && Event["handler"].ToString().Trim() != "") {
                             if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
-                                CommandHandlers[Event["handler"].ToString()].Invoke(this, Event);
+                                CommandHandlers[Event["handler"].ToString()].Invoke(this, Event.ToString());
                             }
                         }
                         break;
@@ -246,7 +244,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         break;
 
                     case "message_recieved":
-                        HandleIncomingMessage(Event);
+                        HandleIncomingMessage(Event.ToString());
                         break;
 
 
@@ -264,7 +262,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case "user_left":
                     case "user_name_changed":
                     case "user_quit":
-                        HandleUserEvent(Event);
+                        HandleUserEvent(Event.ToString());
                         break;
                 }
 
@@ -275,11 +273,9 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        protected virtual void HandleUserEvent(JObject json) {
-            Console.WriteLine("Got user event for user: " + json["sender"]["DisplayName"] + " of type " + json["event"]);
-        }
+        protected virtual void HandleUserEvent(string json) { }
 
-        protected virtual void HandleIncomingMessage(JObject e) { }
+        protected virtual void HandleIncomingMessage(string json) { }
 
         public void SendMessage(Networks.Base.Message message) {
             JObject msg = new JObject();

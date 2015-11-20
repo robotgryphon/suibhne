@@ -302,8 +302,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     case "315":
                         // End of WHO response
                         ParseWhoList(line);
-
-                        // TODO: FireEvent("user_list_update", whoList);
                         break;
 
 
@@ -356,6 +354,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                     #endregion
 
+                    #region User Events
                     case "nick":
                         HandleNicknameChange(line);
                         break;
@@ -383,6 +382,19 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                                 listened.AccessLevels.Remove(quitter.DisplayName + "@" + hostmask);
                         }
                         break;
+                    #endregion
+
+                    case "topic":
+                        Base.User u = User.Parse(dataChunks[0]);
+                        String topic = line.Substring(line.IndexOf(" :") + 2).TrimEnd(new char[] { '\r', '\n' }).Trim();
+
+                        Console.WriteLine(u.DisplayName + " has changed the topic to " + topic);
+                        Guid id = this.GetLocationIdByName(dataChunks[2]);
+                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"UniqueName\": \"" + u.UniqueName + "\", \"DisplayName\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
+
+                        FireEvent(json);
+
+                        break;
 
                     case "mode":
                         HandleModeChange(line);
@@ -395,7 +407,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         break;
 
                     default:
-                        Console.WriteLine("Data recieved: " + line);
+                        // Console.WriteLine("Data recieved: " + line);
                         break;
                 }
             }
@@ -430,6 +442,20 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     msg.sender.NetworkAuthLevel = serv.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
             }
 
+
+            string json = "{" +
+                "\"event\": " + "\"message_recieved\"," +
+                "\"location\": " + "\"" + msg.locationID + "\"," +
+                "\"message\": " + "{" + 
+                    "\"type\": " + (byte) msg.type + "," +
+                    "\"contents\": " + "\"" + msg.message + "\"" + "}," +
+                "\"sender\": " + "{" +
+                    "\"unique_id\": " + "\"" + msg.sender.UniqueName + "\"," +
+                    "\"display_name\": " + "\"" + msg.sender.DisplayName + "\"" +
+                "}" +
+            "}";
+
+            FireEvent(json);
             HandleMessageRecieved(msg);
 
         }
@@ -622,6 +648,16 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             HandleDisconnectComplete(this);
         }
 
+
+        private void HandleModeChange(String line) {
+            Match match = Regex.Match(line, RegularExpressions.SENDER_REGEX_RAW + @" MODE " + RegularExpressions.LOCATION_REGEX + @" " + @"(?<data>.*)", RegexOptions.ExplicitCapture);
+            if (!match.Success)
+                return;
+
+            SendRaw("WHO " + match.Groups["location"].Value);
+        }
+
+        #region Who Responses
         private void ParseWhoResponse(String line) {
 
             /// :foxtaur.furnet.org 352 Delenas #ostenvighx ~Delenas fur-3EB9DC59.hsd1.pa.comcast.net foxtaur.furnet.org Delenas Hr~ :0 Delenas Freshtt
@@ -651,15 +687,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             
         }
 
-        private void HandleModeChange(String line) {
-            Match match = Regex.Match(line, RegularExpressions.SENDER_REGEX_RAW + @" MODE " + RegularExpressions.LOCATION_REGEX + @" " + @"(?<data>.*)", RegexOptions.ExplicitCapture);
-            if (!match.Success)
-                return;
-
-            SendRaw("WHO " + match.Groups["location"].Value);
-        }
-
-
         /// <summary>
         /// Goes through the temporary who feedback and gets all the hostmasks, translating them into ban strings for the final access list
         /// </summary>
@@ -682,26 +709,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
             TempUserAccessLevels.Clear();
         }
-
-        // TODO: More work on the event support - this should be customizable through a config file instead
-        public override bool IsEventSupported(string eventName) {
-            string[] customEvents = new string[] {
-                "user_joined",
-                "user_left",
-                "user_quit",
-                "message_recieved",
-                "user_list_updated",
-                "topic_changed",
-
-                "network_connected",
-                "network_disconnected"
-            };
-
-            if (customEvents.Contains(eventName.ToLower()))
-                return true;
-
-            return false;
-        }
+        #endregion
 
         public override string[] GetSupportedEvents() {
             return new string[] {
@@ -709,7 +717,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 "user_left",
                 "user_quit",
                 "message_recieved",
-                "user_list_updated",
+                "user_changed",
                 "topic_changed",
 
                 "network_connected",

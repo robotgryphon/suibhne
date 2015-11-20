@@ -14,9 +14,10 @@ namespace CLI {
         static void Main(string[] args) {
 
             Core.LoadConfiguration();
+            EventManager.Initialize();
+
             Core.LoadNetworks();
 
-            EventManager.Initialize();
             CommandManager.Initialize();
             ExtensionSystem.Initialize();
 

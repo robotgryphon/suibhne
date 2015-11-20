@@ -25,12 +25,20 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void Start() {
             Core.Log("Setting up server..", LogType.EXTENSIONS);
 
-            Connection.Bind(new IPEndPoint(IPAddress.Any, 6700));
-            Connection.Listen(5);
+            try {
+                Connection.Bind(new IPEndPoint(IPAddress.Any, 6700));
+                Connection.Listen(5);
 
-            Connection.BeginAccept(new AsyncCallback(AcceptConnection), null);
-            Core.Log("Server setup complete. Extensions system ready.", LogType.EXTENSIONS);
-            Console.WriteLine();
+                Connection.BeginAccept(new AsyncCallback(AcceptConnection), null);
+
+                Core.Log("Server setup complete. Extensions system ready.", LogType.EXTENSIONS);
+                Console.WriteLine();
+            }
+
+            catch (SocketException) {
+                Core.Log("Error: Extension system cannot bind to port 6700. Check it's not being used.", LogType.ERROR);
+                return;
+            }
         }
 
         public void Stop() { }
@@ -46,7 +54,9 @@ namespace Ostenvighx.Suibhne.Extensions {
                 // Socket exposed, this is on bot shutdown usually
             }
 
-            catch (Exception) { }
+            catch (Exception exc) {
+                Core.Log(exc.Message, LogType.DEBUG);
+            }
         }
 
         protected void RecieveDataCallback(IAsyncResult result) {

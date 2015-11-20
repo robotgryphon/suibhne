@@ -1,4 +1,6 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Newtonsoft.Json.Linq;
+using Ostenvighx.Suibhne.Extensions;
+using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,6 +19,8 @@ namespace Ostenvighx.Suibhne.Events {
         /// that support those events.
         /// </summary>
         public Dictionary<String, List<Guid>> EventSupport { get; private set; }
+
+        private List<Guid> ListenedNetworks;
 
         public static EventManager Instance {
             get {
@@ -38,8 +42,52 @@ namespace Ostenvighx.Suibhne.Events {
 
         private EventManager() {
             this.EventSupport = new Dictionary<string, List<Guid>>();
-
+            this.ListenedNetworks = new List<Guid>(); 
             GatherConnectorEvents();
+        }
+
+        public static void HookEventHandler(Network n) {
+            if (!instance.ListenedNetworks.Contains(n.Identifier)) {
+                n.OnCustomEventFired += instance.EventHandler;
+                instance.ListenedNetworks.Add(n.Identifier);
+            }
+        }
+
+        /// <summary>
+        /// Internally handles custom event delegation.
+        /// </summary>
+        /// <param name="netID"></param>
+        /// <param name="json"></param>
+        private void EventHandler(Guid netID, String json) {
+            if (!Core.Networks.ContainsKey(netID)) {
+                Core.Log("Error handling custom event. Network guid not active or invalid. (EventManager, guid: " + netID + ")\n" + json, LogType.ERROR);
+                return;
+            }
+
+            try {
+                JObject ev = JObject.Parse(json);
+
+                if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
+                    String eventName = ev["event"].ToString().ToLower().Trim();
+
+                    if (!instance.EventSupport.ContainsKey(eventName))
+                        return;
+
+                    Core.Log("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, LogType.DEBUG);
+
+                    foreach(Guid g in instance.EventSupport[eventName]) {
+                        if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))
+                            continue;
+
+                        ExtensionMap em = ExtensionSystem.Instance.Extensions[g];
+
+                        if (em.Ready)
+                            em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
+                    }
+                }
+            }
+
+            catch (Exception) { }
         }
 
         private void GatherConnectorEvents() {
@@ -52,17 +100,25 @@ namespace Ostenvighx.Suibhne.Events {
                     String connectorName = new DirectoryInfo(connector).Name;
                     Assembly a = Assembly.LoadFile(connector + "/" + connectorName + ".dll");
 
+                    int total_added_for_network_type = 0;
+
                     Type[] types = a.GetTypes();
                     foreach (Type t in types) {
                         if (t.IsSubclassOf(typeof(Network))) {
                             Network network = (Network)Activator.CreateInstance(t);
                             foreach (String eventCode in network.GetSupportedEvents()) {
-                                Core.Log("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")");
-                                if(!EventSupport.ContainsKey(eventCode.ToLower()))
+                                Core.Log("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", LogType.DEBUG);
+                                if (!EventSupport.ContainsKey(eventCode.ToLower())) {
                                     EventSupport.Add(eventCode.ToLower(), new List<Guid>());
+                                    total_added_for_network_type++;
+                                }
                             }
                         }
                     }
+
+                    Core.Log("Added " + total_added_for_network_type + " event hooks for connector type " + a.GetName().Name);
+
+
                 }
 
                 catch (Exception) { }

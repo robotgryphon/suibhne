@@ -202,8 +202,9 @@ namespace Ostenvighx.Suibhne {
             try {
                 Dictionary<Guid, Location> children = new Dictionary<Guid, Location>();
 
+                if(Core.Database.State != ConnectionState.Open)
+                    Core.Database.Open();
 
-                Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
                 c.CommandText = "SELECT * FROM Identifiers WHERE ParentId = '" + parent + "';";
