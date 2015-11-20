@@ -2,17 +2,11 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
-
-using Nini.Config;
 
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
-using System.Net;
 using System.Text;
-using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Networks.Base;
 using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Commands;
@@ -20,9 +14,7 @@ using Ostenvighx.Suibhne.Commands;
 using System.Data;
 using System.Data.SQLite;
 
-// TODO: Remove windows dependency here?
-using System.Windows.Threading;
-using System.Threading.Tasks;
+using Ostenvighx.Suibhne.Events;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
@@ -61,6 +53,9 @@ namespace Ostenvighx.Suibhne.Extensions {
         internal List<Guid> MessageHandlers;
 
         protected ExtensionServer Server;
+
+        public delegate void ExtensionSystemEvent();
+        public event ExtensionSystemEvent AllExtensionsReady;
 
         private ExtensionSystem() {
             if (File.Exists(Core.SystemConfig.SavePath)) {
@@ -118,12 +113,36 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
+        /// <summary>
+        /// Loads the available extension guids into the allocated dictionary,
+        /// getting it ready for further processing.
+        /// </summary>
+        private void LoadExtensionData() {
+            if (Core.ConfigDirectory == "")
+                throw new Exception("Config directory derp?");
+
+            String[] directories = Directory.GetDirectories(Core.ConfigDirectory + "Extensions/");
+            try {
+                foreach (String extensionDir in directories) {
+                    Guid extID = Guid.Parse(extensionDir.Replace(Core.ConfigDirectory + "Extensions/", ""));
+
+                    Core.Log("Loading information for extension: " + extID, LogType.EXTENSIONS);
+                    this.Extensions.Add(extID, new ExtensionMap() { Identifier = extID });
+                }
+            }
+
+            catch (FormatException) {
+                // extension directory not named for guid
+            }
+
+            Core.Log("All extensions primed.", LogType.EXTENSIONS);
+        }
+
         protected void StartExtensions() {
             foreach (String extDir in Directory.GetDirectories(Core.ConfigDirectory + "/Extensions/")) {
                 // Start extension
                 DirectoryInfo di = new DirectoryInfo(extDir);
 
-                Core.Log("Trying to start " + di.Name + ".", LogType.EXTENSIONS);
                 String filename = "";
                 if (File.Exists(extDir + @"\" + di.Name + ".exe"))
                     filename = extDir + @"\" + di.Name + ".exe";
@@ -131,6 +150,11 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (File.Exists(extDir + @"\" + di.Name + ".jar"))
                     filename = extDir + @"\" + di.Name + ".jar";
 
+                // If the extension main file isn't found, keep on going and ignore it
+                if (filename == "")
+                    continue;
+
+                Core.Log("Trying to start " + di.Name + ".", LogType.EXTENSIONS);
 
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.WorkingDirectory = extDir;
@@ -153,75 +177,22 @@ namespace Ostenvighx.Suibhne.Extensions {
             }, null, 45000, System.Threading.Timeout.Infinite);
         }
 
-        protected void LoadExtensionData() {
-            DataTable extensions = new DataTable();
-            try {
-                ExtensionSystem.Database.Open();
-
-                SQLiteCommand c = new SQLiteCommand(ExtensionSystem.Database);
-                c.CommandText = "SELECT * FROM Extensions;";
-
-                SQLiteDataReader r = c.ExecuteReader();
-                extensions.Load(r);
-
-                foreach (DataRow extension in extensions.Rows) {
-                    // Extension information gotten
-                    ExtensionMap map = new ExtensionMap();
-                    map.Ready = false;
-                    map.Socket = null;
-                    map.Name = extension["Name"].ToString();
-                    map.Identifier = Guid.Parse((String) extension["Identifier"]);
-
-                    Core.Log("Got information from extension " + map.Name);
-
-                    Extensions.Add(map.Identifier, map);
-
-                    if (extension["HandlesUserEvents"].ToString() == "1") UserEventHandlers.Add(map.Identifier);
-                    if (extension["HandlesMessages"].ToString() == "1") MessageHandlers.Add(map.Identifier);
-                    
-                }
-
-            }
-
-            catch (Exception e) {
-                Core.Log("Error registering extension: " + e.Message);
-            }
-
-            finally {
-                ExtensionSystem.Database.Close();
-            }
-
-            Core.Log("All extensions loaded into system.", LogType.EXTENSIONS);
-
-            // If we have any event handlers
-            if (UserEventHandlers.Count > 0 && Core.Networks != null) {
-                foreach (NetworkBot b in Core.Networks.Values) {
-                    b.Network.OnUserJoin += ExtensionEventHandlers.HandleUserJoin;
-                    b.Network.OnUserLeave += ExtensionEventHandlers.HandleUserLeave;
-                    b.Network.OnUserQuit += ExtensionEventHandlers.HandleUserQuit;
-
-                    b.Network.OnUserDisplayNameChange += ExtensionEventHandlers.HandleUserNameChange;
-                }
-            }
-
-            if (MessageHandlers.Count > 0) {
-                foreach (NetworkBot b in Core.Networks.Values) {
-                    b.Network.OnMessageRecieved += ExtensionEventHandlers.HandleMessageRecieved;
-                }
-            }
-        }
-
         public void HandleCommand(NetworkBot conn, Message msg) {
             CommandManager.Instance.HandleCommand(conn, msg);
         }
 
-        private void HandleExtensionActivation(Guid id, Socket sock) {
+        private void HandleExtensionActivation(JObject EVENT, Socket sock) {
+
+            Guid id = EVENT["extid"].ToObject<Guid>();
 
             if (!Extensions.ContainsKey(id))
                 return;
 
             ExtensionMap extension = Extensions[id];
+            extension.Name = EVENT["name"].ToString();
+
             ConnectedExtensions++;
+
             Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
 
             if (extension.Socket == null) {
@@ -231,6 +202,22 @@ namespace Ostenvighx.Suibhne.Extensions {
             extension.Ready = true;
 
             Extensions[extension.Identifier] = extension;
+
+            if (EVENT["required_events"] != null) {
+                // Extension hooks to events system
+                if (! Suibhne.Events.EventManager.VerifyCanSupport((EVENT["required_events"].ToObject<string[]>()))) {
+                    // Abort activation, we don't have everything the extension is asking for.
+                    // extension.Send();
+                    return;
+                }
+
+                string[] required = (EVENT["required_events"] as JArray).ToObject<string[]>();
+                string[] optional = (EVENT["optional_events"] as JArray).ToObject<string[]>();
+
+                string[] all_extension_events = required.Union(optional).ToArray<String>();
+
+                EventManager.UpdateExtensionSupport(id, all_extension_events);
+            }
 
             if(Extensions.Count == ConnectedExtensions) {
                 FinishConnectionProcess();
@@ -259,7 +246,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                 t.Dispose();
 
             Core.Log("All of the extensions are now connected.");
-
+            if (instance.AllExtensionsReady != null)
+                instance.AllExtensionsReady();
         }
 
 
@@ -276,17 +264,17 @@ namespace Ostenvighx.Suibhne.Extensions {
                 #region Handle Code Response
                 switch (ev["event"].ToString().ToLower()) {
 
-                    case "extension.activate":
-                        HandleExtensionActivation(ev["extid"].ToObject<Guid>(), sock);
+                    case "extension_activation":
+                        HandleExtensionActivation(ev, sock);
                         break;
 
-                    case "extension.shutdown":
+                    case "extension_shutdown":
                         sock.Shutdown(SocketShutdown.Both);
                         sock.Close();
                         ShutdownExtension(sock);
                         return;
 
-                    case "message.send":
+                    case "message_send":
                         try {
                             Guid locationID = ev["location"]["id"].ToObject<Guid>();
                             

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Ostenvighx.Suibhne;
 using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Events;
+using Ostenvighx.Suibhne.Commands;
 
 namespace CLI {
     class Program {
@@ -16,10 +17,15 @@ namespace CLI {
             Core.LoadNetworks();
 
             EventManager.Initialize();
+            CommandManager.Initialize();
             ExtensionSystem.Initialize();
 
-            // Core.LoadNetworks();
+            CommandManager.MapCommands();
 
+
+            ExtensionSystem.Instance.AllExtensionsReady += () => {
+                Core.StartNetworks();
+            };
 
             Console.ReadLine();
         }

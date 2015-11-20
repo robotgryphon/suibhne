@@ -34,6 +34,11 @@ namespace Ostenvighx.Suibhne.Commands {
             this.CommandMapping = new Dictionary<string, CommandMap>();
         }
 
+        public static void Initialize() {
+            if (instance == null)
+                instance = new CommandManager();
+        }
+
         public void WipeCommandMap() {
             this.CommandMapping.Clear();
         }
@@ -46,50 +51,35 @@ namespace Ostenvighx.Suibhne.Commands {
             return false;
         }
 
-        public int MapCommands() {
+        public static int MapCommands() {
             int mappedCommands = 0;
             if (Core.SystemConfig == null)
                 return 0;
 
             
             try {
-                ExtensionSystem.Database.Open();
+                if(Core.Database.State != ConnectionState.Open)
+                    Core.Database.Open();
 
-                WipeCommandMap();
+                instance.WipeCommandMap();
 
-                String[] commands = Core.SystemConfig.Configs["Commands"].GetKeys();
+                DataTable results = new DataTable();
+                SQLiteCommand fetch_mappings = Core.Database.CreateCommand();
+                fetch_mappings.CommandText = "SELECT * FROM Commands;";
+                SQLiteDataReader sdr = fetch_mappings.ExecuteReader();
+                results.Load(sdr);
 
                 // Loop through requested commands (!<command>)
-                foreach (String commandKey in commands) {
-                    String commandMap = Core.SystemConfig.Configs["Commands"].GetString(commandKey);
+                foreach (DataRow commandEntry in results.Rows) {
 
-                    Core.Log("Attempting to map entry " + commandKey + " to " + commandMap);
-
-                    int nameEnd = commandMap.IndexOf(":");
-                    if (nameEnd == -1) nameEnd = 0;
-
-                    // Get mapped extension name
-                    string extName = commandMap.Substring(0, nameEnd);
+                    Core.Log(">>> Attempting to map command " + commandEntry["Command"] + " to extension " + commandEntry["Extension"] + " (handler: " + commandEntry["Handler"] + ")", LogType.EXTENSIONS);
 
                     CommandMap cm = new CommandMap();
-                    cm.CommandString = commandMap.Substring(nameEnd + 1).Trim();
+                    cm.Handler = commandEntry["Handler"].ToString();
+                    cm.Extension = Guid.Parse(commandEntry["Extension"].ToString());
+                    cm.AccessLevel = (byte) int.Parse(commandEntry["DefaultAccess"].ToString());
 
-                    SQLiteCommand extensionCommandHandlers = ExtensionSystem.Database.CreateCommand();
-                    extensionCommandHandlers.CommandText = "SELECT Extensions.Name, Extensions.Identifier" +
-                        " FROM Extensions" +
-                        " WHERE lower(Extensions.Name) = '" + extName.ToLower() + "';";
-
-                    SQLiteDataReader sdr = extensionCommandHandlers.ExecuteReader();
-                    DataTable extensionCommands = new DataTable();
-                    extensionCommands.Load(sdr);
-
-                    DataRow mappedCommand = extensionCommands.Rows[0];
-
-                    // Now that we have the mapped command row..
-                    cm.Extension = Guid.Parse(mappedCommand["Identifier"].ToString());
-                    cm.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt(commandKey, 1);
-
-                    CommandManager.Instance.RegisterCommand(commandKey, cm);
+                    instance.RegisterCommand((string) commandEntry["Command"], cm);
                     mappedCommands++;
                 }
                 
@@ -104,16 +94,16 @@ namespace Ostenvighx.Suibhne.Commands {
             }
 
             CommandMap sys = new CommandMap();
-            sys.CommandString = "system";
+            sys.Handler = "system";
             sys.Extension = Guid.Empty;
 
             sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("sys", 250);
-            RegisterCommand("sys", sys);
+            instance.RegisterCommand("sys", sys);
 
             sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("system", 250);
-            RegisterCommand("system", sys);
-            RegisterCommand("commands", new CommandMap() { AccessLevel = 1 });
-            RegisterCommand("help", new CommandMap() { AccessLevel = 1 });
+            instance.RegisterCommand("system", sys);
+            instance.RegisterCommand("commands", new CommandMap() { AccessLevel = 1 });
+            instance.RegisterCommand("help", new CommandMap() { AccessLevel = 1 });
             return mappedCommands;
         }
 
@@ -183,7 +173,7 @@ namespace Ostenvighx.Suibhne.Commands {
                         if (CommandMapping.ContainsKey(subCommand)) {
                             CommandMap mappedCommand = CommandMapping[subCommand];
                             ExtensionMap ext = ExtensionSystem.Instance.Extensions[mappedCommand.Extension];
-                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [handler: " + mappedCommand.CommandString + "]", LogType.EXTENSIONS);
+                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [handler: " + mappedCommand.Handler + "]", LogType.EXTENSIONS);
                             ext.HandleHelpCommandRecieved(conn, mappedCommand, message);
                         } else {
                             response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
@@ -200,7 +190,7 @@ namespace Ostenvighx.Suibhne.Commands {
                 default:
                     ExtensionMap extension = ExtensionSystem.Instance.Extensions[CommandMapping[command].Extension];
 
-                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [handler: " + cmd.CommandString + "]", LogType.EXTENSIONS);
+                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [handler: " + cmd.Handler + "]", LogType.EXTENSIONS);
                     if (!extension.Ready) {
                         response.message = "I have {" + command + "} registered as a command, but it looks like the extension isn't ready yet. Try again later.";
                         conn.SendMessage(response);

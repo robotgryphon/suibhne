@@ -136,12 +136,10 @@ namespace Ostenvighx.Suibhne.Extensions {
             conn = (Socket)result.AsyncState;
             try {
                 conn.EndConnect(result);
-                Console.WriteLine("Conn finished");
                 Connected = true;
                 conn.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, conn);
 
-                conn.Send(Encoding.UTF32.GetBytes("{ \"event\": \"extension.activate\", \"extid\": \"" + Identifier + "\" }"));
-
+                Activate();
             }
 
             catch (SocketException se) {
@@ -151,6 +149,17 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (this.OnExtensionExit != null)
                     OnExtensionExit(this);
             }
+        }
+
+        protected virtual void Activate() {
+            JObject activation = new JObject();
+            activation.Add("event", "extension_activation");
+            activation.Add("extid", Identifier);
+            activation.Add("name", Name);
+            activation.Add("required_events", new JArray());
+            activation.Add("optional_events", new JArray());
+
+            conn.Send(Encoding.UTF32.GetBytes(activation.ToString()));
         }
 
         protected void RecieveDataCallback(IAsyncResult result) {
@@ -212,7 +221,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         SendMessage(new Message(Guid.Parse(Event["location"]["id"].ToString()), new User(), response));
                         break;
 
-                    case "command.recieve":
+                    case "command_recieved":
                         if (Event["handler"] != null && Event["handler"].ToString().Trim() != "") {
                             if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
                                 CommandHandlers[Event["handler"].ToString()].Invoke(this, Event);
@@ -220,7 +229,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         }
                         break;
 
-                    case "command.help":
+                    case "command_help":
 
                         if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
                             MethodInfo method = CommandHandlers[Event["handler"].ToString()].Method;
@@ -236,12 +245,12 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                         break;
 
-                    case "message.recieve":
+                    case "message_recieved":
                         HandleIncomingMessage(Event);
                         break;
 
 
-                    case "extension.shutdown":
+                    case "extension_shutdown":
                         conn.Shutdown(SocketShutdown.Both);
                         conn.Close();
                         Connected = false;
@@ -251,10 +260,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                         }
                         break;
 
-                    case "user.join":
-                    case "user.leave":
-                    case "user.namechange":
-                    case "user.quit":
+                    case "user_joined":
+                    case "user_left":
+                    case "user_name_changed":
+                    case "user_quit":
                         HandleUserEvent(Event);
                         break;
                 }
@@ -274,7 +283,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         public void SendMessage(Networks.Base.Message message) {
             JObject msg = new JObject();
-            msg.Add("event", "message.send");
+            msg.Add("event", "message_send");
             msg.Add("extid", this.Identifier);
             msg.Add("contents", message.message);
 

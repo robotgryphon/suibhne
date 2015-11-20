@@ -686,8 +686,15 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         // TODO: More work on the event support - this should be customizable through a config file instead
         public override bool IsEventSupported(string eventName) {
             string[] customEvents = new string[] {
+                "user_joined",
+                "user_left",
+                "user_quit",
+                "message_recieved",
                 "user_list_updated",
-                "topic_changed"
+                "topic_changed",
+
+                "network_connected",
+                "network_disconnected"
             };
 
             if (customEvents.Contains(eventName.ToLower()))
@@ -698,8 +705,15 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
         public override string[] GetSupportedEvents() {
             return new string[] {
+                "user_joined",
+                "user_left",
+                "user_quit",
+                "message_recieved",
                 "user_list_updated",
-                "topic_changed"
+                "topic_changed",
+
+                "network_connected",
+                "network_disconnected"
             };
         }
     }

@@ -25,8 +25,8 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void HandleHelpCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
-                ev.Add("event", "command.help");
-                ev.Add("handler", method.CommandString);
+                ev.Add("event", "command_help");
+                ev.Add("handler", method.Handler);
                 
                 JObject location = new JObject();
                 location.Add("id", msg.locationID);
@@ -51,8 +51,8 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void HandleCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
-                ev.Add("event", "command.recieve");
-                ev.Add("handler", method.CommandString);
+                ev.Add("event", "command_recieved");
+                ev.Add("handler", method.Handler);
                 if (msg.message.Split(' ').Length > 1)
                     ev.Add("arguments", msg.message.Substring(msg.message.IndexOf(' ') + 1));
                 else

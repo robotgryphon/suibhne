@@ -57,8 +57,9 @@ namespace Ostenvighx.Suibhne.Events {
                         if (t.IsSubclassOf(typeof(Network))) {
                             Network network = (Network)Activator.CreateInstance(t);
                             foreach (String eventCode in network.GetSupportedEvents()) {
-                                if(!instance.EventSupport.ContainsKey(eventCode.ToLower()))
-                                    instance.EventSupport.Add(eventCode.ToLower(), new List<Guid>());
+                                Core.Log("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")");
+                                if(!EventSupport.ContainsKey(eventCode.ToLower()))
+                                    EventSupport.Add(eventCode.ToLower(), new List<Guid>());
                             }
                         }
                     }
@@ -66,15 +67,53 @@ namespace Ostenvighx.Suibhne.Events {
 
                 catch (Exception) { }
             }
+
+            if (EventSupport.ContainsKey("message_recieved"))
+                EventSupport.Add("command_recieved", new List<Guid>());
         }
 
+        /// <summary>
+        /// Checks if the event list can support a set of events.
+        /// </summary>
+        /// <param name="eventList">The set of required events.</param>
+        /// <returns>True if the system can support all the events, false otherwise.</returns>
+        internal static bool VerifyCanSupport(string[] eventList) {
+            if (instance == null)
+                Initialize();
+
+            if (instance.EventSupport.Count == 0)
+                return false;
+
+            IEnumerable<string> intersect = instance.EventSupport.Keys.Intersect(eventList);
+
+            if (intersect.Count() == eventList.Count())
+                return true;
+
+            return false;
+        }
         /// <summary>
         /// Should be called by the extension system after it finishes initializing and gathering all the
         /// supported events.
         /// </summary>
-        /// <param name="supported">Key is the extension guid. Value is a list of that extension's supported events.</param>
-        public void UpdateExtensionSupport(Dictionary<Guid, string[]> supported) {
+        /// <param name="id">A guid that specifies which extension to modify.</param>
+        /// <param name="supported">An array of that extension's supported events.</param>
+        public static void UpdateExtensionSupport(Guid id, string[] supported) {
+            foreach (string eventCode in supported) {
+                // Event not supported by system
+                if (!instance.EventSupport.ContainsKey(eventCode.ToLower()))
+                    continue;
 
+                // Event already linked
+                if (instance.EventSupport[eventCode.ToLower()].Contains(id))
+                    continue;
+
+                instance.EventSupport[eventCode.ToLower()].Add(id);
+            }
+
+            // Finally, remove all the references to the extension from the list that don't match the new set
+            string[] unsupported = instance.EventSupport.Keys.Except(supported).ToArray<String>();
+            foreach (string un in unsupported)
+                instance.EventSupport[un].Remove(id);
         }
     }
 }

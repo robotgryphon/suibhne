@@ -88,8 +88,6 @@ namespace Ostenvighx.Suibhne {
                 try {
                     NetworkBot network = new NetworkBot(networkDirectory);
                     Core.Networks.Add(network.Identifier, network);
-
-                    Core.Log("Supported events for " + network.Identifier + ": " + String.Join("; ", network.Network.GetSupportedEvents()));
                 }
 
                 catch (FileNotFoundException fnfe) {

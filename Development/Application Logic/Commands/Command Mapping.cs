@@ -7,12 +7,23 @@ namespace Ostenvighx.Suibhne.Commands {
     
     public struct CommandMap {
 
-        public String CommandString;
+        /// <summary>
+        /// The handler for the command.
+        /// </summary>
+        public String Handler;
+
+        /// <summary>
+        /// The extension the command is linked to.
+        /// </summary>
         public Guid Extension;
+
+        /// <summary>
+        /// The lowest access level the user needs to invoke the command.
+        /// </summary>
         public byte AccessLevel;
 
         public override string ToString() {
-            return this.CommandString;
+            return this.Handler;
         }
     }
 }
