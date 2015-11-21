@@ -277,6 +277,10 @@ namespace Ostenvighx.Suibhne.Extensions {
 
         protected virtual void HandleIncomingMessage(string json) { }
 
+        public void SendBytes(byte[] b) {
+            conn.Send(b);
+        }
+
         public void SendMessage(Networks.Base.Message message) {
             JObject msg = new JObject();
             msg.Add("event", "message_send");

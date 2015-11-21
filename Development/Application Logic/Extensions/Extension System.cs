@@ -188,16 +188,9 @@ namespace Ostenvighx.Suibhne.Extensions {
                     return;
                 }
 
-                string[] eventNameParts = ev["event"].ToString().ToLower().Split('_');
-                string eventHandler = "";
-                foreach (string eventPart in eventNameParts)
-                    eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
-
-                Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
-                object handler = Activator.CreateInstance(t);
-
-                (handler as Suibhne.Events.Handlers.EventHandler).HandleEvent(ev);
+                EventManager.HandleExtensionEvent(ev);
             }
+
             catch (Exception e) {
                 Core.Log("Extension error: " + e.Message, LogType.ERROR);
                 Console.WriteLine(e);

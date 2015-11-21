@@ -48,48 +48,15 @@ namespace Ostenvighx.Suibhne.Events {
 
         public static void HookEventHandler(Network n) {
             if (!instance.ListenedNetworks.Contains(n.Identifier)) {
-                n.OnCustomEventFired += instance.EventHandler;
+                n.OnCustomEventFired += instance.HandleNetworkEvent;
                 instance.ListenedNetworks.Add(n.Identifier);
             }
         }
 
         /// <summary>
-        /// Internally handles custom event delegation.
+        /// Setup method. This method gathers all the available and supported events off the
+        /// various connectors being used.
         /// </summary>
-        /// <param name="netID"></param>
-        /// <param name="json"></param>
-        private void EventHandler(Guid netID, String json) {
-            if (!Core.Networks.ContainsKey(netID)) {
-                Core.Log("Error handling custom event. Network guid not active or invalid. (EventManager, guid: " + netID + ")\n" + json, LogType.ERROR);
-                return;
-            }
-
-            try {
-                JObject ev = JObject.Parse(json);
-
-                if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
-                    String eventName = ev["event"].ToString().ToLower().Trim();
-
-                    if (!instance.EventSupport.ContainsKey(eventName))
-                        return;
-
-                    Core.Log("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, LogType.DEBUG);
-
-                    foreach(Guid g in instance.EventSupport[eventName]) {
-                        if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))
-                            continue;
-
-                        ExtensionMap em = ExtensionSystem.Instance.Extensions[g];
-
-                        if (em.Ready)
-                            em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
-                    }
-                }
-            }
-
-            catch (Exception) { }
-        }
-
         private void GatherConnectorEvents() {
             if (Core.ConfigDirectory == "")
                 throw new Exception("Please start by loading the configuration first, in Core.");
@@ -147,6 +114,7 @@ namespace Ostenvighx.Suibhne.Events {
 
             return false;
         }
+        
         /// <summary>
         /// Should be called by the extension system after it finishes initializing and gathering all the
         /// supported events.
@@ -171,5 +139,61 @@ namespace Ostenvighx.Suibhne.Events {
             foreach (string un in unsupported)
                 instance.EventSupport[un].Remove(id);
         }
+
+        #region Event Routing
+        /// <summary>
+        /// Handles events fired off by networks, delegating the tasks off to various extensions.
+        /// </summary>
+        /// <param name="netID">The identifier of the network that fired the event.</param>
+        /// <param name="json">The event JSON object.</param>
+        private void HandleNetworkEvent(Guid netID, String json) {
+            if (!Core.Networks.ContainsKey(netID)) {
+                Core.Log("Error handling custom event. Network guid not active or invalid. (EventManager, guid: " + netID + ")\n" + json, LogType.ERROR);
+                return;
+            }
+
+            try {
+                JObject ev = JObject.Parse(json);
+
+                if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
+                    String eventName = ev["event"].ToString().ToLower().Trim();
+
+                    if (!instance.EventSupport.ContainsKey(eventName))
+                        return;
+
+                    Core.Log("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, LogType.DEBUG);
+
+                    foreach(Guid g in instance.EventSupport[eventName]) {
+                        if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))
+                            continue;
+
+                        ExtensionMap em = ExtensionSystem.Instance.Extensions[g];
+
+                        if (em.Ready)
+                            em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
+                    }
+                }
+            }
+
+            catch (Exception) { }
+        }
+
+        internal static void HandleExtensionEvent(JObject json) {
+            string[] eventNameParts = json["event"].ToString().ToLower().Split('_');
+            string eventHandler = "";
+            foreach (string eventPart in eventNameParts)
+                eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
+
+            Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
+            if (t == null) {
+                // The event handler couldn't be found. Abort!
+                return;
+            }
+
+            object handler = Activator.CreateInstance(t);
+
+            (handler as Handlers.EventHandler).HandleEvent(json);
+        }
+        #endregion
     }
 }
