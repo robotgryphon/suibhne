@@ -16,13 +16,12 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
 
 
             Guid locationID = json["location"].ToObject<Guid>();
-            ExtensionMap extension = ExtensionSystem.GetExtension(json["extid"].ToObject<Guid>());
 
             Location location = LocationManager.GetLocationInfo(locationID);
             if (location == null)
                 return;
 
-            Message msg = new Message(locationID, new User(extension.Name), json["message"]["contents"].ToString());
+            Message msg = new Message(locationID, new User(""), json["message"]["contents"].ToString());
             NetworkBot bot;
             byte messageType = (byte) json["message"]["type"];
 

@@ -205,6 +205,31 @@ namespace Ostenvighx.Suibhne.Events {
             if (instance.OnEventHandled != null)
                 instance.OnEventHandled(json.ToString(), Core.Side.EXTENSION);
         }
+
+        /// <summary>
+        /// Injects an event into the system and forces it to route it accordingly.
+        /// </summary>
+        /// <param name="json">Injected event json.</param>
+        /// <param name="destination">Which side to send the event data to.</param>
+        public static void HandleInternalEvent(JObject json) {
+            string[] eventNameParts = json["event"].ToString().ToLower().Split('_');
+            string eventHandler = "";
+            foreach (string eventPart in eventNameParts)
+                eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
+
+            Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
+            if (t == null) {
+                // The event handler couldn't be found. Abort!
+                return;
+            }
+
+            object handler = Activator.CreateInstance(t);
+
+            (handler as Handlers.EventHandler).HandleEvent(json);
+
+            if (instance.OnEventHandled != null)
+                instance.OnEventHandled(json.ToString(), Core.Side.INTERNAL);
+        }
         #endregion
     }
 }

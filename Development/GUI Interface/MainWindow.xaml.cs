@@ -1,4 +1,5 @@
-﻿using Ostenvighx.Suibhne.Extensions;
+﻿using Newtonsoft.Json.Linq;
+using Ostenvighx.Suibhne.Extensions;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,29 +20,6 @@ namespace Ostenvighx.Suibhne.Gui {
             Events.EventManager.Initialize();
 
             Core.LoadNetworks();
-
-            
-            
-            foreach (ExtensionMap em in ExtensionSystem.GetExtensionList()) {
-                Grid ExtensionsPanel = new Grid();
-                ExtensionsPanel.Height = 30; ExtensionsPanel.Width = 150;
-                ExtensionsPanel.Background = new SolidColorBrush(Colors.GhostWhite);
-                ExtensionsPanel.Margin = new Thickness(5);
-
-                RowDefinition panelLabel = new RowDefinition();
-                panelLabel.Height = new GridLength(30); 
-                
-                ExtensionsPanel.RowDefinitions.Add(panelLabel);
-
-                Button label = new Button();
-                label.BorderBrush = new SolidColorBrush(Colors.Black);
-                label.BorderThickness = new Thickness(1);
-                label.Content = em.Name;
-                label.SetValue(Grid.RowProperty, 1);
-                ExtensionsPanel.Children.Add(label);
-
-                extensionsContainer.Children.Add(ExtensionsPanel);
-            }
 
             Suibhne.Commands.CommandManager.Initialize();
             ExtensionSystem.Initialize();
@@ -119,6 +97,16 @@ namespace Ostenvighx.Suibhne.Gui {
         private void click_NewLocation(object sender, RoutedEventArgs e) {
             Wins.New_Location win = new Wins.New_Location();
             win.ShowDialog();
+        }
+
+        private void InjectEventHandler(object sender, RoutedEventArgs e) {
+            String event_text = EventInjectionEntry.Text;
+            JObject test = new JObject();
+            try { test = JObject.Parse(event_text); }
+            catch (Exception) { MessageBox.Show("Invalid json to inject into event system. Please verify the syntax is correct.");  }
+
+            try { Events.EventManager.HandleInternalEvent(test); }
+            catch(Exception ex) { }
         }
     }
 }
