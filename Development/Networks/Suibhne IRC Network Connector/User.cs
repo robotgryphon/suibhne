@@ -27,14 +27,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// </summary>
         /// <param name="hostmask">The host mask to parse information from.</param>
         /// <returns>A formatted Irc User object with the parsed information.</returns>
-        public static Base.User Parse(String hostmask) {
+        public static User Parse(String hostmask) {
             Match userMatch = RegularExpressions.USER_REGEX.Match(hostmask);
 
-            Base.User user = new Base.User();
+            User user = new User();
             if (userMatch.Success) {
                 if (userMatch.Groups["username"].Value != "") {
                     user.DisplayName = userMatch.Groups["nickname"].Value;
-                    user.UniqueName = userMatch.Groups["username"].Value;
+                    user.UniqueName = userMatch.Groups["username"].Value + "@" + userMatch.Groups["hostname"].Value;
                 } else {
                     user.DisplayName = "<server>";
                     user.UniqueName = "<server>";
