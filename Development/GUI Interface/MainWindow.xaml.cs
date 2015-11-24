@@ -1,21 +1,10 @@
-﻿using Ostenvighx.Suibhne;
-using Ostenvighx.Suibhne.Extensions;
+﻿using Ostenvighx.Suibhne.Extensions;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Ostenvighx.Suibhne.Gui {
     /// <summary>
@@ -26,19 +15,13 @@ namespace Ostenvighx.Suibhne.Gui {
         public MainWindow() {
             InitializeComponent();
 
-            // TODO: Make fancier loading icon for startup process
-
             Core.LoadConfiguration();
+            Events.EventManager.Initialize();
+
             Core.LoadNetworks();
 
-            Events.EventManager.Initialize();
-            ExtensionSystem.Initialize();
-
-            Ostenvighx.Suibhne.Commands.CommandManager.Instance.MapCommands();
-
-
             
-
+            
             foreach (ExtensionMap em in ExtensionSystem.GetExtensionList()) {
                 Grid ExtensionsPanel = new Grid();
                 ExtensionsPanel.Height = 30; ExtensionsPanel.Width = 150;
@@ -59,11 +42,72 @@ namespace Ostenvighx.Suibhne.Gui {
 
                 extensionsContainer.Children.Add(ExtensionsPanel);
             }
-            // DO STARTUP AFTER DASHBOARD CREATED: Core.StartNetworks();
+
+            Suibhne.Commands.CommandManager.Initialize();
+            ExtensionSystem.Initialize();
+
+            Suibhne.Commands.CommandManager.MapCommands();
+
+
+            ExtensionSystem.Instance.AllExtensionsReady += () => {
+                Core.StartNetworks();
+            };
+
+            RoutedCommand toggle = new RoutedCommand();
+            toggle.InputGestures.Add(new KeyGesture(Key.F2));
+            CommandBindings.Add(new CommandBinding(toggle, ToggleOverlay));
+        }
+
+        private void EventDebugHandler(string json, Core.Side s) {
+            if (EventScrollback.Dispatcher.CheckAccess()) {
+                Border b = new Border();
+                b.BorderThickness = new Thickness(0, 0, 0, 1);
+                b.BorderBrush = new SolidColorBrush(Colors.Bisque);
+                b.Padding = new Thickness(5);
+
+                TextBlock tb = new TextBlock();
+                tb.Text = json;
+                b.Child = tb;
+
+                Color c = Colors.Red;
+                switch (s) {
+                    case Core.Side.INTERNAL:
+                        c = Colors.RoyalBlue;
+                        break;
+
+                    case Core.Side.EXTENSION:
+                        c = Colors.SeaShell;
+                        break;
+
+                    case Core.Side.CONNECTOR:
+                        c = Colors.SlateGray;
+                        break;
+                }
+
+                tb.Foreground = new SolidColorBrush(c);
+
+                EventScrollback.Children.Add(b);
+
+                EventScrollbackContainer.ScrollToBottom();
+            } else
+                EventScrollback.Dispatcher.Invoke(new Action(() => { EventDebugHandler(json, s); }));
+        }
+
+        private void ToggleOverlay(object sender, RoutedEventArgs e) {
+            Core.Log("Overlay button pressed");
+
+            if(OverlayContainer.Visibility == Visibility.Collapsed) {
+                OverlayContainer.Visibility = Visibility.Visible;
+                Events.EventManager.Instance.OnEventHandled += EventDebugHandler;
+            } else {
+                OverlayContainer.Visibility = Visibility.Collapsed;
+                Events.EventManager.Instance.OnEventHandled -= EventDebugHandler;
+            }
+           
         }
 
         private void ExitApplication(object sender, RoutedEventArgs e) {
-            // DoShutdown();
+            // TODO: DoShutdown();
             Application.Current.Shutdown();
         }
 

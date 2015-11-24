@@ -390,7 +390,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                         Console.WriteLine(u.DisplayName + " has changed the topic to " + topic);
                         Guid id = this.GetLocationIdByName(dataChunks[2]);
-                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"UniqueName\": \"" + u.UniqueName + "\", \"DisplayName\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
+                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"unique_id\": \"" + u.UniqueName + "\", \"display_name\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
 
                         FireEvent(json);
 

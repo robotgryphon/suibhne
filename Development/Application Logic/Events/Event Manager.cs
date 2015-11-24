@@ -12,6 +12,11 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.Events {
     public sealed class EventManager {
 
+        #region Handling Delegates and Events
+        public delegate void EventManagerEvent(String eventJson, Core.Side side);
+        public event EventManagerEvent OnEventHandled;
+        #endregion
+
         /// <summary>
         /// A dictionary of extension guids that support events.
         /// The keys are the connector-supported events.
@@ -173,6 +178,9 @@ namespace Ostenvighx.Suibhne.Events {
                             em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
                     }
                 }
+
+                if (instance.OnEventHandled != null)
+                    instance.OnEventHandled(ev.ToString(), Core.Side.CONNECTOR);
             }
 
             catch (Exception) { }
@@ -193,6 +201,9 @@ namespace Ostenvighx.Suibhne.Events {
             object handler = Activator.CreateInstance(t);
 
             (handler as Handlers.EventHandler).HandleEvent(json);
+
+            if (instance.OnEventHandled != null)
+                instance.OnEventHandled(json.ToString(), Core.Side.EXTENSION);
         }
         #endregion
     }

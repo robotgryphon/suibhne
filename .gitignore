@@ -28,6 +28,7 @@ Images/*
 .gitattributes
 Development/Extensions/*
 Development/Libraries/
+Wiki/
 *.iml
 Editor/
 *.psd

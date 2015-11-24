@@ -90,17 +90,19 @@ namespace Ostenvighx.Suibhne.Commands {
             }
 
             finally {
-                ExtensionSystem.Database.Close();
+                Core.Database.Close();
             }
 
             CommandMap sys = new CommandMap();
             sys.Handler = "system";
             sys.Extension = Guid.Empty;
 
-            sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("sys", 250);
+            // TODO: Implement the access levels in the database and modify the following lines
+            // sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("sys", 250);
+            sys.AccessLevel = 250;
             instance.RegisterCommand("sys", sys);
 
-            sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("system", 250);
+            // sys.AccessLevel = (byte) Core.SystemConfig.Configs["CommandAccess"].GetInt("system", 250);
             instance.RegisterCommand("system", sys);
             instance.RegisterCommand("commands", new CommandMap() { AccessLevel = 1 });
             instance.RegisterCommand("help", new CommandMap() { AccessLevel = 1 });

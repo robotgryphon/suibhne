@@ -21,7 +21,6 @@ namespace Ostenvighx.Suibhne.Extensions {
     /// searches through directories for the extension INI files.
     /// </summary>
     public class ExtensionSystem {
-        public static SQLiteConnection Database;
         internal Dictionary<Guid, ExtensionMap> Extensions;
         internal List<Guid> MessageHandlers;
         internal List<Guid> UserEventHandlers;

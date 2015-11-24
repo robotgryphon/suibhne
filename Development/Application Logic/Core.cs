@@ -32,6 +32,12 @@ namespace Ostenvighx.Suibhne {
 
         public static Boolean DEBUG;
 
+        public enum Side : byte {
+            CONNECTOR,
+            INTERNAL,
+            EXTENSION
+        }
+
         /// <summary>
         /// Base configuration directory. Will always have a trailing slash. ALWAYS.
         /// </summary>
@@ -62,19 +68,19 @@ namespace Ostenvighx.Suibhne {
                 Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
                 Core.SystemConfig.CaseSensitive = false;
 
-                Core.SystemConfig.ExpandKeyValues();
                 Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
                 if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
                     Core.ConfigDirectory += "/";
                     Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
                     Core.SystemConfig.Save();
                 }
+
+                Core.SystemConfig.ExpandKeyValues();
                 if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
                     SQLiteConnection.CreateFile(Core.ConfigDirectory + "system.sns");
                 }
 
                 Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
-                ExtensionSystem.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/extensions.sns");
 
                 if(Core.SystemConfig.Configs["System"] != null)
                     Core.DEBUG = Core.SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);

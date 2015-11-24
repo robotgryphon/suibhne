@@ -282,22 +282,22 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         public void SendMessage(Networks.Base.Message message) {
-            JObject msg = new JObject();
-            msg.Add("event", "message_send");
-            msg.Add("extid", this.Identifier);
-            msg.Add("contents", message.message);
+            JObject msg_data = new JObject();
+            msg_data.Add("event", "message_send");
+            msg_data.Add("extid", this.Identifier);
+            msg_data.Add("location", message.locationID);
 
-            JObject location = new JObject();
-            location.Add("id", message.locationID);
-            location.Add("type", (byte) message.type);
+            JObject msg = new JObject();
+            msg.Add("contents", message.message);
+            msg.Add("type", (byte) message.type);
 
             if (Message.IsPrivateMessage(message)) {
-                location.Add("target", message.target.DisplayName);
+                msg.Add("target", message.target.DisplayName);
             }
-            
-            msg.Add("location", location);
 
-            conn.Send(Encoding.UTF32.GetBytes(msg.ToString()));
+            msg_data.Add("message", msg);
+
+            conn.Send(Encoding.UTF32.GetBytes(msg_data.ToString()));
         }
     }
 }

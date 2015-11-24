@@ -31,24 +31,18 @@ namespace Ostenvighx.Suibhne.System_Commands {
 
                 case "id":
                     if (messageParts.Length < 4) {
-                        response.message = "You need to specify an extension to disable.";
+                        response.message = "You need to specify an extension to get the identifier for.";
                         conn.SendMessage(response);
                         break;
                     }
 
                     workingExtension.Name = msg.message.Split(new char[] { ' ' }, 4)[3];
 
-                    // DB query to fetch extension ID
                     try {
-                        ExtensionSystem.Database.Open();
-                        SQLiteCommand extensionIdFetchCommand = ExtensionSystem.Database.CreateCommand();
-                        extensionIdFetchCommand.CommandText = "SELECT * FROM Extensions WHERE Name = '" + workingExtension.Name + "';";
 
-                        SQLiteDataReader r = extensionIdFetchCommand.ExecuteReader();
-                        DataTable results = new DataTable();
-                        results.Load(r);
+                        workingExtension.Identifier = ExtensionSystem.FindByName(workingExtension.Name);
 
-                        response.message = "I have an id of '" + results.Rows[0]["Identifier"].ToString() + "' for extension '" + workingExtension.Name + "'.";
+                        response.message = "I have an id of '" + workingExtension.Identifier + "' for extension '" + workingExtension.Name + "'.";
                         conn.SendMessage(response);
 
                     }
@@ -57,10 +51,6 @@ namespace Ostenvighx.Suibhne.System_Commands {
                         response.message = "There was an error processing your request. Sorry about that! Error message: " + e.Message;
                         conn.SendMessage(response);
 
-                    }
-
-                    finally {
-                        ExtensionSystem.Database.Close();
                     }
                     break;
 
