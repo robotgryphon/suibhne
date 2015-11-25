@@ -1,28 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Ostenvighx.Suibhne.Networks.Base;
+using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace Ostenvighx.Suibhne.Gui.Wins {
     /// <summary>
     /// Interaction logic for RenameDialog.xaml
     /// </summary>
     public partial class RenameDialog : Window {
-        public RenameDialog() {
+
+        private Guid id;
+
+        private RenameDialog() {
             InitializeComponent();
         }
 
-        private void Confirm(object sender, RoutedEventArgs e) {
+        public RenameDialog(Guid id) {
+            this.id = id;
+            InitializeComponent();
+        }
 
+        public override void EndInit() {
+            base.EndInit();
+
+            Location l = LocationManager.GetLocationInfo(id);
+
+            this.text.Text = l.Name;
+        }
+        private void Confirm(object sender, RoutedEventArgs e) {
+            if (this.text.Text.Trim() == "")
+                return;
+
+            this.Close();
         }
     }
 }

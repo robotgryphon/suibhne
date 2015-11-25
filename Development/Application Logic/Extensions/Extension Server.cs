@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -54,9 +55,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 // Socket exposed, this is on bot shutdown usually
             }
 
-            catch (Exception exc) {
-                Core.Log(exc.Message, LogType.DEBUG);
-            }
+            catch (Exception) { }
         }
 
         protected void RecieveDataCallback(IAsyncResult result) {

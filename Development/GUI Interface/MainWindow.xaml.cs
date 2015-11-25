@@ -16,19 +16,10 @@ namespace Ostenvighx.Suibhne.Gui {
         public MainWindow() {
             InitializeComponent();
 
-            Core.LoadConfiguration();
-            Events.EventManager.Initialize();
-
-            Core.LoadNetworks();
-
-            Suibhne.Commands.CommandManager.Initialize();
-            ExtensionSystem.Initialize();
-
-            Suibhne.Commands.CommandManager.MapCommands();
-
+            Core.Initialize();
 
             ExtensionSystem.Instance.AllExtensionsReady += () => {
-                Core.StartNetworks();
+                Core.Start();
             };
 
             RoutedCommand toggle = new RoutedCommand();

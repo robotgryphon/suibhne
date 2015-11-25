@@ -21,20 +21,17 @@ namespace Ostenvighx.Suibhne.Extensions {
     /// searches through directories for the extension INI files.
     /// </summary>
     public class ExtensionSystem {
+
         internal Dictionary<Guid, ExtensionMap> Extensions;
         internal List<Guid> MessageHandlers;
         internal List<Guid> UserEventHandlers;
         protected ExtensionServer Server;
         private static ExtensionSystem instance;
+
         // Used for timing stuffs
         private Timer t;
 
         private ExtensionSystem() {
-            if (File.Exists(Core.SystemConfig.SavePath)) {
-                // Get some basic info about config file
-                Core.ConfigLastUpdate = File.GetLastWriteTime(Core.SystemConfig.SavePath);
-            }
-
             this.ConnectedExtensions = 0;
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
             this.UserEventHandlers = new List<Guid>();
@@ -277,22 +274,17 @@ namespace Ostenvighx.Suibhne.Extensions {
             String[] directories = Directory.GetDirectories(Core.ConfigDirectory + "Extensions/");
             try {
                 foreach (String extensionDir in directories) {
-                    Core.Log("Loading directory.. " + extensionDir, LogType.DEBUG);
-
+                    Debug.WriteLine("Loading extension from directory: " + extensionDir);
                     Guid extID = Guid.Parse(new DirectoryInfo(extensionDir).Name);
-
-                    Core.Log("Loading information for extension: " + extID, LogType.EXTENSIONS);
-
                     this.Extensions.Add(extID, new ExtensionMap() { Identifier = extID });
                 }
             }
             catch (FormatException fe) {
                 // extension directory not named for guid
-                Core.Log(fe.StackTrace, LogType.DEBUG);
+                Debug.WriteLine(fe.StackTrace);
             }
 
-            Core.Log("All extensions primed.", LogType.EXTENSIONS);
-            Core.Log("", LogType.EXTENSIONS);
+            Core.Log("All extensions primed." + Environment.NewLine, LogType.EXTENSIONS);
         }
         private void StartExtensions() {
             foreach (String extDir in Directory.GetDirectories(Core.ConfigDirectory + "/Extensions/")) {
@@ -310,7 +302,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 if (filename == "")
                     continue;
 
-                Core.Log("Trying to start " + filename, LogType.DEBUG);
+                Debug.WriteLine("Trying to start extension with file " + filename, "Extensions");
 
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.WorkingDirectory = extDir;

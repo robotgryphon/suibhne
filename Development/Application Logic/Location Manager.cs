@@ -24,7 +24,8 @@ namespace Ostenvighx.Suibhne {
             }
 
             try {
-                Core.Database.Open();
+                if(Core.Database.State != ConnectionState.Open)
+                    Core.Database.Open();
 
                 SQLiteCommand update = Core.Database.CreateCommand();
                 update.CommandText = "UPDATE Identifiers SET Name='" + name + "' WHERE Identifier='" + id + "';";
@@ -36,7 +37,9 @@ namespace Ostenvighx.Suibhne {
 
             }
 
-            catch (Exception) { }
+            catch (Exception ex) {
+                Core.Log(ex.Message);
+            }
 
             finally {
                 Core.Database.Close();
@@ -68,8 +71,7 @@ namespace Ostenvighx.Suibhne {
             }
 
             catch (Exception) {
-
-                return null;
+                return new Guid[0];
             }
 
             finally {

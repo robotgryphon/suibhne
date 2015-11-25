@@ -218,8 +218,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                 HandleDataPacket(text);
 
-                
-
                 recievedOn.BeginReceive(GlobalBuffer, 0, GlobalBuffer.Length, SocketFlags.None, DataRecievedCallback, recievedOn);
 
             }

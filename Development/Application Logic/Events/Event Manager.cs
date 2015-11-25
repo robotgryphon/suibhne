@@ -3,6 +3,7 @@ using Ostenvighx.Suibhne.Extensions;
 using Ostenvighx.Suibhne.Networks.Base;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -79,7 +80,7 @@ namespace Ostenvighx.Suibhne.Events {
                         if (t.IsSubclassOf(typeof(Network))) {
                             Network network = (Network)Activator.CreateInstance(t);
                             foreach (String eventCode in network.GetSupportedEvents()) {
-                                Core.Log("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", LogType.DEBUG);
+                                Debug.WriteLine("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", "Events");
                                 if (!EventSupport.ContainsKey(eventCode.ToLower())) {
                                     EventSupport.Add(eventCode.ToLower(), new List<Guid>());
                                     total_added_for_network_type++;
@@ -166,7 +167,7 @@ namespace Ostenvighx.Suibhne.Events {
                     if (!instance.EventSupport.ContainsKey(eventName))
                         return;
 
-                    Core.Log("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, LogType.DEBUG);
+                    Debug.WriteLine("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, "Events");
 
                     foreach(Guid g in instance.EventSupport[eventName]) {
                         if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))

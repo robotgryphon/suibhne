@@ -37,7 +37,8 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
         internal void PopulateLocationList() {
             itemsList.Items.Clear();
-            foreach (Guid g in LocationManager.GetNetworks()) {
+            Guid[] locations = LocationManager.GetNetworks();
+            foreach (Guid g in locations) {
                 TreeViewItem networkListItem = new TreeViewItem();
 
                 Location networkLocation = LocationManager.GetLocationInfo(g);
@@ -89,7 +90,26 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
         }
 
         protected void Rename(object sender, RoutedEventArgs e) {
+            TreeViewItem selectedItem = (TreeViewItem)itemsList.SelectedItem;
+            if (selectedItem == null || selectedItem.Uid == null || selectedItem.Uid == Guid.Empty.ToString()) {
+                MessageBox.Show("Please select an item to rename.");
+                return;
+            }
 
+            Guid locationID = Guid.Parse(selectedItem.Uid);
+
+            // Double check it's a valid location
+            Location locationInfo = LocationManager.GetLocationInfo(locationID);
+            if (locationInfo == null)
+                return;
+
+            Wins.RenameDialog rnd = new RenameDialog(locationID);
+            rnd.ShowDialog();
+
+            String new_name = rnd.text.Text;
+            LocationManager.RenameLocation(locationID, new_name);
+
+            PopulateLocationList();
         }
 
         private void Delete(object sender, RoutedEventArgs e) {

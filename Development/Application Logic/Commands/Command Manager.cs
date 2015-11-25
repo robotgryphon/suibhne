@@ -14,6 +14,7 @@ using System.Data;
 using System.Data.SQLite;
 using System.Text.RegularExpressions;
 using Ostenvighx.Suibhne.System_Commands;
+using System.Diagnostics;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -72,7 +73,7 @@ namespace Ostenvighx.Suibhne.Commands {
                 // Loop through requested commands (!<command>)
                 foreach (DataRow commandEntry in results.Rows) {
 
-                    Core.Log(">>> Attempting to map command " + commandEntry["Command"] + " to extension " + commandEntry["Extension"] + " (handler: " + commandEntry["Handler"] + ")", LogType.DEBUG);
+                    Debug.WriteLine(">>> Attempting to map command " + commandEntry["Command"] + " to extension " + commandEntry["Extension"] + " (handler: " + commandEntry["Handler"] + ")", "Extensions");
 
                     CommandMap cm = new CommandMap();
                     cm.Handler = commandEntry["Handler"].ToString();
@@ -220,55 +221,6 @@ namespace Ostenvighx.Suibhne.Commands {
                     case "exts":
                     case "extensions":
                         SysCommands.Extensions(conn, msg);
-                        break;
-
-                    case "reload":
-                        if (messageParts.Length < 3) {
-                            response.message = "I need more parameters than that. Try config, access, or extensions.";
-                            conn.SendMessage(response);
-                            break;
-                        }
-
-                        switch (messageParts[2].ToLower()) {
-                            case "config":
-                                if (Core.SystemConfig != null) {
-                                    if (Core.ConfigLastUpdate < File.GetLastWriteTime(Core.SystemConfig.SavePath)) {
-                                        try {
-                                            Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + @"/suibhne.ini");
-                                            int numRemapped = MapCommands();
-                                            response.message = "Successfully remapped " + numRemapped + " commands to " + ExtensionSystem.Instance.Extensions.Count + " extensions.";
-                                            conn.SendMessage(response);
-
-                                            // TODO: MapAccessLevels();
-                                            Core.ConfigLastUpdate = DateTime.Now;
-                                        }
-
-                                        catch (Exception e) {
-                                            response.message = "Error processing request: " + e.Message;
-                                            conn.SendMessage(response);
-                                        }
-                                    } else {
-                                        response.message = "Your system config is up-to-date.";
-                                        conn.SendMessage(response);
-                                    }
-                                }
-                                break;
-
-                            case "extensions":
-                            case "access":
-                                response.message = "whispers: \"This isn't quite available yet.\"";
-                                response.type = Networks.Base.Reference.MessageType.PublicAction;
-                                conn.SendMessage(response);
-                                response.type = Networks.Base.Reference.MessageType.PublicMessage;
-                                break;
-
-                            default:
-                                response.message = "is not sure what to do with that. Try config or extensions as a parameter.";
-                                response.type = Networks.Base.Reference.MessageType.PublicAction;
-                                conn.SendMessage(response);
-                                response.type = Networks.Base.Reference.MessageType.PublicMessage;
-                                break;
-                        }
                         break;
 
                     case "version":

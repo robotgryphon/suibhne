@@ -13,19 +13,10 @@ namespace CLI {
     class Program {
         static void Main(string[] args) {
 
-            Core.LoadConfiguration();
-            EventManager.Initialize();
-
-            Core.LoadNetworks();
-
-            CommandManager.Initialize();
-            ExtensionSystem.Initialize();
-
-            CommandManager.MapCommands();
-
+            Core.Initialize();
 
             ExtensionSystem.Instance.AllExtensionsReady += () => {
-                Core.StartNetworks();
+                Core.Start();
             };
 
             Console.ReadLine();

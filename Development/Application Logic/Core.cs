@@ -10,6 +10,7 @@ using System.Text;
 using System.Data;
 using Newtonsoft.Json;
 using System.Data.SQLite;
+using System.Diagnostics;
 
 namespace Ostenvighx.Suibhne {
 
@@ -28,8 +29,6 @@ namespace Ostenvighx.Suibhne {
 
         public static Dictionary<Guid, NetworkBot> Networks;
 
-        public static DateTime ConfigLastUpdate;
-
         public static Boolean DEBUG;
 
         public enum Side : byte {
@@ -43,11 +42,13 @@ namespace Ostenvighx.Suibhne {
         /// </summary>
         public static String ConfigDirectory;
 
-        public static IniConfigSource SystemConfig;
-        public static SQLiteConnection Database;
+        internal static IniConfigSource SystemConfig;
+        internal static SQLiteConnection Database;
 
-        [Script("startTime")]
-        public static DateTime StartTime = DateTime.Now;
+        public static DateTime StartTime {
+            get; private set;
+        } = DateTime.Now;
+
 
         public delegate void CoreLogEvent(String log, LogType type = LogType.GENERAL);
         public static event CoreLogEvent OnLogMessage;
@@ -62,13 +63,35 @@ namespace Ostenvighx.Suibhne {
             protected set { }
         }
 
-        public static void LoadConfiguration() {
+        public static void Initialize() {
+            LoadConfiguration();
+            Events.EventManager.Initialize();
+
+            LoadNetworks();
+            Commands.CommandManager.Initialize();
+
+            Extensions.ExtensionSystem.Initialize();
+
+            Commands.CommandManager.MapCommands();
+        }
+
+        private static void LoadConfiguration() {
+            Core.Log("Loading the configuration data...");
+
             try {
-                Core.ConfigLastUpdate = DateTime.Now;
                 Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
                 Core.SystemConfig.CaseSensitive = false;
 
+                // Make sure directories config exists - if not, create it and add in the configroot
+                if (Core.SystemConfig.Configs["Directories"] == null) {
+                    Core.SystemConfig.AddConfig("Directories");
+                    Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                    Core.SystemConfig.Save();
+                }
+
                 Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+
+                // Make sure there's a trailing slash at the end of the config directory
                 if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
                     Core.ConfigDirectory += "/";
                     Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
@@ -81,6 +104,8 @@ namespace Ostenvighx.Suibhne {
                 }
 
                 Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
+                CheckDatabase();
+
 
                 if(Core.SystemConfig.Configs["System"] != null)
                     Core.DEBUG = Core.SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
@@ -90,15 +115,15 @@ namespace Ostenvighx.Suibhne {
 
             }
         }
-        public static void LoadNetworks() {
+
+        private static void LoadNetworks() {
             Core.Networks = new Dictionary<Guid, NetworkBot>();
 
-            String[] networkDirectories = Directory.GetDirectories(Core.ConfigDirectory + "/Networks/");
-
-            foreach (String networkDirectory in networkDirectories) {
+            Guid[] networks = LocationManager.GetNetworks();
+            foreach (Guid netID in networks) {
                 try {
-                    NetworkBot network = new NetworkBot(networkDirectory);
-                    Core.Networks.Add(network.Identifier, network);
+                    NetworkBot network = new NetworkBot(netID);
+                    Core.Networks.Add(netID, network);
                 }
 
                 catch (FileNotFoundException fnfe) {
@@ -115,7 +140,7 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        public static void StartNetworks() {
+        public static void Start() {
             foreach (NetworkBot network in Core.Networks.Values) {
                 if (File.Exists(Core.ConfigDirectory + "/Networks/" + network.Identifier + "/disabled"))
                     continue;
@@ -125,10 +150,6 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
-
-            // If we are debugging but not in debug mode, exit
-            if (type == LogType.DEBUG && !DEBUG)
-                return;
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write("[{0}] ", DateTime.Now);
@@ -154,10 +175,6 @@ namespace Ostenvighx.Suibhne {
                     Console.ForegroundColor = ConsoleColor.Magenta;
                     break;
 
-                case LogType.DEBUG:
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    break;
-
                 default:
                     Console.ForegroundColor = ConsoleColor.White;
                     break;
@@ -167,6 +184,51 @@ namespace Ostenvighx.Suibhne {
             Console.ResetColor();
 
             if (OnLogMessage != null) OnLogMessage("[" + DateTime.Now + "] " + message, type);
+        }
+
+        /// <summary>
+        /// Verifies the integrity of the system database.
+        /// Checks tables are valid and existing.
+        /// </summary>
+        private static void CheckDatabase() {
+            if (Core.Database.State != ConnectionState.Open)
+                Core.Database.Open();
+
+            try {
+                SQLiteCommand tableCheck = Core.Database.CreateCommand();
+                tableCheck.CommandText = "select count(*) from sqlite_master WHERE type='table' AND (name='Identifiers' OR name='Commands');";
+                int i = int.Parse(tableCheck.ExecuteScalar().ToString());
+
+                if (i >= 2) return;
+
+                tableCheck.CommandText = "create table if not exists Identifiers (" +
+                    "`Identifier`	TEXT NOT NULL UNIQUE," +
+	                "`ParentId`	TEXT," +
+	                "`Name`	TEXT," +
+	                "`LocationType`	INTEGER," +
+                    "PRIMARY KEY(Identifier)," +
+                    "FOREIGN KEY(`ParentId`) REFERENCES Identifier" +
+                  ")";
+
+                if (tableCheck.ExecuteNonQuery() == 1)
+                    Core.Log("Created identifiers table.");
+
+                tableCheck.CommandText = "create table if not exists Commands (" +
+                    "`Command`	TEXT UNIQUE," +
+                    "`Extension`	TEXT," +
+                    "`Handler`	TEXT," +
+                    "`DefaultAccess`	INTEGER DEFAULT 1," +
+                    "PRIMARY KEY(Command)" +
+                  ")";
+
+                if (tableCheck.ExecuteNonQuery() == 1)
+                    Core.Log("Created command-linking table.");
+            }
+
+            catch(Exception ex) {
+
+            }
+            finally { Core.Database.Close(); }
         }
     }
 }

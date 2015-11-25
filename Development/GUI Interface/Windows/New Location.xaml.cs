@@ -66,7 +66,7 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
                     dropLabel.Content = "Parent Network:";
                     networkType.Items.Clear();
 
-                    foreach(Guid netID in Core.Networks.Keys) {
+                    foreach(Guid netID in LocationManager.GetNetworks()) {
                         Location l = LocationManager.GetLocationInfo(netID);
                         ComboBoxItem cbi = new ComboBoxItem();
                         cbi.Content = l.Name;

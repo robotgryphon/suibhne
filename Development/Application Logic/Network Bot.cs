@@ -44,19 +44,14 @@ namespace Ostenvighx.Suibhne {
         public event IrcCommandEvent OnCommandRecieved;
         #endregion
 
-        public NetworkBot(String configDir){
-            try {
-                this.Identifier = Guid.Parse(configDir.Substring(configDir.LastIndexOf("/") + 1));
-            }
+        public NetworkBot(Guid id){
+            this.Identifier = id;
 
-            catch (Exception) {
-                return;
-            }
+            String configDir = Core.ConfigDirectory + "Networks/" + Identifier;
 
 
             if (!File.Exists(configDir + "/network.ini")) {
-                Core.Log("Could not load network information file: " + configDir + "/network.ini");
-                return;
+                throw new FileNotFoundException("Could not load network information file: " + configDir + "/network.ini");
             }
 
             IniConfigSource config = new IniConfigSource(configDir + "/network.ini");
@@ -65,35 +60,39 @@ namespace Ostenvighx.Suibhne {
             if (config.Configs["Network"] == null || config.Configs["Network"].Get("type") == null)
                 throw new KeyNotFoundException("Network configuration file missing network section. Cannot continue.");
 
-            string networkType = config.Configs["Network"].GetString("type", "unknown");
+            try {
+                string networkType = config.Configs["Network"].GetString("type", "unknown");
+                if (networkType != null && networkType != "" && networkType != "unknown") {
 
-            if (networkType != null && networkType != "" && networkType != "unknown") {
-                
-                // First file should be network dll
-                Assembly networkAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "/Connectors/" + networkType + "/" + networkType + ".dll");
-                Type[] types = networkAssembly.GetTypes();
-                foreach (Type t in types) {
-                    if (t.IsSubclassOf(typeof(Network))) {
-                        this._network = (Network)Activator.CreateInstance(t);
-                        _network.Setup(config.SavePath);
-                        _network.Identifier = Identifier;
-                        _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
-                        _network.OnMessageRecieved += this.HandleMessageRecieved;
-                        _network.OnConnectionComplete += (conn) => {
-                            AutoJoinLocations();
-                        };
+                    // First file should be network dll
+                    Assembly networkAssembly = Assembly.LoadFrom(Core.ConfigDirectory + "/Connectors/" + networkType + "/" + networkType + ".dll");
+                    Type[] types = networkAssembly.GetTypes();
+                    foreach (Type t in types) {
+                        if (t.IsSubclassOf(typeof(Network))) {
+                            this._network = (Network)Activator.CreateInstance(t);
+                            _network.Setup(config.SavePath);
+                            _network.Identifier = Identifier;
+                            _network.Listened.Add(Identifier, new Location("<network>", Networks.Base.Reference.LocationType.Network));
+                            _network.OnMessageRecieved += this.HandleMessageRecieved;
+                            _network.OnConnectionComplete += (conn) => {
+                                AutoJoinLocations();
+                            };
 
-                        EventManager.HookEventHandler(_network);
+                            _network.Status = Reference.ConnectionStatus.Disconnected;
+                            EventManager.HookEventHandler(_network);
+                        }
                     }
-                }
 
-                // TODO: Tear this out of here, check in database instead
-                // foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
-                //    _network.Listened[Identifier].AccessLevels.Add(opIdentifier, (byte) config.Configs["Operators"].GetInt(opIdentifier));
-                // }
+                    // TODO: Tear this out of here, check in database instead
+                    // foreach(String opIdentifier in config.Configs["Operators"].GetKeys()){
+                    //    _network.Listened[Identifier].AccessLevels.Add(opIdentifier, (byte) config.Configs["Operators"].GetInt(opIdentifier));
+                    // }
+                }
             }
 
-            this.Status = Networks.Base.Reference.ConnectionStatus.Disconnected;
+            catch (Exception) {
+                throw new Exception("Could not initialize the network.");
+            }
         }
 
         public void ReloadConfiguration() {
