@@ -22,6 +22,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             '~'     // 150
         };
 
+        public User()
+            : base() { }
+
+        public User(string username, string last_displayname, string current_displayname) 
+            : base(username, last_displayname, current_displayname) { }
+
         /// <summary>
         /// Try to parse user information out of a full hostmask.
         /// </summary>

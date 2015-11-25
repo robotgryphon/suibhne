@@ -203,7 +203,10 @@ namespace Ostenvighx.Suibhne.Extensions {
         /// </summary>
         private void CheckExtensionsStatus() {
             if (Extensions.Count != ConnectedExtensions) {
-                Core.Log("Error: It's been a while and not all the extensions have responded. Hunting those down now, but continuing without them.", LogType.EXTENSIONS);
+                if (!Core.DEBUG)
+                    Core.Log("Error: It's been a while and not all the extensions have responded. Hunting those down now, but continuing without them.", LogType.EXTENSIONS);
+                else
+                    Core.Log("{Extensions startup skipped for now, forcing continue}", LogType.EXTENSIONS);
 
                 // TODO: Figure out which extensions haven't started here, retry hooking them later
             }
@@ -217,8 +220,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                 t.Dispose();
 
             Core.Log("All of the extensions are now connected.");
-            if (instance.AllExtensionsReady != null)
-                instance.AllExtensionsReady();
+            if (AllExtensionsReady != null)
+                AllExtensionsReady();
         }
 
         private void HandleExtensionActivation(JObject EVENT, Socket sock) {
@@ -318,15 +321,19 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Process.Start(psi);
             }
 
-            Core.Log("All extensions have been asked to start. Counter initialized.", LogType.EXTENSIONS);
 
-            t = null;
+            if (!Core.DEBUG) {
+                Core.Log("All extensions have been asked to start. Counter initialized.", LogType.EXTENSIONS);
+                t = null;
 
-            // Start a timer to check the progress of extension activation in 45 seconds
-            t = new Timer((obj) => {
+                // Start a timer to check the progress of extension activation in 45 seconds
+                t = new Timer((obj) => {
+                    CheckExtensionsStatus();
+                    t.Dispose();
+                }, null, 45000, System.Threading.Timeout.Infinite);
+            } else {
                 CheckExtensionsStatus();
-                t.Dispose();
-            }, null, 45000, System.Threading.Timeout.Infinite);
+            }
         }
     }
 }

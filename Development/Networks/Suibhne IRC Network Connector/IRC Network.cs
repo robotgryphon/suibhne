@@ -603,13 +603,13 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         protected void HandleNicknameChange(String line) {
             String[] dataChunks = line.Split(new char[] { ' ' });
 
-            Base.User changer = User.Parse(dataChunks[0]);
+            User changer = User.Parse(dataChunks[0]);
             changer.LastDisplayName = changer.DisplayName;
             changer.DisplayName = dataChunks[2].TrimStart(':');
-                
+
             if (changer.LastDisplayName == Me.DisplayName) {
-                Base.User me = new Base.User(Me.UniqueName, Me.DisplayName, changer.DisplayName);
-                Me = me;
+                Me.LastDisplayName = Me.DisplayName;
+                Me.DisplayName = changer.DisplayName;
             }
 
             HandleUserDisplayNameChange(Identifier, changer);
