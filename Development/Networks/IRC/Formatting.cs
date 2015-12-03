@@ -10,7 +10,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
     /// Handles all formatting, including bold, italics, underlining,
     /// as well as colors (both foreground and backgrounds)
     /// </summary>
-    public struct Formatter {
+    public struct Formatting {
 
         /// <summary>
         /// Makes all text after appear bold.

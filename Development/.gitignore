@@ -1,0 +1,9 @@
+GUI Interface/
+Libraries/
+packages/
+Application Logic/
+*.sln
+Command Line Launcher/
+Launcher.cs
+*.csproj
+Extensions/Social Awareness/Keys.cs

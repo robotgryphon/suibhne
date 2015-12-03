@@ -14,7 +14,6 @@ using System.Threading;
 
 namespace Ostenvighx.Suibhne.Extensions {
 
-    [Script("extensions")]
     /// <summary>
     /// The extension registry connects an IrcBot and a set of extension suites together.
     /// It goes through the ExtensionDirectories directory defined in the bot configuration and
@@ -23,8 +22,6 @@ namespace Ostenvighx.Suibhne.Extensions {
     public class ExtensionSystem {
 
         internal Dictionary<Guid, ExtensionMap> Extensions;
-        internal List<Guid> MessageHandlers;
-        internal List<Guid> UserEventHandlers;
         protected ExtensionServer Server;
         private static ExtensionSystem instance;
 
@@ -34,16 +31,11 @@ namespace Ostenvighx.Suibhne.Extensions {
         private ExtensionSystem() {
             this.ConnectedExtensions = 0;
             this.Extensions = new Dictionary<Guid, ExtensionMap>();
-            this.UserEventHandlers = new List<Guid>();
-            this.MessageHandlers = new List<Guid>();
 
             Server = new ExtensionServer();
             Server.OnDataRecieved += HandleIncomingData;
             Server.OnSocketCrash += ShutdownExtension;
             Server.Start();
-
-            LoadExtensionData();
-            StartExtensions();
         }
 
         public delegate void ExtensionSystemEvent();
@@ -87,13 +79,15 @@ namespace Ostenvighx.Suibhne.Extensions {
         public static void Initialize() {
             if (instance == null)
                 instance = new ExtensionSystem();
+
+            instance.LoadExtensionData();
+            instance.StartExtensions();
         }
 
         /// <summary>
         /// Gets a list of all active extensions.
         /// </summary>
         /// <returns></returns>
-        [Script("getActive")]
         public String[] GetActiveExtensions() {
             List<String> maps = new List<String>();
             foreach (ExtensionMap map in Extensions.Values) {
@@ -222,31 +216,20 @@ namespace Ostenvighx.Suibhne.Extensions {
         }
 
         private void HandleExtensionActivation(JObject EVENT, Socket sock) {
-            Guid id = EVENT["extid"].ToObject<Guid>();
+            
 
-            if (!Extensions.ContainsKey(id))
-                return;
-
-            ExtensionMap extension = Extensions[id];
-            extension.Name = EVENT["name"].ToString();
-
-            ConnectedExtensions++;
-
-            Core.Log("Activating extension: " + extension.Name, LogType.EXTENSIONS);
-
-            if (extension.Socket == null) {
-                extension.Socket = sock;
-            }
-
-            extension.Ready = true;
-
-            Extensions[extension.Identifier] = extension;
+            Core.Log("Activating extension: " + EVENT["name"], LogType.EXTENSIONS);
 
             if (EVENT["required_events"] != null) {
                 // Extension hooks to events system
-                if (!Suibhne.Events.EventManager.VerifyCanSupport((EVENT["required_events"].ToObject<string[]>()))) {
+                if (!EventManager.VerifyCanSupport((EVENT["required_events"].ToObject<string[]>()))) {
+                    
                     // Abort activation, we don't have everything the extension is asking for.
-                    // extension.Send();
+                    JObject error = new JObject();
+                    error.Add("event", "extension_shutdown");
+                    error.Add("reason", "The requested required events cannot be supported.");
+
+                    sock.Send(Encoding.UTF32.GetBytes(error.ToString()));
                     return;
                 }
 
@@ -255,12 +238,30 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 string[] all_extension_events = required.Union(optional).ToArray<String>();
 
-                EventManager.UpdateExtensionSupport(id, all_extension_events);
+                EventManager.UpdateExtensionSupport(EVENT["extid"].ToObject<Guid>(), all_extension_events);
             }
 
             if (Extensions.Count == ConnectedExtensions) {
                 FinishConnectionProcess();
             }
+
+            #region Set up extension references in system
+            // Set up extension in system
+            Guid id = EVENT["extid"].ToObject<Guid>();
+
+            if (!Extensions.ContainsKey(id))
+                return;
+
+            ExtensionMap extension = Extensions[id];
+            extension.Name = EVENT["name"].ToString();
+
+            if (extension.Socket == null)
+                extension.Socket = sock;
+
+            ConnectedExtensions++;
+            extension.Ready = true;
+            Extensions[extension.Identifier] = extension;
+            #endregion
         }
 
         /// <summary>
@@ -268,7 +269,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         /// getting it ready for further processing.
         /// </summary>
         private void LoadExtensionData() {
-            if (Core.ConfigDirectory == "")
+            if (Core.ConfigDirectory == "" || Core.ConfigDirectory == null)
                 throw new Exception("Config directory derp?");
 
             String[] directories = Directory.GetDirectories(Core.ConfigDirectory + "Extensions/");
@@ -286,6 +287,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Core.Log("All extensions primed." + Environment.NewLine, LogType.EXTENSIONS);
         }
+
         private void StartExtensions() {
             foreach (String extDir in Directory.GetDirectories(Core.ConfigDirectory + "/Extensions/")) {
                 // Start extension

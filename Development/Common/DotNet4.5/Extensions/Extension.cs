@@ -76,8 +76,11 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void Start() {
             Console.WriteLine("Starting extension as " + Identifier);
             MapCommandMethods();
+            SetupConfiguration();
             Connect();
         }
+
+        protected virtual void SetupConfiguration() { }
 
         private void MapCommandMethods() {
             // Get all possible command handler methods and create a mapping dictionary
@@ -106,7 +109,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         public virtual void Connect() {
 
             try {
-                Console.WriteLine("Starting conn");
+                Console.WriteLine("Starting connection");
                 conn.BeginConnect("127.0.0.1", 6700, ConnectedCallback, conn);
             }
 
@@ -175,13 +178,15 @@ namespace Ostenvighx.Suibhne.Extensions {
                     recievedOn.BeginReceive(this.buffer, 0, buffer.Length, SocketFlags.None, RecieveDataCallback, recievedOn);
                 }
 
-                catch (SocketException se) {
+                catch (SocketException) {
                     // Handle socket suddenly shutting down. This is usually when main application quits for some reason.
                     if (this.OnServerDisconnect != null) {
                         OnServerDisconnect(this);
-                        this.conn.Close();
-                        this.conn.Dispose();
                     }
+
+                    this.conn.Close();
+                    this.conn.Dispose();
+                    Connected = false;
                 }
 
                 catch (Exception e) {
@@ -199,11 +204,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                 string json = Encoding.UTF32.GetString(data);
                 JObject Event;
 
-                try {
-                    Event = JObject.Parse(json);
-                }
-
-                catch (Exception e) {
+                try { Event = JObject.Parse(json); }
+                catch (Exception) {
                     Console.WriteLine("Invalid json: " + json);
                     return;
                 }
@@ -232,10 +234,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                         if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
                             MethodInfo method = CommandHandlers[Event["handler"].ToString()].Method;
 
-                            Object[] attrs = method.GetCustomAttributes(typeof(HelpAttribute), false);
+                            Object[] attrs = method.GetCustomAttributes(typeof(CommandHelpAttribute), false);
                             foreach (Object attr in attrs) {
-                                if (attr.GetType() == typeof(HelpAttribute)) {
-                                    HelpAttribute handler = (HelpAttribute)attr;
+                                if (attr.GetType() == typeof(CommandHelpAttribute)) {
+                                    CommandHelpAttribute handler = (CommandHelpAttribute)attr;
                                     SendMessage(new Message(Guid.Parse(Event["location"]["id"].ToString()), new User(), handler.HelpText));
                                 }
                             }
@@ -253,9 +255,8 @@ namespace Ostenvighx.Suibhne.Extensions {
                         conn.Close();
                         Connected = false;
 
-                        if (this.OnExtensionExit != null) {
+                        if (this.OnExtensionExit != null)
                             OnExtensionExit(this);
-                        }
                         break;
 
                     case "user_joined":
@@ -264,6 +265,10 @@ namespace Ostenvighx.Suibhne.Extensions {
                     case "user_quit":
                         HandleUserEvent(Event.ToString());
                         break;
+
+                    default:
+                        HandleEvent(Event.ToString());
+                        break;                        
                 }
 
             }
@@ -272,6 +277,12 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Console.WriteLine(e);
             }
         }
+
+        /// <summary>
+        /// Handles an additional event outside of the commonly supported ones.
+        /// </summary>
+        /// <param name="json"></param>
+        protected virtual void HandleEvent(string json) { }
 
         protected virtual void HandleUserEvent(string json) { }
 

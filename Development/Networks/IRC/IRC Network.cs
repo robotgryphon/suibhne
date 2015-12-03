@@ -34,11 +34,6 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
         protected String unfinishedData;
 
-        internal Guid Identifier {
-            get { return GetLocationIdByName("<network>"); }
-            private set { }
-        }
-
         #region Data Events
         /// <summary>
         /// Fired when any incomind data is recieved. This is the absolute lowest-level

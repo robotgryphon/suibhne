@@ -221,6 +221,7 @@ namespace Ostenvighx.Suibhne.Events {
             Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
             if (t == null) {
                 // The event handler couldn't be found. Abort!
+                Core.Log("Error handling event " + json["event"].ToString() + "; the handler could not be found, or does not exist.");
                 return;
             }
 

@@ -24,7 +24,6 @@ namespace Ostenvighx.Suibhne {
         DEBUG
     }
 
-    [Script("core")]
     public class Core {
 
         public static Dictionary<Guid, NetworkBot> Networks;
@@ -65,6 +64,7 @@ namespace Ostenvighx.Suibhne {
 
         public static void Initialize() {
             LoadConfiguration();
+
             Events.EventManager.Initialize();
 
             LoadNetworks();
@@ -79,40 +79,50 @@ namespace Ostenvighx.Suibhne {
             Core.Log("Loading the configuration data...");
 
             try {
-                Core.SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
-                Core.SystemConfig.CaseSensitive = false;
+                SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
+                SystemConfig.CaseSensitive = false;
 
                 // Make sure directories config exists - if not, create it and add in the configroot
-                if (Core.SystemConfig.Configs["Directories"] == null) {
-                    Core.SystemConfig.AddConfig("Directories");
-                    Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
-                    Core.SystemConfig.Save();
+                if (SystemConfig.Configs["System"] == null) {
+                    SystemConfig.AddConfig("System");
+                    SystemConfig.Configs["System"].Set("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                    SystemConfig.Save();
                 }
 
-                Core.ConfigDirectory = Core.SystemConfig.Configs["Directories"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
+                Core.ConfigDirectory = SystemConfig.Configs["System"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
 
                 // Make sure there's a trailing slash at the end of the config directory
                 if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
                     Core.ConfigDirectory += "/";
-                    Core.SystemConfig.Configs["Directories"].Set("ConfigurationRoot", Core.ConfigDirectory);
-                    Core.SystemConfig.Save();
+                    SystemConfig.Configs["System"].Set("ConfigurationRoot", Core.ConfigDirectory);
+                    SystemConfig.Save();
                 }
 
-                Core.SystemConfig.ExpandKeyValues();
+                SystemConfig.ExpandKeyValues();
                 if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
                     SQLiteConnection.CreateFile(Core.ConfigDirectory + "system.sns");
                 }
 
-                Core.Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
+                Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
+
+                DEBUG = SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
+
+                try {
+                    Database.Open();
+                    Core.Log("Database opened successfully.");
+                    Database.Close();
+                }
+
+                catch (Exception dbe) {
+                    Console.WriteLine(dbe);
+                }
+
                 CheckDatabase();
-
-
-                if(Core.SystemConfig.Configs["System"] != null)
-                    Core.DEBUG = Core.SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
             }
 
-            catch (Exception) {
-
+            catch (Exception ex) {
+                Core.Log(ex.Message);
+                Core.Log(ex.StackTrace);
             }
         }
 

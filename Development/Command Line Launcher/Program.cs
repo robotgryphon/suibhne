@@ -13,11 +13,12 @@ namespace CLI {
     class Program {
         static void Main(string[] args) {
 
-            Core.Initialize();
-
             ExtensionSystem.Instance.AllExtensionsReady += () => {
                 Core.Start();
             };
+
+            Core.Initialize();
+
 
             Console.ReadLine();
         }

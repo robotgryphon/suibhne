@@ -50,7 +50,7 @@ namespace Ostenvighx.Suibhne {
 
         public static Guid[] GetNetworks() {
             if (Core.Database == null)
-                return null;
+                throw new Exception("Attempted to access locations, but database was not connected.");
 
             try {
                 Core.Database.Open();

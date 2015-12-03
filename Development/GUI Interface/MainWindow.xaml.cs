@@ -16,11 +16,12 @@ namespace Ostenvighx.Suibhne.Gui {
         public MainWindow() {
             InitializeComponent();
 
-            Core.Initialize();
-
             ExtensionSystem.Instance.AllExtensionsReady += () => {
                 Core.Start();
             };
+
+            Core.Initialize();
+
 
             RoutedCommand toggle = new RoutedCommand();
             toggle.InputGestures.Add(new KeyGesture(Key.F2));
