@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Ostenvighx.Suibhne.Networks.Irc {
+namespace Ostenvighx.Suibhne.Services.Irc {
 
     /// <summary>
     /// Used to handle and make formatting IRC messages and responses easier.

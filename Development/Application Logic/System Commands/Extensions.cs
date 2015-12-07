@@ -1,5 +1,5 @@
 ﻿using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.System_Commands {
     internal partial class SysCommands {
 
-        public static void Extensions(NetworkBot conn, Message msg) {
+        public static void Extensions(ServiceWrapper conn, Message msg) {
             Message response = Message.GenerateResponse(conn.Me, msg);
             String[] messageParts = msg.message.Split(' ');
             ExtensionMap workingExtension = new ExtensionMap();

@@ -2,14 +2,14 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Ostenvighx.Suibhne.Networks.Irc {
+namespace Ostenvighx.Suibhne.Services.Irc {
 
     /// <summary>
     /// An Networks.Irc User is a user connected to an IRC Network.
     /// This class contains information on their known nicknames,
     /// host mask, and Username.
     /// </summary>
-    public class User : Ostenvighx.Suibhne.Networks.Base.User {
+    public class User : Ostenvighx.Suibhne.Services.Chat.User {
 
         /// <summary>
         /// An array containing all valid operator prefixes.
@@ -40,14 +40,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (userMatch.Success) {
                 if (userMatch.Groups["username"].Value != "") {
                     user.DisplayName = userMatch.Groups["nickname"].Value;
-                    user.UniqueName = userMatch.Groups["username"].Value + "@" + userMatch.Groups["hostname"].Value;
+                    user.UniqueID = userMatch.Groups["username"].Value + "@" + userMatch.Groups["hostname"].Value;
                 } else {
                     user.DisplayName = "<server>";
-                    user.UniqueName = "<server>";
+                    user.UniqueID = "<server>";
                 }
             } else {
                 user.DisplayName = "<unknown>";
-                user.UniqueName = "<unknown>";
+                user.UniqueID = "<unknown>";
             }
 
             return user;

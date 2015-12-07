@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,8 +26,6 @@ namespace Ostenvighx.Suibhne.Events {
         /// </summary>
         public Dictionary<String, List<Guid>> EventSupport { get; private set; }
 
-        private List<Guid> ListenedNetworks;
-
         public static EventManager Instance {
             get {
                 if (instance == null)
@@ -48,15 +46,11 @@ namespace Ostenvighx.Suibhne.Events {
 
         private EventManager() {
             this.EventSupport = new Dictionary<string, List<Guid>>();
-            this.ListenedNetworks = new List<Guid>(); 
             GatherConnectorEvents();
         }
 
-        public static void HookEventHandler(Network n) {
-            if (!instance.ListenedNetworks.Contains(n.Identifier)) {
-                n.OnCustomEventFired += instance.HandleNetworkEvent;
-                instance.ListenedNetworks.Add(n.Identifier);
-            }
+        public static void HookEventHandler(ChatService n) {
+            n.OnCustomEventFired += instance.HandleNetworkEvent;
         }
 
         /// <summary>
@@ -77,8 +71,8 @@ namespace Ostenvighx.Suibhne.Events {
 
                     Type[] types = a.GetTypes();
                     foreach (Type t in types) {
-                        if (t.IsSubclassOf(typeof(Network))) {
-                            Network network = (Network)Activator.CreateInstance(t);
+                        if (t.IsSubclassOf(typeof(ChatService))) {
+                            ChatService network = (ChatService)Activator.CreateInstance(t);
                             foreach (String eventCode in network.GetSupportedEvents()) {
                                 Debug.WriteLine("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", "Events");
                                 if (!EventSupport.ContainsKey(eventCode.ToLower())) {
@@ -97,6 +91,7 @@ namespace Ostenvighx.Suibhne.Events {
                 catch (Exception) { }
             }
 
+            // If this service can handle messages, it can handle runtime commands
             if (EventSupport.ContainsKey("message_recieved"))
                 EventSupport.Add("command_recieved", new List<Guid>());
         }
@@ -148,26 +143,23 @@ namespace Ostenvighx.Suibhne.Events {
 
         #region Event Routing
         /// <summary>
-        /// Handles events fired off by networks, delegating the tasks off to various extensions.
+        /// Handles events fired off by services, delegating the tasks off to various extensions.
         /// </summary>
         /// <param name="netID">The identifier of the network that fired the event.</param>
         /// <param name="json">The event JSON object.</param>
         private void HandleNetworkEvent(Guid netID, String json) {
-            if (!Core.Networks.ContainsKey(netID)) {
-                Core.Log("Error handling custom event. Network guid not active or invalid. (EventManager, guid: " + netID + ")\n" + json, LogType.ERROR);
+            if (!Core.ConnectedServices.ContainsKey(netID)) {
+                Core.Log("Error handling custom event. Service guid not valid or service is not currently active. (guid: " + netID + ")\n" + json, LogType.ERROR);
                 return;
             }
 
             try {
                 JObject ev = JObject.Parse(json);
-
                 if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
                     String eventName = ev["event"].ToString().ToLower().Trim();
 
                     if (!instance.EventSupport.ContainsKey(eventName))
                         return;
-
-                    Debug.WriteLine("Caught event " + eventName + " from network " + netID + ". Event JSON:\n" + json, "Events");
 
                     foreach(Guid g in instance.EventSupport[eventName]) {
                         if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))

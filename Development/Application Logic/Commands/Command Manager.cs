@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Nini.Config;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -129,7 +129,7 @@ namespace Ostenvighx.Suibhne.Commands {
             return available.ToArray();
         }
 
-        public void HandleCommand(NetworkBot conn, Message message) {
+        public void HandleCommand(ServiceWrapper conn, Message message) {
             message.message = message.message.Trim();
             String[] messageParts = message.message.Split(new char[] { ' ' });
             String command = messageParts[0].ToLower().TrimStart(new char[] { '!' }).TrimEnd();
@@ -138,17 +138,13 @@ namespace Ostenvighx.Suibhne.Commands {
                 subCommand = messageParts[1].ToLower();
 
             Message response = new Message(message.locationID, conn.Me, "Response");
-            response.type = Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
-            if (message.type != Networks.Base.Reference.MessageType.PublicAction || message.type != Networks.Base.Reference.MessageType.PublicMessage) {
-                response.target = message.target;
-            }
+            if (message.IsPrivate) response.target = message.target;
 
             if(!Regex.Match(command, @"[\w\d]+").Success)
                 return;
             
             if (!CommandMapping.ContainsKey(command)) {
-                response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                response.message = "is not sure what to do with this information. [INVALID COMMAND]";
+                response.message = "I am not sure what to do with this information. [Invalid command]";
                 conn.SendMessage(response);
                 return;
             }
@@ -176,11 +172,10 @@ namespace Ostenvighx.Suibhne.Commands {
                         if (CommandMapping.ContainsKey(subCommand)) {
                             CommandMap mappedCommand = CommandMapping[subCommand];
                             ExtensionMap ext = ExtensionSystem.Instance.Extensions[mappedCommand.Extension];
-                            Core.Log("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [handler: " + mappedCommand.Handler + "]", LogType.EXTENSIONS);
+                            Debug.WriteLine("Recieved help command for command '" + subCommand + "'. Telling extension " + ext.Name + " to handle it. [handler: " + mappedCommand.Handler + "]", LogType.EXTENSIONS);
                             ext.HandleHelpCommandRecieved(conn, mappedCommand, message);
                         } else {
-                            response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                            response.message = "does not have information on that command.";
+                            response.message = "I do not have information on that command. Sorry!";
                             conn.SendMessage(response);
                         }
                     } else {
@@ -193,7 +188,7 @@ namespace Ostenvighx.Suibhne.Commands {
                 default:
                     ExtensionMap extension = ExtensionSystem.Instance.Extensions[CommandMapping[command].Extension];
 
-                    Core.Log("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [handler: " + cmd.Handler + "]", LogType.EXTENSIONS);
+                    Debug.WriteLine("Recieved command '" + command + "'. Telling extension " + extension.Name + " to handle it. [handler: " + cmd.Handler + "]", LogType.EXTENSIONS);
                     if (!extension.Ready) {
                         response.message = "I have {" + command + "} registered as a command, but it looks like the extension isn't ready yet. Try again later.";
                         conn.SendMessage(response);
@@ -205,13 +200,11 @@ namespace Ostenvighx.Suibhne.Commands {
             }
         }
 
-        private void HandleSystemCommand(NetworkBot conn, Message msg) {
+        private void HandleSystemCommand(ServiceWrapper conn, Message msg) {
             string[] messageParts = msg.message.Split(' ');
             String subCommand = "";
             Message response = new Message(msg.locationID, conn.Me, "System Command Response");
-            if (msg.type != Networks.Base.Reference.MessageType.PublicAction || msg.type != Networks.Base.Reference.MessageType.PublicMessage) {
-                response.target = msg.target;
-            }
+            if (msg.IsPrivate) response.target = msg.target;
 
             if (messageParts.Length > 1)
                 subCommand = messageParts[1];
@@ -233,15 +226,13 @@ namespace Ostenvighx.Suibhne.Commands {
 
                     case "uptime":
                         TimeSpan diff = DateTime.Now - Core.StartTime;
-                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                        response.message = "has been up for " +
+                        response.message = "The system has been up for " +
                             (diff.Days > 0 ? diff.Days + " days" : "") +
                             (diff.Hours > 0 ? diff.Hours + " hours, " : "") +
                             (diff.Minutes > 0 ? diff.Minutes + " minutes, " : "") +
                             (diff.Seconds > 0 ? diff.Seconds + " seconds" : "") + ". [Up since " + Core.StartTime.ToString() + "]";
 
                         conn.SendMessage(response);
-                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                         break;
 
                     case "id":
@@ -297,10 +288,8 @@ namespace Ostenvighx.Suibhne.Commands {
                         break;
 
                     default:
-                        response.type = Suibhne.Networks.Base.Reference.MessageType.PublicAction;
-                        response.message = "does not know what you are asking for. "; // + "[Invalid subcommand]", Formatter.Colors.Orange);
+                        response.message = "I do not know what you are asking for. ";
                         conn.SendMessage(response);
-                        response.type = Ostenvighx.Suibhne.Networks.Base.Reference.MessageType.PublicMessage;
                         break;
                 }
             } else {

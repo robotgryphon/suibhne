@@ -7,10 +7,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-using System.Data;
 using Newtonsoft.Json;
-using System.Data.SQLite;
 using System.Diagnostics;
+using System.Data;
+using System.Data.SQLite;
 
 namespace Ostenvighx.Suibhne {
 
@@ -26,7 +26,7 @@ namespace Ostenvighx.Suibhne {
 
     public class Core {
 
-        public static Dictionary<Guid, NetworkBot> Networks;
+        public static Dictionary<Guid, ServiceWrapper> ConnectedServices;
 
         public static Boolean DEBUG;
 
@@ -67,7 +67,7 @@ namespace Ostenvighx.Suibhne {
 
             Events.EventManager.Initialize();
 
-            LoadNetworks();
+            LoadServiceInformation();
             Commands.CommandManager.Initialize();
 
             Extensions.ExtensionSystem.Initialize();
@@ -105,7 +105,7 @@ namespace Ostenvighx.Suibhne {
 
                 Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
 
-                DEBUG = SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
+                Core.DEBUG = SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
 
                 try {
                     Database.Open();
@@ -126,22 +126,18 @@ namespace Ostenvighx.Suibhne {
             }
         }
 
-        private static void LoadNetworks() {
-            Core.Networks = new Dictionary<Guid, NetworkBot>();
+        private static void LoadServiceInformation() {
+            Core.ConnectedServices = new Dictionary<Guid, ServiceWrapper>();
 
-            Guid[] networks = LocationManager.GetNetworks();
-            foreach (Guid netID in networks) {
+            Guid[] serviceIDs = LocationManager.GetServiceIdentifiers();
+            foreach (Guid serviceID in serviceIDs) {
                 try {
-                    NetworkBot network = new NetworkBot(netID);
-                    Core.Networks.Add(netID, network);
+                    ServiceWrapper serv = new ServiceWrapper(serviceID);
+                    Core.ConnectedServices.Add(serviceID, serv);
                 }
 
-                catch (FileNotFoundException fnfe) {
-                    Console.WriteLine("Network configuration file not found: " + fnfe.Message);
-                }
-
-                catch (KeyNotFoundException) {
-                    // Network unable to process correctly
+                catch (FileNotFoundException fnf) {
+                    Log(fnf.Message, LogType.ERROR);
                 }
 
                 catch (Exception e) {
@@ -151,8 +147,9 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void Start() {
-            foreach (NetworkBot network in Core.Networks.Values) {
-                if (File.Exists(Core.ConfigDirectory + "/Networks/" + network.Identifier + "/disabled"))
+            foreach (ServiceWrapper network in Core.ConnectedServices.Values) {
+                // If the service is disabled by a flag file, do not start it- just keep swimmin'
+                if (File.Exists(Core.ConfigDirectory + "/Services/" + network.Identifier + "/disabled"))
                     continue;
 
                 network.Connect();
@@ -160,6 +157,7 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void Log(string message, LogType type = LogType.GENERAL) {
+
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write("[{0}] ", DateTime.Now);
@@ -190,7 +188,9 @@ namespace Ostenvighx.Suibhne {
                     break;
             }
 
-            Console.WriteLine("{0}", message);
+            StackFrame sf = new StackTrace().GetFrame(1);
+
+            Console.WriteLine("{0}{1}", type == LogType.ERROR ? "[" + sf.GetMethod().DeclaringType.Name + "." + sf.GetMethod().Name + "] " : "", message);
             Console.ResetColor();
 
             if (OnLogMessage != null) OnLogMessage("[" + DateTime.Now + "] " + message, type);

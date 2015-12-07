@@ -1,4 +1,4 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.IO;
 using System.Windows;
@@ -66,7 +66,7 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
                     dropLabel.Content = "Parent Network:";
                     networkType.Items.Clear();
 
-                    foreach(Guid netID in LocationManager.GetNetworks()) {
+                    foreach(Guid netID in LocationManager.GetServiceIdentifiers()) {
                         Location l = LocationManager.GetLocationInfo(netID);
                         ComboBoxItem cbi = new ComboBoxItem();
                         cbi.Content = l.Name;
@@ -75,7 +75,7 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
                         networkType.Items.Add(cbi);
                     }
 
-                    if (Core.Networks.Count > 0)
+                    if (Core.ConnectedServices.Count > 0)
                         networkType.SelectedIndex = 0;
 
                     name.Focus();

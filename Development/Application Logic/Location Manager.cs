@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 using System.Data;
 using System.Data.SQLite;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 
 namespace Ostenvighx.Suibhne {
     public class LocationManager {
@@ -48,7 +48,7 @@ namespace Ostenvighx.Suibhne {
             return false;
         }
 
-        public static Guid[] GetNetworks() {
+        public static Guid[] GetServiceIdentifiers() {
             if (Core.Database == null)
                 throw new Exception("Attempted to access locations, but database was not connected.");
 
@@ -180,8 +180,8 @@ namespace Ostenvighx.Suibhne {
                 command.CommandText = "DELETE FROM Identifiers WHERE Identifier = '" + id + "' OR ParentId = '" + id + "';";
                 command.ExecuteNonQuery();
 
-                if (Core.Networks.ContainsKey(id))
-                    Core.Networks.Remove(id);
+                if (Core.ConnectedServices.ContainsKey(id))
+                    Core.ConnectedServices.Remove(id);
 
             }
 
@@ -221,7 +221,7 @@ namespace Ostenvighx.Suibhne {
                     l.Parent = parent;
 
                     int locationType = int.Parse(row["LocationType"].ToString());
-                    l.Type = (Reference.LocationType)((byte)locationType);
+                    l.Type = (Services.Chat.Reference.LocationType)((byte)locationType);
 
                     children.Add(id, l);
                 }
@@ -267,7 +267,7 @@ namespace Ostenvighx.Suibhne {
                     returned.Parent = Guid.Parse(result["ParentId"].ToString());
 
                     int locationType = int.Parse(result["LocationType"].ToString());
-                    returned.Type = (Reference.LocationType) ((byte) locationType);
+                    returned.Type = (Services.Chat.Reference.LocationType) ((byte) locationType);
 
                     return new KeyValuePair<Guid, Location>(Guid.Parse(result["Identifier"].ToString()), returned);
                 } else
@@ -308,7 +308,7 @@ namespace Ostenvighx.Suibhne {
                         returned.Parent = Guid.Parse(result["ParentId"].ToString());
 
                     int locationType = int.Parse(result["LocationType"].ToString());
-                    returned.Type = (Reference.LocationType)((byte)locationType);
+                    returned.Type = (Services.Chat.Reference.LocationType)((byte)locationType);
                 } else
                     return null;
             }

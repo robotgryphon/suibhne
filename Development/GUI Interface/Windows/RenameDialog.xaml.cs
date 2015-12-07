@@ -1,4 +1,4 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Windows;
 

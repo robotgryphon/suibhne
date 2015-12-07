@@ -1,7 +1,7 @@
 using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Commands;
 using Ostenvighx.Suibhne.Events;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -97,7 +97,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             return maps.ToArray();
         }
 
-        public void HandleCommand(NetworkBot conn, Message msg) {
+        public void HandleCommand(ServiceWrapper conn, Message msg) {
             CommandManager.Instance.HandleCommand(conn, msg);
         }
 
@@ -273,16 +273,17 @@ namespace Ostenvighx.Suibhne.Extensions {
                 throw new Exception("Config directory derp?");
 
             String[] directories = Directory.GetDirectories(Core.ConfigDirectory + "Extensions/");
-            try {
-                foreach (String extensionDir in directories) {
-                    Debug.WriteLine("Loading extension from directory: " + extensionDir);
-                    Guid extID = Guid.Parse(new DirectoryInfo(extensionDir).Name);
+            foreach (String extensionDir in directories) {
+                Debug.WriteLine("Loading extension from directory: " + extensionDir);
+                DirectoryInfo di = new DirectoryInfo(extensionDir);
+                try {
+                    Guid extID = Guid.Parse(di.Name);
                     this.Extensions.Add(extID, new ExtensionMap() { Identifier = extID });
                 }
-            }
-            catch (FormatException fe) {
-                // extension directory not named for guid
-                Debug.WriteLine(fe.StackTrace);
+
+                catch(FormatException) {
+                    Core.Log("Directory name not a valid identifier for an extension. Directory name: " + di.Name, LogType.ERROR);
+                }
             }
 
             Core.Log("All extensions primed." + Environment.NewLine, LogType.EXTENSIONS);

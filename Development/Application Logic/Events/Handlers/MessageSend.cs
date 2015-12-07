@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 
@@ -22,17 +22,17 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
                 return;
 
             Message msg = new Message(locationID, new User(""), json["message"]["contents"].ToString());
-            NetworkBot bot;
+            ServiceWrapper bot;
             byte messageType = (byte) json["message"]["type"];
 
-            if (Message.IsPrivateMessage((Reference.MessageType) messageType)) {
-                bot = Core.Networks[locationID];
+            if (json["message"]["is_private"] != null && (bool) json["message"]["is_private"]) {
+                bot = Core.ConnectedServices[locationID];
+                msg.IsPrivate = true;
                 msg.target = new User(json["message"]["target"].ToString());
             } else {
-                bot = Core.Networks[location.Parent];
+                bot = Core.ConnectedServices[location.Parent];
             }
 
-            msg.type = (Reference.MessageType)((byte) json["message"]["type"]);
             bot.SendMessage(msg);
         }
     }

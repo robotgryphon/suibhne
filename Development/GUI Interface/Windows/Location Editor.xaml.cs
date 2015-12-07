@@ -1,4 +1,4 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -51,9 +51,9 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
         private void LoadConnectorInformation() {
             String path = "";
-            if (location.Type != Reference.LocationType.Network) {
+            if (location.Type != Services.Chat.Reference.LocationType.Network) {
                 if (location.Parent != Guid.Empty) {
-                    path = Core.ConfigDirectory + "/Networks/" + location.Parent + "/network.ini";
+                    path = Core.ConfigDirectory + "/Services/" + location.Parent + "/service.ini";
                 } else {
                     MessageBox.Show("Error: Somehow, this location does not have a parent set, " +
                     "and we can't figure out what network type it is. As such, configuration fields cannot be loaded." +
@@ -62,19 +62,19 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
                 }
 
             } else {
-                path = Core.ConfigDirectory + "/Networks/" + id + "/network.ini";
+                path = Core.ConfigDirectory + "/Services/" + id + "/service.ini";
             }
 
             try {
                 IniConfigSource config = new IniConfigSource(path);
                 config.CaseSensitive = false;
-                if (config == null || config.Configs["Network"] == null) {
-                    MessageBox.Show("Error: The network configuration file appears to be missing its network type information. Please check or regenerate that file as needed." + Environment.NewLine
+                if (config == null || config.Configs["Service"] == null) {
+                    MessageBox.Show("Error: The service configuration file appears to be missing its type information. Please check or regenerate that file as needed." + Environment.NewLine
                         + "It is located at: " + path);
                     this.Close();
                 }
 
-                this.connector = config.Configs["Network"].GetString("type");
+                this.connector = config.Configs["Service"].GetString("type");
             }
 
             catch (Exception) {
@@ -99,22 +99,22 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
             }
 
             switch (location.Type) {
-                case Reference.LocationType.Network:
+                case Services.Chat.Reference.LocationType.Network:
                     // Network editing
                     XmlNode networkRoot = xml.ChildNodes[1].SelectSingleNode("Network");
                     foreach(XmlNode node in networkRoot.ChildNodes)
                         ParseConfigStructure(node);
                     break;
 
-                case Reference.LocationType.Public:
-                case Reference.LocationType.Private:
+                case Services.Chat.Reference.LocationType.Public:
+                case Services.Chat.Reference.LocationType.Private:
                     // Location editing
                     XmlNode locationRoot = xml.ChildNodes[1].SelectSingleNode("Location");
                     foreach(XmlNode node in locationRoot.ChildNodes)
                         ParseConfigStructure(node);
                     break;
 
-                case Reference.LocationType.Unknown:
+                case Services.Chat.Reference.LocationType.Unknown:
                     MessageBox.Show("This type of location is not supported by the GUI editor. Please refer to the connector's documentation (if any) for support.");
                     return;
             }
@@ -224,16 +224,16 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
             String configFilePath = "";
 
             if(location.Parent == Guid.Empty)
-                configFilePath = Core.ConfigDirectory + "/Networks/" + id + "/network.ini";
+                configFilePath = Core.ConfigDirectory + "/Services/" + id + "/service.ini";
             else
-                configFilePath = Core.ConfigDirectory + "/Networks/" + location.Parent + "/Locations/" + id + "/location.ini";
+                configFilePath = Core.ConfigDirectory + "/Services/" + location.Parent + "/Locations/" + id + "/location.ini";
 
             try {
                 IniConfigSource config = new IniConfigSource(configFilePath);
                 XmlDocument xml = new XmlDocument();
                 xml.Load(Core.ConfigDirectory + "/Connectors/" + connector + "/Config.xml");
 
-                foreach(XmlNode node in xml.ChildNodes[1].SelectSingleNode(location.Type == Reference.LocationType.Network ? "Network" : "Location")){
+                foreach(XmlNode node in xml.ChildNodes[1].SelectSingleNode(location.Type == Services.Chat.Reference.LocationType.Network ? "Network" : "Location")){
                     LoadDataWithXml(node, config);
                 }
             }
@@ -312,13 +312,13 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
             // Depending on location type, get proper save path and recreate file
             switch (location.Type) {
-                case Reference.LocationType.Network:
+                case Services.Chat.Reference.LocationType.Network:
                     // Saving network information
                     configuration.Save(Core.ConfigDirectory + "/Networks/" + id + "/network.ini");
 
                     break;
 
-                case Reference.LocationType.Public:
+                case Services.Chat.Reference.LocationType.Public:
                     // Saving location information
                     configuration.Save(Core.ConfigDirectory + "/Networks/" + location.Parent + "/Locations/" + id + "/location.ini");
                     break;
@@ -343,10 +343,10 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
             XmlDocument structure = new XmlDocument();
             structure.LoadXml(stackText);
 
-            String configType = location.Type == Reference.LocationType.Network ? "Network" : "Location";
+            String configType = location.Type == Services.Chat.Reference.LocationType.Network ? "Network" : "Location";
 
             // If it's a network, write in the type of network into the file
-            if (location.Type == Reference.LocationType.Network) {
+            if (location.Type == Services.Chat.Reference.LocationType.Network) {
                 configuration.AddConfig("Network");
                 configuration.Configs["Network"].Set("type", this.connector);
             }

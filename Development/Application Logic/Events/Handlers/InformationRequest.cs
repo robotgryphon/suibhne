@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 
 namespace Ostenvighx.Suibhne.Events.Handlers {
 
@@ -37,6 +37,9 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
             // The type determines which type of information is being requested.
             switch (json["type"].ToString().ToLower()) {
                 case "extension":
+                    if (json["identifier"] == null)
+                        throw new FormatException("An identifier is needed to look up extension information.");
+
 
                     break;
 
@@ -68,6 +71,12 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
             }
 
             EventManager.HandleInternalEvent(returnData);
+        }
+
+        private async Task<JObject> GetExtensionInfo() {
+            JObject returned = new JObject();
+
+            return returned;
         }
     }
 }

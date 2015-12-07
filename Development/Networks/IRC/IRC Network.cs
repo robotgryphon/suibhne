@@ -8,13 +8,14 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Text;
 using Nini.Config;
+using System.Diagnostics;
 
-namespace Ostenvighx.Suibhne.Networks.Irc {
+namespace Ostenvighx.Suibhne.Services.Irc {
 
     /// <summary>
     /// An irc connection manages a connection to a typical IRC server.
     /// </summary>
-    public class IrcNetwork : Base.Network {
+    public class IrcNetwork : Chat.ChatService {
         #region Network I/O
         /// <summary>
         /// The base TCP connection to the IRC Network.
@@ -70,13 +71,13 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             this._conn = null;
             this.GlobalBuffer = new byte[2048];
 
-            this.Listened = new Dictionary<Guid, Base.Location>();
-            this.Status = Base.Reference.ConnectionStatus.NotReady;
+            this.Listened = new Dictionary<Guid, Chat.Location>();
+            this.Status = Services.Reference.ConnectionStatus.NotReady;
 
             this._conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            this.Me = new Base.User();
-            this.Server = new Base.Location("localhost", Networks.Base.Reference.LocationType.Network);
+            this.Me = new Chat.User();
+            this.Server = new Chat.Location("localhost", Services.Chat.Reference.LocationType.Network);
 
             this.port = 6667;
 
@@ -96,8 +97,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="authPass">Password to use for nickserv.</param>
         public IrcNetwork(String host, int port, String nickname, String username, String realname = "", String password = "", String authPass = "")
             : this() {
-            this.Me = new Base.User(username, authPass, nickname);
-            this.Server = new Base.Location(host, password, Base.Reference.LocationType.Network);
+            this.Me = new Chat.User(username, authPass, nickname);
+            this.Server = new Chat.Location(host, password, Chat.Reference.LocationType.Network);
 
             this.port = port;
         }
@@ -108,7 +109,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="config">Configuration to use to connect to the server.</param>
         public IrcNetwork(IConfigSource config)
             : this() {
-                DoNetworkSetup(config);
+            DoNetworkSetup(config);
         }
 
         public override void Setup(String configFile) {
@@ -121,19 +122,19 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             IniConfigSource configLoaded = new IniConfigSource(configFile);
             configLoaded.CaseSensitive = false;
 
-            DoNetworkSetup(configLoaded);            
+            DoNetworkSetup(configLoaded);
         }
 
         private void DoNetworkSetup(IConfigSource config) {
-            this.Me = new Base.User(
+            this.Me = new Chat.User(
                 config.Configs["Account Settings"].GetString("userName", "user"),
                 config.Configs["Authentification"].GetString("authPass", ""),
                 config.Configs["Account Settings"].GetString("displayName", "IrcUser"));
 
-            this.Server = new Base.Location(
+            this.Server = new Chat.Location(
                 config.Configs["Host Settings"].GetString("host", "localhost"),
                 config.Configs["Host Settings"].GetString("servPass", ""),
-                Base.Reference.LocationType.Network);
+                Chat.Reference.LocationType.Network);
 
             this.port = config.Configs["Host Settings"].GetInt("port", 6667);
         }
@@ -144,13 +145,11 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="DisplayName">Nickname to change to.</param>
         /// <param name="log">If true, sets Me LastDisplayName value to old DisplayName.</param>
         public void ChangeNickname(String nickname, Boolean log = true) {
-            if (Status == Base.Reference.ConnectionStatus.Connected && nickname != null && nickname != "" && nickname != Me.DisplayName) {
+            if (Status == Services.Reference.ConnectionStatus.Connected && nickname != null && nickname != "" && nickname != Me.DisplayName) {
                 SendRaw("NICK :" + nickname);
 
-                Base.User tmpMe = new Base.User(Me.UniqueName, log ? Me.DisplayName : Me.LastDisplayName, nickname);
+                Chat.User tmpMe = new Chat.User(Me.UniqueID, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
-
-                HandleUserDisplayNameChange(Identifier, Me);
             }
         }
 
@@ -158,8 +157,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// Perform a connection to the server.
         /// </summary>
         public override void Connect() {
-            if (Status == Base.Reference.ConnectionStatus.Disconnected) {
-                Status = Base.Reference.ConnectionStatus.Connecting;
+            if (Status == Services.Reference.ConnectionStatus.Disconnected) {
+                Status = Services.Reference.ConnectionStatus.Connecting;
                 try {
 
                     _conn.BeginConnect(Server.Name, 6667, new AsyncCallback(ConnectionCompleteCallback), _conn);
@@ -182,7 +181,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                 client.BeginReceive(GlobalBuffer, 0, GlobalBuffer.Length, SocketFlags.None, DataRecievedCallback, client);
 
-                SendRaw(String.Format("USER {0} 8 * :{0}", Me.UniqueName));
+                SendRaw(String.Format("USER {0} 8 * :{0}", Me.UniqueID));
 
                 Thread.Sleep(100);
 
@@ -232,20 +231,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (unfinishedData != "") {
                 String newData = data.Split('\n')[0];
                 data = data.Remove(0, newData.Length + 1);
-                Console.WriteLine("Next data: " + newData);
-
                 unfinishedData += newData;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Finished line: " + unfinishedData);
-                Console.ForegroundColor = ConsoleColor.White;
-
                 this.HandleData(unfinishedData);
                 unfinishedData = "";
             }
 
             String[] lines = data.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
             foreach (String line in lines) {
-                
+
                 String lineTrimmed = line.TrimStart(new char[] { ':' }).TrimEnd('\r');
                 if (line.EndsWith("\r")) {
 
@@ -258,19 +251,21 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     Console.WriteLine("Unfinished line: " + line);
                     unfinishedData = lineTrimmed;
                 }
-                
+
             }
         }
 
-        protected override void HandleConnectionComplete(Base.Network n) {
+        // Hook connection complete, make sure we identify before triggering rest of the base handler actions.
+        protected override void HandleConnectionComplete() {
             if (Me.LastDisplayName != "") {
-                Base.Message message = new Base.Message(this.Identifier, Me, "IDENTIFY " + Me.LastDisplayName);
-                message.type = Base.Reference.MessageType.PrivateMessage;
-                message.target = new Base.User("NickServ");
+                Message message = new Message(this.Identifier, null, "IDENTIFY " + Me.LastDisplayName);
+                message.IsPrivate = true;
+                message.target = new Chat.User("NickServ");
+
                 SendMessage(message);
             }
 
-            base.HandleConnectionComplete(n);
+            base.HandleConnectionComplete();
         }
         /// <summary>
         /// Method to handle incoming data, line by line.
@@ -281,7 +276,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             if (this.OnDataRecieved != null) {
                 OnDataRecieved(this, line);
             }
-            
+
             String[] dataChunks = line.Split(new char[] { ' ' });
             try {
                 switch (dataChunks[1].ToLower()) {
@@ -331,13 +326,13 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
 
                     case "376":
                         // End MOTD
-                        Status = Base.Reference.ConnectionStatus.Connected;
-                        HandleConnectionComplete(this);
+                        Status = Services.Reference.ConnectionStatus.Connected;
+                        HandleConnectionComplete();
                         break;
 
                     case "422":
-                        Status = Base.Reference.ConnectionStatus.Connected;
-                        HandleConnectionComplete(this);
+                        Status = Services.Reference.ConnectionStatus.Connected;
+                        HandleConnectionComplete();
                         break;
 
                     case "433":
@@ -353,22 +348,22 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                         break;
 
                     case "join":
-                        Base.User joiner = User.Parse(dataChunks[0]);
+                        Chat.User joiner = User.Parse(dataChunks[0]);
                         HandleUserJoin(GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
                         break;
 
                     case "part":
-                        Base.User parter = User.Parse(dataChunks[0]);
+                        Chat.User parter = User.Parse(dataChunks[0]);
                         HandleUserLeave(GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
                         break;
 
                     case "quit":
-                        Base.User quitter = User.Parse(dataChunks[0]);
+                        Chat.User quitter = User.Parse(dataChunks[0]);
                         HandleUserQuit(Identifier, quitter);
 
-                        foreach (Base.Location listened in Listened.Values) {
+                        foreach (Chat.Location listened in Listened.Values) {
                             string hostmask = dataChunks[0].Substring(line.IndexOf("@") + 1);
-                            if(listened.AccessLevels.ContainsKey("*@" + hostmask))
+                            if (listened.AccessLevels.ContainsKey("*@" + hostmask))
                                 listened.AccessLevels.Remove("*@" + hostmask);
 
                             if (listened.AccessLevels.ContainsKey(quitter.DisplayName + "@" + hostmask))
@@ -378,12 +373,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                     #endregion
 
                     case "topic":
-                        Base.User u = User.Parse(dataChunks[0]);
+                        Chat.User u = User.Parse(dataChunks[0]);
                         String topic = line.Substring(line.IndexOf(" :") + 2).TrimEnd(new char[] { '\r', '\n' }).Trim();
 
                         Console.WriteLine(u.DisplayName + " has changed the topic to " + topic);
                         Guid id = this.GetLocationIdByName(dataChunks[2]);
-                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"unique_id\": \"" + u.UniqueName + "\", \"display_name\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
+                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"unique_id\": \"" + u.UniqueID + "\", \"display_name\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
 
                         FireEvent(json);
 
@@ -411,46 +406,21 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         }
 
         protected void HandleIncomingMessage(String line) {
-            Base.Message msg = Message.Parse(this, line);
+            Message msg = Message.Parse(this, line);
 
             String hostmask = "";
             string userhost = line.Split(new char[] { ' ' })[0];
             Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
             if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
 
-            if (Listened.ContainsKey(msg.locationID)) {
-                Base.Location loc = Listened[msg.locationID];
-
-                if (loc.AccessLevels.ContainsKey("*@" + hostmask))
-                    msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels["*@" + hostmask];
-
-                if (loc.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
-                    msg.sender.LocalAuthLevel = msg.sender.NetworkAuthLevel = loc.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
-
-                Base.Location serv = Listened[Identifier];
-                if (serv.AccessLevels.ContainsKey("*@" + hostmask))
-                    msg.sender.NetworkAuthLevel = serv.AccessLevels["*@" + hostmask];
-
-                if (serv.AccessLevels.ContainsKey(msg.sender.DisplayName + "@" + hostmask))
-                    msg.sender.NetworkAuthLevel = serv.AccessLevels[msg.sender.DisplayName + "@" + hostmask];
-            }
-
-
-            string json = "{" +
-                "\"event\": " + "\"message_recieved\"," +
-                "\"location\": " + "\"" + msg.locationID + "\"," +
-                "\"message\": " + "{" + 
-                    "\"type\": " + (byte) msg.type + "," +
-                    "\"contents\": " + "\"" + msg.message + "\"" + "}," +
-                "\"sender\": " + "{" +
-                    "\"unique_id\": " + "\"" + msg.sender.UniqueName + "\"," +
-                    "\"display_name\": " + "\"" + msg.sender.DisplayName + "\"" +
-                "}" +
+            string extraJSON = "{" +
+                "\"message\": " + "{" +
+                    "\"is_action\": " + (msg.IsAction ? "true":"false") + "," +
+                    "\"is_private\": " + (msg.IsPrivate ? "true" : "false") +
+               "}" +
             "}";
 
-            FireEvent(json);
-            HandleMessageRecieved(msg);
-
+            base.HandleMessageRecieved(msg, extraJSON);
         }
 
         /// <summary>
@@ -459,14 +429,14 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// </summary>
         /// <param name="locationID">Public (as an Location) to join.</param>
         public override void JoinLocation(Guid locationID) {
-            if (Status == Base.Reference.ConnectionStatus.Connected) {
+            if (Status == Services.Reference.ConnectionStatus.Connected) {
                 if (locationID != Guid.Empty && !this.Listened.ContainsKey(locationID)) {
 
                     // Load location information
-                    IniConfigSource l = new IniConfigSource(ConfigRoot + "/Networks/" + this.Identifier + "/Locations/" + locationID + "/location.ini");
+                    IniConfigSource l = new IniConfigSource(ConfigRoot + "/Services/" + this.Identifier + "/Locations/" + locationID + "/location.ini");
                     l.CaseSensitive = false;
 
-                    Base.Location location = new Base.Location("");
+                    Chat.Location location = new Chat.Location("");
                     if (l.Configs["Location"] != null && l.Configs["Location"].GetString("Name") != null) {
                         location.Name = l.Configs["Location"].GetString("name");
                     } else {
@@ -502,10 +472,10 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="locationID">Public to leave. Must be in the current locationID list.</param>
         /// <param name="reason">Message to send upon leaving the locationID.</param>
         public void LeaveLocation(Guid locationID, String reason) {
-            if (Status == Base.Reference.ConnectionStatus.Connected) {
+            if (Status == Services.Reference.ConnectionStatus.Connected) {
                 if (locationID != null && locationID != Guid.Empty) {
                     if (Listened.ContainsKey(locationID)) {
-                        Base.Location l = Listened[locationID];
+                        Chat.Location l = Listened[locationID];
                         if (this.OnListeningEnd != null) {
                             OnListeningEnd(this, locationID);
                         }
@@ -525,9 +495,28 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="message">Line to send to the server.</param>
         /// <param name="log">If set to <c>true</c>, log the raw command to the output window. (Enabled by default)</param>
         public void SendRaw(String data) {
-            if (this._conn.Connected && Status != Base.Reference.ConnectionStatus.Disconnected) {
+            if (this._conn.Connected && Status != Services.Reference.ConnectionStatus.Disconnected) {
                 byte[] bdata = Encoding.UTF8.GetBytes(data + "\r\n");
                 _conn.Send(bdata);
+            }
+        }
+
+        // TODO: Implement event handling so we can handle actions again
+        private void SendMessage(Message m) {
+            if (Status == Services.Reference.ConnectionStatus.Connected && m != null) {
+
+                if (Listened.ContainsKey(m.locationID) || m.locationID == Identifier) {
+                    string location;
+                    if (m.locationID == this.Identifier && m.IsPrivate)
+                        location = m.target.DisplayName;
+                    else
+                        location = Listened[m.locationID].Name;
+
+                    SendRaw("PRIVMSG " + location + " :" + (m.IsAction ? "\u0001ACTION " : "") + m.message + (m.IsAction ? "\u0001" : ""));
+                } else {
+                    // Have not joined location
+                    Console.WriteLine("Location not available: " + m.locationID);
+                }
             }
         }
 
@@ -537,51 +526,16 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// be kept in practice that it matches the bot's current DisplayName on the server.
         /// </summary>
         /// <param name="message">Message to send to the server.</param>
-        public override void SendMessage(Base.Message message) {
-            if (Status == Base.Reference.ConnectionStatus.Connected && message != null) {
-
-                String location;
-                if (Listened.ContainsKey(message.locationID)) {
-                    if (message.locationID == this.Identifier && message.IsPrivate)
-                        location = message.target.DisplayName;
-                    else
-                        location = Listened[message.locationID].Name;
-
-                    switch (message.type) {
-                        case Base.Reference.MessageType.PublicMessage:
-                        case Base.Reference.MessageType.PrivateMessage:
-                        case Base.Reference.MessageType.Unknown:
-                            SendRaw("PRIVMSG " + location + " :" + message.message);
-                            break;
-
-                        case Base.Reference.MessageType.PublicAction:
-                        case Base.Reference.MessageType.PrivateAction:
-                            SendRaw("PRIVMSG " + location + " :\u0001ACTION " + message.message + "\u0001");
-                            break;
-
-                        case Base.Reference.MessageType.Notice:
-                            SendRaw("NOTICE " + location + " :" + message.message);
-                            break;
-
-                        default:
-                            // Fail.
-                            break;
-                    }
-
-                    HandleMessageRecieved(message);
-                } else {
-                    // Have not joined location
-                    Console.WriteLine("Location not available: " + message.locationID);
-                }
-            }
+        public override void SendMessage(Chat.Message message) {
+            SendMessage(message);
         }
 
-        protected override void HandleUserJoin(Guid l, Base.User u) {
+        protected override void HandleUserJoin(Guid l, Chat.User u) {
             base.HandleUserJoin(l, u);
             SendRaw("WHO " + Listened[l].Name);
         }
 
-        protected override void HandleUserLeave(Guid l, Base.User u) {
+        protected override void HandleUserLeave(Guid l, Chat.User u) {
             // Make sure we only send a new names list if it's not US that left.
             if (u.DisplayName.ToLower() != Me.DisplayName.ToLower())
                 SendRaw("WHO " + Listened[l].Name);
@@ -605,9 +559,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 Me.DisplayName = changer.DisplayName;
             }
 
-            HandleUserDisplayNameChange(Identifier, changer);
-
-            foreach (Base.Location location in Listened.Values) {
+            foreach (Chat.Location location in Listened.Values) {
                 foreach (String host in location.AccessLevels.Keys) {
                     if (host.StartsWith(changer.LastDisplayName)) {
                         byte accessLevel = location.AccessLevels[host];
@@ -637,8 +589,8 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         /// <param name="reason">Specifies a quit message to send in place of default.</param>
         public override void Disconnect(String reason = "Leaving") {
             SendRaw("QUIT :" + reason);
-            Status = Base.Reference.ConnectionStatus.Disconnected;
-            HandleDisconnectComplete(this);
+            Status = Services.Reference.ConnectionStatus.Disconnected;
+            base.HandleDisconnectComplete();
         }
 
 
@@ -658,12 +610,12 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
             String[] bits = line.Split(new char[] { ' ' });
             Guid locationGuid = GetLocationIdByName(bits[3]);
             User u = new User();
-            u.UniqueName = bits[4].TrimStart(new char[]{'~'});
+            u.UniqueID = bits[4].TrimStart(new char[] { '~' });
             u.DisplayName = bits[7];
 
             String userHost = bits[5];
             String modesRaw = bits[8];
-            
+
             byte level = User.GetAccessLevel(modesRaw);
             if (level == 0) level = 1;
 
@@ -677,7 +629,7 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
                 TempUserAccessLevels.Add(userHost, new Dictionary<string, byte>());
 
             TempUserAccessLevels[bits[5]].Add(bits[7], level);
-            
+
         }
 
         /// <summary>
@@ -686,10 +638,10 @@ namespace Ostenvighx.Suibhne.Networks.Irc {
         private void ParseWhoList(String line) {
             String[] lineBits = line.Split(new char[] { ' ' });
             Guid locationID = GetLocationIdByName(lineBits[3]);
-            Base.Location location = Listened[locationID];
+            Chat.Location location = Listened[locationID];
             location.AccessLevels.Clear();
 
-            foreach(KeyValuePair<string, Dictionary<string, byte>> hostmaskItem in TempUserAccessLevels){
+            foreach (KeyValuePair<string, Dictionary<string, byte>> hostmaskItem in TempUserAccessLevels) {
                 if (hostmaskItem.Value.Count > 1) {
                     // Remap keys
                     foreach (KeyValuePair<string, byte> user in hostmaskItem.Value) {

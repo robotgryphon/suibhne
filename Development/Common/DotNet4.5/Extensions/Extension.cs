@@ -8,7 +8,7 @@ using System.Threading;
 using System.Linq;
 
 using System.Reflection;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 
 using Newtonsoft.Json.Linq;
 using System.Runtime.InteropServices;
@@ -215,10 +215,14 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 switch (Event["event"].ToString().ToLower()) {
                     case "extension_details":
-                        string response =
-                            "[" + Identifier + "] " + Name + " (v. " + Version + ")" + " developed by " + Author;
+                        JObject response = new JObject();
+                        response.Add("event", "extension_details");
+                        response.Add("extid", Identifier);
+                        response.Add("name", Name);
+                        response.Add("version", Version);
+                        response.Add("author", Author);
 
-                        SendMessage(new Message(Guid.Parse(Event["location"]["id"].ToString()), new User(), response));
+                        SendEvent(response);
                         break;
 
                     case "command_recieved":
@@ -278,6 +282,11 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
+        public void SendEvent(JObject response) {
+            byte[] bytes = Encoding.UTF32.GetBytes(response.ToString());
+            SendBytes(bytes);
+        }
+
         /// <summary>
         /// Handles an additional event outside of the commonly supported ones.
         /// </summary>
@@ -292,7 +301,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             conn.Send(b);
         }
 
-        public void SendMessage(Networks.Base.Message message) {
+        public void SendMessage(Services.Chat.Message message) {
             JObject msg_data = new JObject();
             msg_data.Add("event", "message_send");
             msg_data.Add("extid", this.Identifier);
@@ -300,9 +309,9 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject msg = new JObject();
             msg.Add("contents", message.message);
-            msg.Add("type", (byte) message.type);
 
-            if (Message.IsPrivateMessage(message)) {
+            if (message.IsPrivate) {
+                msg.Add("is_private", true);
                 msg.Add("target", message.target.DisplayName);
             }
 

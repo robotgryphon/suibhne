@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Ostenvighx.Suibhne.Networks.Irc {
+namespace Ostenvighx.Suibhne.Services.Irc {
 
     /// <summary>
     /// This class holds static Regular Expressions and strings for matching IRC-related

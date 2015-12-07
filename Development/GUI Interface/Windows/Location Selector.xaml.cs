@@ -1,4 +1,4 @@
-﻿using Ostenvighx.Suibhne.Networks.Base;
+﻿using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -37,7 +37,7 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
         internal void PopulateLocationList() {
             itemsList.Items.Clear();
-            Guid[] locations = LocationManager.GetNetworks();
+            Guid[] locations = LocationManager.GetServiceIdentifiers();
             foreach (Guid g in locations) {
                 TreeViewItem networkListItem = new TreeViewItem();
 
@@ -130,12 +130,12 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
             Core.Log("Deleting item " + locationInfo.Name + " with id " + locationID + ".");
             switch (locationInfo.Type) {
-                case Reference.LocationType.Network:
+                case Services.Chat.Reference.LocationType.Network:
                     ((TreeView) selectedItem.Parent).Items.Remove(selectedItem);
                     break;
 
-                case Reference.LocationType.Public:
-                case Reference.LocationType.Private:
+                case Services.Chat.Reference.LocationType.Public:
+                case Services.Chat.Reference.LocationType.Private:
                     ((TreeViewItem)selectedItem.Parent).Items.Remove(selectedItem);
                     break;
 

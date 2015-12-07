@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 
 using Ostenvighx.Suibhne.Extensions;
-using Ostenvighx.Suibhne.Networks.Base;
+using Ostenvighx.Suibhne.Services.Chat;
 using Newtonsoft.Json.Linq;
 
 namespace Ostenvighx.Suibhne.Extensions {
@@ -35,21 +35,16 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Socket.Send(data);
         }
 
-        public void HandleHelpCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
+        public void HandleHelpCommandRecieved(ServiceWrapper conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
                 ev.Add("event", "command_help");
                 ev.Add("handler", method.Handler);
-                
-                JObject location = new JObject();
-                location.Add("id", msg.locationID);
-                location.Add("type", (byte) msg.type);
-
-                ev.Add("location", location);
+                ev.Add("location", msg.locationID);
 
                 JObject sender = new JObject();
-                sender.Add("DisplayName", msg.sender.DisplayName);
-                sender.Add("Username", msg.sender.UniqueName);
+                sender.Add("display_name", msg.sender.DisplayName);
+                sender.Add("unique_id", msg.sender.UniqueID);
 
                 ev.Add("sender", sender);
 
@@ -61,7 +56,7 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
-        public void HandleCommandRecieved(NetworkBot conn, Commands.CommandMap method, Message msg) {
+        public void HandleCommandRecieved(ServiceWrapper conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
                 ev.Add("event", "command_recieved");
@@ -73,13 +68,12 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 JObject location = new JObject();
                 location.Add("id", msg.locationID);
-                location.Add("type", (byte)msg.type);
-
+                location.Add("is_private", msg.IsPrivate);
                 ev.Add("location", location);
 
                 JObject sender = new JObject();
-                sender.Add("DisplayName", msg.sender.DisplayName);
-                sender.Add("Username", msg.sender.UniqueName);
+                sender.Add("display_name", msg.sender.DisplayName);
+                sender.Add("unique_id", msg.sender.UniqueID);
 
                 ev.Add("sender", sender);
 
