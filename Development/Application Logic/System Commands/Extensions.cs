@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.System_Commands {
     internal partial class SysCommands {
 
-        public static void Extensions(ServiceWrapper conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
+        public static void Extensions(ChatService conn, Message msg) {
+            Message response = Message.GenerateResponse(msg);
             String[] messageParts = msg.message.Split(' ');
             ExtensionMap workingExtension = new ExtensionMap();
 

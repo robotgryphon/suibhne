@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.System_Commands {
     internal partial class SysCommands {
 
-        public static void Version(ServiceWrapper conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
-            response.message = "I am currently running version " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        public static void Version(ChatService conn, Message msg) {
+            Message response = Message.GenerateResponse(msg);
+            response.message = "I am currently running version " + Core.SystemVersion.ToString();
             conn.SendMessage(response);
         }
 

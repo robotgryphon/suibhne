@@ -10,8 +10,8 @@ namespace Ostenvighx.Suibhne.System_Commands {
     internal partial class SysCommands {
 
         // TODO: This requires the old action type, but this may not be supported on all services. Need to refactor..
-        public static void Commands(ServiceWrapper conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
+        public static void Commands(ChatService conn, Message msg) {
+            Message response = Message.GenerateResponse(msg);
             response.message = "I figure you have access to these commands: ";
 
             String[] AvailableCommands = CommandManager.Instance.GetAvailableCommandsForUser(msg.sender, false);

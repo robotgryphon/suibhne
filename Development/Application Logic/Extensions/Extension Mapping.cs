@@ -35,7 +35,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Socket.Send(data);
         }
 
-        public void HandleHelpCommandRecieved(ServiceWrapper conn, Commands.CommandMap method, Message msg) {
+        public void HandleHelpCommandRecieved(ChatService conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
                 ev.Add("event", "command_help");
@@ -50,13 +50,13 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                 Send(Encoding.UTF32.GetBytes(ev.ToString()));
             } else {
-                Message response = Message.GenerateResponse(conn.Me, msg);
+                Message response = Message.GenerateResponse(msg);
                 response.message = "That command's extension is registered, but not started. No help is available at this point.";
                 conn.SendMessage(response);
             }
         }
 
-        public void HandleCommandRecieved(ServiceWrapper conn, Commands.CommandMap method, Message msg) {
+        public void HandleCommandRecieved(ChatService conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
                 ev.Add("event", "command_recieved");

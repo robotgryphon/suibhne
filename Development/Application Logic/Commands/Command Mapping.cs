@@ -18,6 +18,11 @@ namespace Ostenvighx.Suibhne.Commands {
         public Guid Extension;
 
         /// <summary>
+        /// Used when the system itself is registering the handlers for the command.
+        /// </summary>
+        internal Boolean Is_Internal;
+
+        /// <summary>
         /// The lowest access level the user needs to invoke the command.
         /// </summary>
         public byte AccessLevel;

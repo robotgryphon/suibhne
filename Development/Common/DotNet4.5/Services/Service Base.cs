@@ -32,8 +32,8 @@ namespace Ostenvighx.Suibhne.Services {
         public event Events.CustomEventDelegate OnCustomEventFired;
 
         #region Connection Handling
-        public abstract void Connect();
-        public abstract void Disconnect(String reason = "");
+        public abstract void Start();
+        public abstract void Stop(String reason = "");
 
         protected virtual void HandleConnectionComplete() {
             if (this.OnConnectionComplete != null)
@@ -53,5 +53,6 @@ namespace Ostenvighx.Suibhne.Services {
 
         public abstract String[] GetSupportedEvents();
 
+        public abstract void Setup(String configBase);
     }
 }

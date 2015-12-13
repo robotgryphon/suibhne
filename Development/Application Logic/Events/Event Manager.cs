@@ -49,7 +49,7 @@ namespace Ostenvighx.Suibhne.Events {
             GatherConnectorEvents();
         }
 
-        public static void HookEventHandler(ChatService n) {
+        public static void HookEventHandler(Services.ServiceConnector n) {
             n.OnCustomEventFired += instance.HandleNetworkEvent;
         }
 
@@ -74,7 +74,9 @@ namespace Ostenvighx.Suibhne.Events {
                         if (t.IsSubclassOf(typeof(ChatService))) {
                             ChatService network = (ChatService)Activator.CreateInstance(t);
                             foreach (String eventCode in network.GetSupportedEvents()) {
-                                Debug.WriteLine("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", "Events");
+                                if (Core.DEBUG)
+                                    Debug.WriteLine("Attempting addition of support for event " + eventCode.ToLower() + " (Connector: " + t.Assembly.GetName().Name + ")", "Events");
+
                                 if (!EventSupport.ContainsKey(eventCode.ToLower())) {
                                     EventSupport.Add(eventCode.ToLower(), new List<Guid>());
                                     total_added_for_network_type++;
@@ -115,7 +117,7 @@ namespace Ostenvighx.Suibhne.Events {
 
             return false;
         }
-        
+
         /// <summary>
         /// Should be called by the extension system after it finishes initializing and gathering all the
         /// supported events.
@@ -155,71 +157,81 @@ namespace Ostenvighx.Suibhne.Events {
 
             try {
                 JObject ev = JObject.Parse(json);
-                if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
-                    String eventName = ev["event"].ToString().ToLower().Trim();
 
-                    if (!instance.EventSupport.ContainsKey(eventName))
-                        return;
-
-                    foreach(Guid g in instance.EventSupport[eventName]) {
-                        if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))
-                            continue;
-
-                        ExtensionMap em = ExtensionSystem.Instance.Extensions[g];
-
-                        if (em.Ready)
-                            em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
-                    }
-                }
+                instance.HandleEvent(ev);
+                // DistributeEventToExtensions(ev);
 
                 if (instance.OnEventHandled != null)
                     instance.OnEventHandled(ev.ToString(), Core.Side.CONNECTOR);
             }
-
             catch (Exception) { }
         }
 
-        internal static void HandleExtensionEvent(JObject json) {
-            string[] eventNameParts = json["event"].ToString().ToLower().Split('_');
-            string eventHandler = "";
-            foreach (string eventPart in eventNameParts)
-                eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
+        internal static void DistributeEventToExtensions(JObject ev) {
+            if (ev["event"] != null && ev["event"].ToString().Trim() != "") {
+                String eventName = ev["event"].ToString().ToLower().Trim();
 
-            Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
-            if (t == null) {
-                // The event handler couldn't be found. Abort!
-                return;
+                if (!instance.EventSupport.ContainsKey(eventName))
+                    return;
+
+                foreach (Guid g in instance.EventSupport[eventName]) {
+                    if (!ExtensionSystem.Instance.Extensions.ContainsKey(g))
+                        continue;
+
+                    ExtensionMap em = ExtensionSystem.Instance.Extensions[g];
+
+                    if (em.Ready)
+                        em.Send(Encoding.UTF32.GetBytes(ev.ToString()));
+                }
             }
+        }
 
-            object handler = Activator.CreateInstance(t);
-
-            (handler as Handlers.EventHandler).HandleEvent(json);
+        internal static void HandleExtensionEvent(JObject json) {
+            instance.HandleEvent(json);
 
             if (instance.OnEventHandled != null)
                 instance.OnEventHandled(json.ToString(), Core.Side.EXTENSION);
         }
 
         /// <summary>
-        /// Injects an event into the system and forces it to route it accordingly.
+        /// Takes an event and attempts to find a matching event handler for it.
+        /// If the event is natively supported by the system, the system handles it.
+        /// Otherwise, it attempts to pass the event off to the extensions that say they handle it.
         /// </summary>
-        /// <param name="json">Injected event json.</param>
-        /// <param name="destination">Which side to send the event data to.</param>
-        public static void HandleInternalEvent(JObject json) {
-            string[] eventNameParts = json["event"].ToString().ToLower().Split('_');
+        /// <param name="json">Event JSON.</param>
+        private void HandleEvent(JObject json) {
+            String eventName = json["event"].ToString().ToLower();
+            string[] eventNameParts = eventName.Split('_');
             string eventHandler = "";
             foreach (string eventPart in eventNameParts)
                 eventHandler += eventPart.Substring(0, 1).ToUpper() + eventPart.Substring(1);
 
             Type t = Type.GetType("Ostenvighx.Suibhne.Events.Handlers." + eventHandler);
             if (t == null) {
-                // The event handler couldn't be found. Abort!
-                Core.Log("Error handling event " + json["event"].ToString() + "; the handler could not be found, or does not exist.");
-                return;
+                // The event handler couldn't be found. Try to see if an extension has registered the event.
+                Core.Log("Error handling event " + json["event"].ToString() + "; the handler could not be found, or does not exist." + 
+                    Environment.NewLine +
+                    "Trying to find an extension that handles the event now.");
+
+                if (EventSupport.ContainsKey(eventName)) {
+
+                } else {
+                    Core.Log("Failed to find event handler for " + eventName + ". Aborting.");
+                    return;
+                }
             }
 
             object handler = Activator.CreateInstance(t);
 
             (handler as Handlers.EventHandler).HandleEvent(json);
+        }
+
+        /// <summary>
+        /// Injects an event into the system and forces it to route it accordingly.
+        /// </summary>
+        /// <param name="json">Injected event json.</param>
+        public static void HandleInternalEvent(JObject json) {
+            instance.HandleEvent(json);
 
             if (instance.OnEventHandled != null)
                 instance.OnEventHandled(json.ToString(), Core.Side.INTERNAL);

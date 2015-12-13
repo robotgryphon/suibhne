@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 namespace Ostenvighx.Suibhne.System_Commands {
     internal partial class SysCommands {
 
-        public static void NetworkInfo(ServiceWrapper conn, Message msg) {
-            Message response = Message.GenerateResponse(conn.Me, msg);
+        public static void NetworkInfo(ChatService conn, Message msg) {
+            Message response = Message.GenerateResponse(msg);
             String[] messageParts = msg.message.Split(' ');
 
             if (messageParts.Length != 3) {

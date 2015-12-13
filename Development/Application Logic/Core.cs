@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Data;
 using System.Data.SQLite;
+using Ostenvighx.Suibhne.Configuration;
+using Ostenvighx.Suibhne.Services;
 
 namespace Ostenvighx.Suibhne {
 
@@ -26,7 +28,7 @@ namespace Ostenvighx.Suibhne {
 
     public class Core {
 
-        public static Dictionary<Guid, ServiceWrapper> ConnectedServices;
+        public static Dictionary<Guid, Services.ServiceConnector> ConnectedServices;
 
         public static Boolean DEBUG;
 
@@ -40,6 +42,7 @@ namespace Ostenvighx.Suibhne {
         /// Base configuration directory. Will always have a trailing slash. ALWAYS.
         /// </summary>
         public static String ConfigDirectory;
+        internal static String CommandPrefix;
 
         internal static IniConfigSource SystemConfig;
         internal static SQLiteConnection Database;
@@ -63,7 +66,7 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void Initialize() {
-            LoadConfiguration();
+            ConfigHelper.LoadConfiguration();
 
             Events.EventManager.Initialize();
 
@@ -75,65 +78,15 @@ namespace Ostenvighx.Suibhne {
             Commands.CommandManager.MapCommands();
         }
 
-        private static void LoadConfiguration() {
-            Core.Log("Loading the configuration data...");
-
-            try {
-                SystemConfig = new IniConfigSource(Environment.CurrentDirectory + "/suibhne.ini");
-                SystemConfig.CaseSensitive = false;
-
-                // Make sure directories config exists - if not, create it and add in the configroot
-                if (SystemConfig.Configs["System"] == null) {
-                    SystemConfig.AddConfig("System");
-                    SystemConfig.Configs["System"].Set("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
-                    SystemConfig.Save();
-                }
-
-                Core.ConfigDirectory = SystemConfig.Configs["System"].GetString("ConfigurationRoot", Environment.CurrentDirectory + "/Configuration/");
-
-                // Make sure there's a trailing slash at the end of the config directory
-                if (Core.ConfigDirectory[Core.ConfigDirectory.Length - 1] != '/') {
-                    Core.ConfigDirectory += "/";
-                    SystemConfig.Configs["System"].Set("ConfigurationRoot", Core.ConfigDirectory);
-                    SystemConfig.Save();
-                }
-
-                SystemConfig.ExpandKeyValues();
-                if (!File.Exists(Core.ConfigDirectory + "system.sns")) {
-                    SQLiteConnection.CreateFile(Core.ConfigDirectory + "system.sns");
-                }
-
-                Database = new SQLiteConnection("Data Source=" + Core.ConfigDirectory + "/system.sns");
-
-                Core.DEBUG = SystemConfig.Configs["System"].GetBoolean("DEBUG_MODE", false);
-
-                try {
-                    Database.Open();
-                    Core.Log("Database opened successfully.");
-                    Database.Close();
-                }
-
-                catch (Exception dbe) {
-                    Console.WriteLine(dbe);
-                }
-
-                CheckDatabase();
-            }
-
-            catch (Exception ex) {
-                Core.Log(ex.Message);
-                Core.Log(ex.StackTrace);
-            }
-        }
-
         private static void LoadServiceInformation() {
-            Core.ConnectedServices = new Dictionary<Guid, ServiceWrapper>();
+            Core.ConnectedServices = new Dictionary<Guid, Services.ServiceConnector>();
 
             Guid[] serviceIDs = LocationManager.GetServiceIdentifiers();
             foreach (Guid serviceID in serviceIDs) {
                 try {
-                    ServiceWrapper serv = new ServiceWrapper(serviceID);
-                    Core.ConnectedServices.Add(serviceID, serv);
+                    ServiceConnector serv = ServiceHelper.GenerateConnector(serviceID);
+                    if(serv != null)
+                        Core.ConnectedServices.Add(serviceID, serv);
                 }
 
                 catch (FileNotFoundException fnf) {
@@ -147,12 +100,12 @@ namespace Ostenvighx.Suibhne {
         }
 
         public static void Start() {
-            foreach (ServiceWrapper network in Core.ConnectedServices.Values) {
+            foreach (ServiceConnector serv in Core.ConnectedServices.Values) {
                 // If the service is disabled by a flag file, do not start it- just keep swimmin'
-                if (File.Exists(Core.ConfigDirectory + "/Services/" + network.Identifier + "/disabled"))
+                if (File.Exists(Core.ConfigDirectory + "/Services/" + serv.Identifier + "/disabled"))
                     continue;
 
-                network.Connect();
+                serv.Start();
             }
         }
 
@@ -194,51 +147,6 @@ namespace Ostenvighx.Suibhne {
             Console.ResetColor();
 
             if (OnLogMessage != null) OnLogMessage("[" + DateTime.Now + "] " + message, type);
-        }
-
-        /// <summary>
-        /// Verifies the integrity of the system database.
-        /// Checks tables are valid and existing.
-        /// </summary>
-        private static void CheckDatabase() {
-            if (Core.Database.State != ConnectionState.Open)
-                Core.Database.Open();
-
-            try {
-                SQLiteCommand tableCheck = Core.Database.CreateCommand();
-                tableCheck.CommandText = "select count(*) from sqlite_master WHERE type='table' AND (name='Identifiers' OR name='Commands');";
-                int i = int.Parse(tableCheck.ExecuteScalar().ToString());
-
-                if (i >= 2) return;
-
-                tableCheck.CommandText = "create table if not exists Identifiers (" +
-                    "`Identifier`	TEXT NOT NULL UNIQUE," +
-	                "`ParentId`	TEXT," +
-	                "`Name`	TEXT," +
-	                "`LocationType`	INTEGER," +
-                    "PRIMARY KEY(Identifier)," +
-                    "FOREIGN KEY(`ParentId`) REFERENCES Identifier" +
-                  ")";
-
-                if (tableCheck.ExecuteNonQuery() == 1)
-                    Core.Log("Created identifiers table.");
-
-                tableCheck.CommandText = "create table if not exists Commands (" +
-                    "`Command`	TEXT UNIQUE," +
-                    "`Extension`	TEXT," +
-                    "`Handler`	TEXT," +
-                    "`DefaultAccess`	INTEGER DEFAULT 1," +
-                    "PRIMARY KEY(Command)" +
-                  ")";
-
-                if (tableCheck.ExecuteNonQuery() == 1)
-                    Core.Log("Created command-linking table.");
-            }
-
-            catch(Exception ex) {
-
-            }
-            finally { Core.Database.Close(); }
         }
     }
 }

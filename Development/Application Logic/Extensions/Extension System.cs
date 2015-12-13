@@ -97,10 +97,6 @@ namespace Ostenvighx.Suibhne.Extensions {
             return maps.ToArray();
         }
 
-        public void HandleCommand(ServiceWrapper conn, Message msg) {
-            CommandManager.Instance.HandleCommand(conn, msg);
-        }
-
         public void Shutdown() {
             foreach (ExtensionMap em in Extensions.Values) {
                 ShutdownExtension(em.Identifier);
@@ -131,7 +127,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             Core.Log("Extension '" + extension.Name + "' is being shutdown. Resetting the references for it.", LogType.EXTENSIONS);
             JObject shutdown = new JObject();
-            shutdown.Add("event", "extension.shutdown");
+            shutdown.Add("event", "extension_shutdown");
 
             extension.Send(Encoding.UTF32.GetBytes(shutdown.ToString()));
 

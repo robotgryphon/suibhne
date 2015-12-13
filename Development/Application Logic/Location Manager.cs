@@ -57,7 +57,7 @@ namespace Ostenvighx.Suibhne {
 
                 List<Guid> networks = new List<Guid>();
                 SQLiteCommand command = Core.Database.CreateCommand();
-                command.CommandText = "SELECT * FROM Identifiers WHERE LocationType=1;";
+                command.CommandText = "SELECT * FROM Locations WHERE LocationType=1;";
 
                 DataTable resultsTable = new DataTable();
                 SQLiteDataReader resultsReader = command.ExecuteReader();
@@ -87,10 +87,10 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Open();
 
                 SQLiteCommand command = Core.Database.CreateCommand();
-                command.CommandText = "INSERT INTO Identifiers VALUES ('" + id.ToString() + "', '" + parent.ToString() + "', '" + name + "', 2);";
+                command.CommandText = "INSERT INTO Locations VALUES ('" + id.ToString() + "', '" + parent.ToString() + "', '" + name + "', 2);";
                 command.ExecuteNonQuery();
 
-                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + parent + "/Locations/" + id);
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Services/" + parent + "/Locations/" + id);
             }
 
             catch (Exception) { }
@@ -114,11 +114,11 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Open();
 
                 SQLiteCommand command = Core.Database.CreateCommand();
-                command.CommandText = "INSERT INTO Identifiers VALUES ('" + id.ToString() + "', '', '" + name + "', 1);";
+                command.CommandText = "INSERT INTO Locations VALUES ('" + id.ToString() + "', '', '" + name + "', 1);";
                 command.ExecuteNonQuery();
 
-                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id);
-                Directory.CreateDirectory(Core.ConfigDirectory + "/Networks/" + id + "/Locations");
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Services/" + id);
+                Directory.CreateDirectory(Core.ConfigDirectory + "/Services/" + id + "/Locations");
 
                 
             }
@@ -133,13 +133,7 @@ namespace Ostenvighx.Suibhne {
 
             #region Creating basic network file
             try {
-                String newConfigFile = Core.ConfigDirectory + "/Networks/" + id + "/network.ini";
-
-                IniConfigSource config = new IniConfigSource();
-
-                config.AddConfig("Network");
-                config.Configs["Network"].Set("type", type);
-                config.Save(newConfigFile);
+                File.Create( Core.ConfigDirectory + "/Services/" + id + "/service.ini" );
             }
 
             catch(Exception e) {
@@ -157,11 +151,11 @@ namespace Ostenvighx.Suibhne {
                 return;
 
             try {
-                if (Directory.Exists(@Core.ConfigDirectory + @"Networks/" + id))
-                    Directory.Delete(Core.ConfigDirectory + @"Networks/" + id, true);
+                if (Directory.Exists(@Core.ConfigDirectory + @"Services/" + id))
+                    Directory.Delete(Core.ConfigDirectory + @"Services/" + id, true);
                 else {
                     Location location = GetLocationInfo(id);
-                    String dir = Core.ConfigDirectory + @"Networks/" + location.Parent + @"/Locations/" + id;
+                    String dir = Core.ConfigDirectory + @"Services/" + location.Parent + @"/Locations/" + id;
 
                     if(Directory.Exists(dir))
                         Directory.Delete(dir, true);
@@ -177,7 +171,7 @@ namespace Ostenvighx.Suibhne {
                     Core.Database.Open();
 
                 SQLiteCommand command = Core.Database.CreateCommand();
-                command.CommandText = "DELETE FROM Identifiers WHERE Identifier = '" + id + "' OR ParentId = '" + id + "';";
+                command.CommandText = "DELETE FROM Locations WHERE Identifier = '" + id + "' OR ParentId = '" + id + "';";
                 command.ExecuteNonQuery();
 
                 if (Core.ConnectedServices.ContainsKey(id))
@@ -209,7 +203,7 @@ namespace Ostenvighx.Suibhne {
 
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
-                c.CommandText = "SELECT * FROM Identifiers WHERE ParentId = '" + parent + "';";
+                c.CommandText = "SELECT * FROM Locations WHERE ParentId = '" + parent + "';";
 
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
@@ -256,7 +250,7 @@ namespace Ostenvighx.Suibhne {
                 Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
-                c.CommandText = "SELECT * FROM Identifiers WHERE ParentId = '" + parent + "' AND lower(Name)='" + location.ToLower() + "';";
+                c.CommandText = "SELECT * FROM Locations WHERE ParentId = '" + parent + "' AND lower(Name)='" + location.ToLower() + "';";
 
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
@@ -296,7 +290,7 @@ namespace Ostenvighx.Suibhne {
                 if(Core.Database.State != ConnectionState.Open) Core.Database.Open();
                 DataTable resultsTable = new DataTable();
                 SQLiteCommand c = Core.Database.CreateCommand();
-                c.CommandText = "SELECT * FROM Identifiers WHERE Identifier = '" + id + "';";
+                c.CommandText = "SELECT * FROM Locations WHERE Identifier = '" + id + "';";
 
                 SQLiteDataReader resultsReader = c.ExecuteReader();
                 resultsTable.Load(resultsReader);
@@ -336,11 +330,11 @@ namespace Ostenvighx.Suibhne {
                 SQLiteCommand c = Core.Database.CreateCommand();
 
                 if (location != "") {
-                    c.CommandText = "SELECT * FROM Identifiers " +
-	                    "WHERE Identifiers.ParentId IN (SELECT Identifier FROM Identifiers WHERE lower(Name) = '" + network.ToLower() + "')" +
+                    c.CommandText = "SELECT * FROM Locations " +
+	                    "WHERE Locations.ParentId IN (SELECT Identifier FROM Locations WHERE lower(Name) = '" + network.ToLower() + "')" +
                         " AND lower(Name) = '" + location.ToLower() + "';";
                 } else {
-                    c.CommandText = "SELECT * FROM Identifiers WHERE lower(Name) = '" + network.ToLower() + "';";
+                    c.CommandText = "SELECT * FROM Locations WHERE lower(Name) = '" + network.ToLower() + "';";
                 }
 
 

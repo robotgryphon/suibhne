@@ -48,8 +48,8 @@ namespace Ostenvighx.Suibhne.Services.Chat {
             this.message = message;
         }
 
-        public static Message GenerateResponse(User u, Message msg) {
-            Message response = new Message(msg.locationID, u, "Response");
+        public static Message GenerateResponse(Message msg) {
+            Message response = new Message(msg.locationID, "Response");
 
             if (msg.IsPrivate) {
                 response.IsPrivate = true;

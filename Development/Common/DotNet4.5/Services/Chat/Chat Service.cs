@@ -12,8 +12,6 @@ namespace Ostenvighx.Suibhne.Services.Chat {
         /// </summary>
         protected String ConfigRoot;
 
-        
-
         /// <summary>
         /// Includes known information about the bot as an Networks.Base User.
         /// Use DisplayName and similar information here.
@@ -36,12 +34,6 @@ namespace Ostenvighx.Suibhne.Services.Chat {
             protected set;
         }
 
-        public abstract void Setup(string configFile);
-
-        #region Event Methods
-        public event Events.MessageEvent OnMessageRecieved;
-        #endregion
-
         /// <summary>
         /// Get a reference to an Location object by name. Useful for locationID lookups.
         /// </summary>
@@ -49,7 +41,7 @@ namespace Ostenvighx.Suibhne.Services.Chat {
         /// <returns>Reference to the Location for a given locationName.</returns>
         public Guid GetLocationIdByName(String locationName) {
             Guid returned = Guid.Empty;
-            foreach (KeyValuePair<Guid, Chat.Location> location in Listened) {
+            foreach (KeyValuePair<Guid, Location> location in Listened) {
                 if (location.Value.Name.Equals(locationName.ToLower()))
                     return location.Key;
             }
@@ -62,33 +54,38 @@ namespace Ostenvighx.Suibhne.Services.Chat {
         /// </summary>
         /// <param name="locationName">Location to attempt lookup on.</param>
         /// <returns>Reference to the Location for a given locationName.</returns>
-        public Chat.Location GetLocationByName(String locationName) {
+        public Location GetLocationByName(String locationName) {
             Guid locationID = GetLocationIdByName(locationName);
             if (locationID != Guid.Empty)
                 return Listened[locationID];
 
-            return Chat.Location.Unknown;
+            return Location.Unknown;
         }
-
-        public abstract void SendMessage(Message m);
 
         public abstract void JoinLocation(Guid g);
 
         public abstract void LeaveLocation(Guid g);
 
-        protected virtual void HandleUserJoin(Guid l, User u) {
+        protected virtual void LocationJoined(Guid l, String extraJSON = "") {
+        }
+
+        protected virtual void LocationLeft(Guid l, String extraJSON = "") { }
+
+        protected virtual void UserJoined(Guid l, User u, String extraJSON = "") {
             
         }
 
-        protected virtual void HandleUserLeave(Guid l, User u) {
+        protected virtual void UserLeft(Guid l, User u, String extraJSON = "") {
             
         }
 
-        protected virtual void HandleUserQuit(Guid l, User u) {
+        protected virtual void UserQuit(Guid l, User u, String extraJSON = "") {
             
         }
 
-        protected virtual void HandleMessageRecieved(Message m, String extraJSON) {
+        public abstract void SendMessage(Message m);
+
+        protected virtual void MessageRecieved(Message m, String extraJSON = "") {
             JObject ev, extra;
             try {
                 ev = new JObject();
@@ -101,7 +98,6 @@ namespace Ostenvighx.Suibhne.Services.Chat {
                 message.Add("contents", m.message);
                 if (m.IsPrivate) {
                     message.Add("is_private", true);
-                    message.Add("target", m.target.UniqueID);
                 }
 
                 ev.Add("message", message);

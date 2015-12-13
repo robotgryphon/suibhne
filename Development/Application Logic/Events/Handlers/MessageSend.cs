@@ -11,7 +11,7 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
             if (json["location"] == null)
                 throw new Exception("Location identifier not set.");
 
-            if (json["message"] == null || json["message"]["contents"] == null || json["message"]["type"] == null)
+            if (json["message"] == null || json["message"]["contents"] == null)
                 throw new Exception("Need to have a message (with contents and type) defined to send!");
 
 
@@ -22,18 +22,18 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
                 return;
 
             Message msg = new Message(locationID, new User(""), json["message"]["contents"].ToString());
-            ServiceWrapper bot;
-            byte messageType = (byte) json["message"]["type"];
+
+            ChatService conn;
 
             if (json["message"]["is_private"] != null && (bool) json["message"]["is_private"]) {
-                bot = Core.ConnectedServices[locationID];
+                conn = Core.ConnectedServices[locationID] as ChatService;
                 msg.IsPrivate = true;
                 msg.target = new User(json["message"]["target"].ToString());
             } else {
-                bot = Core.ConnectedServices[location.Parent];
+                conn = Core.ConnectedServices[location.Parent] as ChatService;
             }
 
-            bot.SendMessage(msg);
+            conn.SendMessage(msg);
         }
     }
 }
