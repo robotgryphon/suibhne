@@ -94,8 +94,8 @@ namespace Ostenvighx.Suibhne.Events {
             }
 
             // If this service can handle messages, it can handle runtime commands
-            if (EventSupport.ContainsKey("message_recieved"))
-                EventSupport.Add("command_recieved", new List<Guid>());
+            if (EventSupport.ContainsKey("message_received"))
+                EventSupport.Add("command_received", new List<Guid>());
         }
 
         /// <summary>

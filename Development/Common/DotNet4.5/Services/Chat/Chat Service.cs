@@ -91,7 +91,7 @@ namespace Ostenvighx.Suibhne.Services.Chat {
                 ev = new JObject();
                 extra = JObject.Parse(extraJSON);
 
-                ev.Add("event", "message_recieved");
+                ev.Add("event", "message_received");
                 ev.Add("location", m.locationID);
 
                 JObject message = new JObject();

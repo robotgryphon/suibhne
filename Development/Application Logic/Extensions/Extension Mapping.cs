@@ -59,7 +59,7 @@ namespace Ostenvighx.Suibhne.Extensions {
         public void HandleCommandRecieved(ChatService conn, Commands.CommandMap method, Message msg) {
             if (Ready) {
                 JObject ev = new JObject();
-                ev.Add("event", "command_recieved");
+                ev.Add("event", "command_received");
                 ev.Add("handler", method.Handler);
                 if (msg.message.Split(' ').Length > 1)
                     ev.Add("arguments", msg.message.Substring(msg.message.IndexOf(' ') + 1));

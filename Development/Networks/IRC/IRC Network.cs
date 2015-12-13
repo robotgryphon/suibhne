@@ -644,7 +644,7 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                 "user_joined",
                 "user_left",
                 "user_quit",
-                "message_recieved",
+                "message_received",
                 "user_changed",
                 "topic_changed",
 

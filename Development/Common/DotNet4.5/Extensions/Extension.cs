@@ -225,7 +225,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         SendEvent(response);
                         break;
 
-                    case "command_recieved":
+                    case "command_received":
                         if (Event["handler"] != null && Event["handler"].ToString().Trim() != "") {
                             if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
                                 CommandHandlers[Event["handler"].ToString()].Invoke(this, Event.ToString());
@@ -249,7 +249,7 @@ namespace Ostenvighx.Suibhne.Extensions {
 
                         break;
 
-                    case "message_recieved":
+                    case "message_received":
                         HandleIncomingMessage(Event.ToString());
                         break;
 
