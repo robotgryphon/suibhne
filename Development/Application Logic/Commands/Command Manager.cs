@@ -13,8 +13,8 @@ using Ostenvighx.Suibhne.Extensions;
 using System.Data;
 using System.Data.SQLite;
 using System.Text.RegularExpressions;
-using Ostenvighx.Suibhne.System_Commands;
 using System.Diagnostics;
+using Ostenvighx.Suibhne.Commands.Handlers;
 
 namespace Ostenvighx.Suibhne.Commands {
     public class CommandManager {
@@ -131,13 +131,29 @@ namespace Ostenvighx.Suibhne.Commands {
         }
 
         internal static void RouteInternalCommand(string command, JObject ev) {
-            Guid location = ev["location"]["id"].ToObject<Guid>();
+            Guid serviceID = ev["routing"]["serviceID"].ToObject<Guid>();
             String args = ev["arguments"].ToString();
 
-            Core.Log("REcieved internal command " + command + " from " + location + ", with " + 
+            Core.Log("Received internal command " + command + " from service " + serviceID + ", with " + 
                 (args != "" ? "arguments " + args : "no arguments") +
                 ".");
 
+            String commandHandler = command.Substring(0, 1).ToUpper() + command.Substring(1);
+
+            Type t = Type.GetType("Ostenvighx.Suibhne.Commands.Handlers." + commandHandler);
+            if(t == null) {
+
+            }
+
+            try {
+                ICommandHandler cmdHandler = Activator.CreateInstance(t) as ICommandHandler;
+                cmdHandler.HandleCommand(ev);
+            }
+
+            catch(Exception e) {
+                Core.Log("Caught exception handling command " + command + ": " + e.Message, LogType.ERROR);
+                (Core.ConnectedServices[serviceID] as ChatService).SendMessage(ev["routing"].ToString(), new Message(e.Message));
+            }
         }
     }
 }

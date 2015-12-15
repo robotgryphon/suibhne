@@ -83,7 +83,7 @@ namespace Ostenvighx.Suibhne.Services.Chat {
             
         }
 
-        public abstract void SendMessage(Message m);
+        public abstract void SendMessage(String routing, Message msg);
 
         protected virtual void MessageRecieved(Message m, String extraJSON = "") {
             JObject ev, extra;
@@ -92,7 +92,11 @@ namespace Ostenvighx.Suibhne.Services.Chat {
                 extra = JObject.Parse(extraJSON);
 
                 ev.Add("event", "message_received");
-                ev.Add("location", m.locationID);
+
+                JObject routing = new JObject();
+                routing.Add("serviceID", Identifier);
+
+                ev.Add("routing", routing);
 
                 JObject message = new JObject();
                 message.Add("contents", m.message);

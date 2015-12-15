@@ -214,7 +214,7 @@ namespace Ostenvighx.Suibhne.Events {
                     "Trying to find an extension that handles the event now.");
 
                 if (EventSupport.ContainsKey(eventName)) {
-
+                    DistributeEventToExtensions(json);
                 } else {
                     Core.Log("Failed to find event handler for " + eventName + ". Aborting.");
                     return;

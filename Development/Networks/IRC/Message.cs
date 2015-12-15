@@ -9,11 +9,13 @@ namespace Ostenvighx.Suibhne.Services.Irc {
     /// parse incoming messages, queries, notices, and the like.
     /// </summary>
     public class Message : Chat.Message {
-
+        internal String location;
         public Boolean IsAction;
 
-        public Message(Guid locationID, User sender, String message)
-            : base(locationID, sender, message) { }
+        public Message(User sender, String message)
+            : base(sender, message) {
+            location = "";
+        }
 
         /// <summary>
         /// Take a well-formed PRIVMSG or NOTICE line and parse it into its various components.
@@ -28,9 +30,10 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                 User sender = User.Parse(bits[0]);
 
                 Message msg = new Message(
-                    conn.GetLocationIdByName(bits[2].ToLower()),
                     sender,
                     line.Substring(line.IndexOf(" :") + 2));
+
+                msg.location = bits[2] == "*" ? "<server>" : bits[2];
 
                 if (bits[1].ToLower() == "notice")
                     msg.IsPrivate = true;
@@ -42,9 +45,9 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                 }
 
                 // If message origin is the bot's current Username, add 2 to type to signal Private type.
-                if (msg.locationID == Guid.Empty && bits[2].ToLower() == conn.Me.DisplayName.ToLower()) {
+                if (msg.location.ToLower() == conn.Me.DisplayName.ToLower()) {
                     msg.IsPrivate = true;
-                    msg.locationID = conn.Identifier;
+                    msg.location = msg.sender.DisplayName;
                     msg.target = msg.sender;
                 }
 

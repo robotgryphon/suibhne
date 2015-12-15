@@ -10,6 +10,7 @@ using System.Text;
 using Nini.Config;
 using System.Diagnostics;
 using Ostenvighx.Suibhne.Services.Chat;
+using Newtonsoft.Json.Linq;
 
 namespace Ostenvighx.Suibhne.Services.Irc {
 
@@ -243,14 +244,14 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             Debug.WriteLine("Connection complete on " + Identifier);
 
             if (Me.LastDisplayName != "") {
-                Message message = new Message(this.Identifier, null, "IDENTIFY " + Me.LastDisplayName);
+                Message message = new Message(null, "IDENTIFY " + Me.LastDisplayName);
                 message.IsPrivate = true;
                 message.target = new Chat.User("NickServ");
 
                 SendMessage(message);
             }
 
-            foreach(String directory in Directory.GetDirectories(ConfigRoot + "/Services/" + Identifier + "/Locations/")) {
+            foreach (String directory in Directory.GetDirectories(ConfigRoot + "/Services/" + Identifier + "/Locations/")) {
                 String id = new DirectoryInfo(directory).Name;
                 Guid idGuid;
                 try { idGuid = Guid.Parse(id); }
@@ -273,6 +274,7 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                     case "001":
                         // Network welcome message
                         // Network.locationName = dataChunks[0].TrimStart(new char[] { ':' });
+                        Status = Services.Reference.ConnectionStatus.Authenticating;
                         break;
 
                     case "315":
@@ -379,7 +381,8 @@ namespace Ostenvighx.Suibhne.Services.Irc {
 
                     case "privmsg":
                     case "notice":
-                        HandleIncomingMessage(line);
+                        if(Status == Services.Reference.ConnectionStatus.Connected)
+                            HandleIncomingMessage(line);
                         break;
 
                     default:
@@ -401,14 +404,19 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             Match hostmaskMatch = RegularExpressions.USER_REGEX.Match(userhost);
             if (hostmaskMatch.Success) hostmask = hostmaskMatch.Groups["hostname"].Value;
 
-            string extraJSON = "{" +
-                "\"message\": " + "{" +
-                    "\"is_action\": " + (msg.IsAction ? "true":"false") + "," +
-                    "\"is_private\": " + (msg.IsPrivate ? "true" : "false") +
-               "}" +
-            "}";
+            JObject extra = new JObject();
 
-            base.MessageRecieved(msg, extraJSON);
+            // Add routing information
+            JObject routing = new JObject();
+            routing.Add("respond_to", msg.location);
+            extra.Add("routing", routing);
+
+            // Add message action information
+            JObject message = new JObject();
+            message.Add("is_action", msg.IsAction);
+            extra.Add("message", message);
+
+            base.MessageRecieved(msg, extra.ToString());
         }
 
         /// <summary>
@@ -485,31 +493,41 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             }
         }
 
+        internal void SendMessage(Message m) {
+            JObject routing = new JObject();
+            routing.Add("serviceID", Identifier);
+            routing.Add("respond_to", m.location);
+
+            SendMessage(routing.ToString(), m);
+        }
+
         /// <summary>
         /// Sends a well-formed message, using the message's location as the destination and other
         /// values as expected. The message's SENDER parameter does not matter, but it should
         /// be kept in practice that it matches the bot's current DisplayName on the server.
         /// </summary>
         /// <param name="message">Message to send to the server.</param>
-        public override void SendMessage(Chat.Message message) {
+        public override void SendMessage(String routing, Chat.Message message) {
             if (Status == Services.Reference.ConnectionStatus.Connected && message != null) {
-                if (Listened.ContainsKey(message.locationID) || message.locationID == Identifier) {
-                    string location;
-                    if (message.locationID == this.Identifier && message.IsPrivate)
-                        location = message.target.DisplayName;
-                    else
-                        location = Listened[message.locationID].Name;
 
-                    SendRaw("PRIVMSG " + location + " :" + 
-                        // (message.IsAction ? "\u0001ACTION " : "") + 
-                        message.message
-                        // + (m.IsAction ? "\u0001" : "")
-                      );
+                try {
+                    JObject r = JObject.Parse(routing);
+                    String location = "";
+                    if (r["respond_to"] == null)
+                        throw new FormatException("Cannot route message, target not defined.");
 
-                } else {
-                    // Have not joined location
-                    Console.WriteLine("Location not available: " + message.locationID);
+                    location = r["respond_to"].ToString();
+
+                    SendRaw("PRIVMSG " + location + " :" +
+                    // (message.IsAction ? "\u0001ACTION " : "") + 
+                    message.message
+                    // + (m.IsAction ? "\u0001" : "")
+                  );
                 }
+
+                catch (Exception e) { }
+
+                
             }
         }
 

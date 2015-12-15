@@ -8,32 +8,21 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
     internal class MessageSend : EventHandler {
 
         public void HandleEvent(JObject json) {
-            if (json["location"] == null)
-                throw new Exception("Location identifier not set.");
+            if (json["routing"] == null || json["routing"]["serviceID"] == null)
+                throw new Exception("Routing data or service identifier not set. Aborting event handling.");
 
             if (json["message"] == null || json["message"]["contents"] == null)
                 throw new Exception("Need to have a message (with contents and type) defined to send!");
 
 
-            Guid locationID = json["location"].ToObject<Guid>();
+            Guid serviceID = json["routing"]["serviceID"].ToObject<Guid>();
+            if (!Core.ConnectedServices.ContainsKey(serviceID))
+                throw new Exception("That service was not found or is not currently connected.");
 
-            Location location = LocationManager.GetLocationInfo(locationID);
-            if (location == null)
-                return;
+            Message msg = new Message(json["message"]["contents"].ToString());
 
-            Message msg = new Message(locationID, new User(""), json["message"]["contents"].ToString());
-
-            ChatService conn;
-
-            if (json["message"]["is_private"] != null && (bool) json["message"]["is_private"]) {
-                conn = Core.ConnectedServices[locationID] as ChatService;
-                msg.IsPrivate = true;
-                msg.target = new User(json["message"]["target"].ToString());
-            } else {
-                conn = Core.ConnectedServices[location.Parent] as ChatService;
-            }
-
-            conn.SendMessage(msg);
+            ChatService conn = Core.ConnectedServices[serviceID] as ChatService;
+            conn.SendMessage(json["routing"].ToString(), msg);
         }
     }
 }

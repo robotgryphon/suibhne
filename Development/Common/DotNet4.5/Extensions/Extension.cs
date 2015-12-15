@@ -234,19 +234,7 @@ namespace Ostenvighx.Suibhne.Extensions {
                         break;
 
                     case "command_help":
-
-                        if (CommandHandlers.ContainsKey(Event["handler"].ToString())) {
-                            MethodInfo method = CommandHandlers[Event["handler"].ToString()].Method;
-
-                            Object[] attrs = method.GetCustomAttributes(typeof(CommandHelpAttribute), false);
-                            foreach (Object attr in attrs) {
-                                if (attr.GetType() == typeof(CommandHelpAttribute)) {
-                                    CommandHelpAttribute handler = (CommandHelpAttribute)attr;
-                                    SendMessage(new Message(Guid.Parse(Event["location"]["id"].ToString()), new User(), handler.HelpText));
-                                }
-                            }
-                        }
-
+                        HandleHelpResponse(Event);
                         break;
 
                     case "message_received":
@@ -282,6 +270,30 @@ namespace Ostenvighx.Suibhne.Extensions {
             }
         }
 
+        private void HandleHelpResponse(JObject ev) {
+            JObject response = new JObject();
+            response.Add("event", "command_help_response");
+            response.Add("routing", ev["routing"]);
+
+            if (CommandHandlers.ContainsKey(ev["handler"].ToString())) {
+                MethodInfo method = CommandHandlers[ev["handler"].ToString()].Method;
+
+                Object[] attrs = method.GetCustomAttributes(typeof(CommandHelpAttribute), false);
+                foreach (Object attr in attrs) {
+                    if (attr.GetType() == typeof(CommandHelpAttribute)) {
+                        CommandHelpAttribute handler = (CommandHelpAttribute)attr;
+                        
+                        response.Add("helptext", handler.HelpText);
+                        SendEvent(response);
+                        break;
+                    }
+                }
+            } else {
+                response.Add("error", "That command handler does not have a help text defined.");
+                SendEvent(response);
+            }
+        }
+
         public void SendEvent(JObject response) {
             byte[] bytes = Encoding.UTF32.GetBytes(response.ToString());
             SendBytes(bytes);
@@ -301,11 +313,12 @@ namespace Ostenvighx.Suibhne.Extensions {
             conn.Send(b);
         }
 
-        public void SendMessage(Services.Chat.Message message) {
+        public void SendMessage(JObject routing, Message message) {
             JObject msg_data = new JObject();
             msg_data.Add("event", "message_send");
             msg_data.Add("extid", this.Identifier);
-            msg_data.Add("location", message.locationID);
+
+            msg_data.Add("routing", routing);
 
             JObject msg = new JObject();
             msg.Add("contents", message.message);

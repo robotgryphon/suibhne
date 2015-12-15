@@ -30,6 +30,11 @@ namespace Ostenvighx.Suibhne.Services {
             Disconnecting,
 
             /// <summary>
+            /// Connected to the service, now busy authenticating/logging in.
+            /// </summary>
+            Authenticating,
+
+            /// <summary>
             /// _conn is in progress. Will automatically change to status
             /// Connected upon finishing and start the information thread.
             /// </summary>
