@@ -1,0 +1,32 @@
+﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Wins.ConnectionList"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Services List" Height="300" MaxWidth="500" Width="500">
+    <Window.Resources>
+        <ContextMenu Name="context" x:Key="context">
+            <MenuItem Header="Add New Service" />
+            <MenuItem Header="Refresh List" Click="RefreshListHandler" />
+            <Separator />
+            
+            <MenuItem Header="With Selected..">
+                <MenuItem Header="Edit" Click="Edit" />
+                <MenuItem Header="Rename" />
+                <MenuItem Header="Delete" />                
+            </MenuItem>
+        </ContextMenu>
+    </Window.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden">
+            <ListView Name="ItemsList" SelectionMode="Single" ContextMenu="{StaticResource context}">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Service Name" Width="120" DisplayMemberBinding="{Binding Name}" />
+                        <GridViewColumn Header="Identifier" Width="240" DisplayMemberBinding="{Binding Identifier}"/>
+                        <GridViewColumn Header="Type" Width="100" DisplayMemberBinding="{Binding ServiceType}"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </ScrollViewer>
+    </Grid>
+</Window>

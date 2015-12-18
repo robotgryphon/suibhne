@@ -1,0 +1,32 @@
+﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Windows.ConnectionEditor"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Ostenvighx.Suibhne.Gui.Windows"
+        mc:Ignorable="d"
+        Title="Connection Editor" Height="500" Width="600" MaxWidth="600">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Background="#FF7FA8FF">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="80" />
+            </Grid.ColumnDefinitions>
+            
+            <Label Name="ServiceNameArea" Content="Loading.." FontSize="20" />
+            <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                <Button Margin="0,2" Height="20" Background="CornflowerBlue" BorderThickness="0" Click="ReloadFromDisk">Reload</Button>
+                <Button Margin="0,2" Height="20" Background="CornflowerBlue" BorderThickness="0" Click="WriteToDisk">Save</Button>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Name="connContainer"></StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
