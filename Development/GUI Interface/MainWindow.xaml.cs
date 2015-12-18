@@ -16,10 +16,7 @@ namespace Ostenvighx.Suibhne.Gui {
         public MainWindow() {
             InitializeComponent();
 
-            ExtensionSystem.Instance.AllExtensionsReady += () => {
-                Core.Start();
-            };
-
+            ExtensionSystem.Instance.AllExtensionsReady += () => { Core.Start(); };
             Core.Initialize();
 
 
