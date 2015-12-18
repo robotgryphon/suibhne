@@ -16,9 +16,6 @@ namespace Ostenvighx.Suibhne.Services.Chat {
             BotAdmin = 250
         }
 
-        public byte NetworkAuthLevel;
-        public byte LocalAuthLevel;
-
         /// <summary>
         /// The user's Username. This is usually the first bit of their hostmask.
         /// </summary>
@@ -59,8 +56,6 @@ namespace Ostenvighx.Suibhne.Services.Chat {
             :this(nickname, nickname, nickname) { }
 
         public User(String username, String last_displayname, String current_displayname) {
-            this.NetworkAuthLevel = (byte)User.AccessLevel.Basic; 
-            this.LocalAuthLevel = (byte)User.AccessLevel.Basic;
             this.UniqueID = username;
             this.LastDisplayName = last_displayname;
             this.DisplayName = current_displayname;

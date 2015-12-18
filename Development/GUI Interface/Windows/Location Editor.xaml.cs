@@ -15,8 +15,10 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Xml;
 using Nini.Config;
+using Ostenvighx.Suibhne.Services;
 
 namespace Ostenvighx.Suibhne.Gui.Wins {
+    /*
     /// <summary>
     /// Interaction logic for LocationEditor.xaml
     /// </summary>
@@ -41,7 +43,7 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
         public LocationEditor(Guid id)
             : this() {
             this.id = id;
-            this.location = LocationManager.GetLocationInfo(id);
+            this.location = ServiceManager.GetServiceInfo(id);
             this.Title += " - " + location.Name;
 
             LoadConnectorInformation();
@@ -387,5 +389,5 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
             LoadExistingData();
         }
         #endregion
-    }
+    } */
 }

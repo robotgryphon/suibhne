@@ -322,12 +322,6 @@ namespace Ostenvighx.Suibhne.Extensions {
 
             JObject msg = new JObject();
             msg.Add("contents", message.message);
-
-            if (message.IsPrivate) {
-                msg.Add("is_private", true);
-                msg.Add("target", message.target.DisplayName);
-            }
-
             msg_data.Add("message", msg);
 
             conn.Send(Encoding.UTF32.GetBytes(msg_data.ToString()));

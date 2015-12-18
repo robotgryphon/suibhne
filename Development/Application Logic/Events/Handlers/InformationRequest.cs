@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Ostenvighx.Suibhne.Services.Chat;
+using Ostenvighx.Suibhne.Services;
 
 namespace Ostenvighx.Suibhne.Events.Handlers {
 
@@ -43,23 +44,24 @@ namespace Ostenvighx.Suibhne.Events.Handlers {
 
                     break;
 
-                case "location":
-                    if (json["location"] == null)
-                        throw new FormatException("Need to specify a location guid.");
+                case "service":
+                    if (json["serviceID"] == null)
+                        throw new FormatException("Need to specify a service identifier.");
 
                     Guid loc;
-                    try { loc = Guid.Parse(json["location"].ToString()); }
-                    catch (Exception) { throw new FormatException("Location is not a valid guid.");  }
+                    try { loc = Guid.Parse(json["serviceID"].ToString()); }
+                    catch (Exception) { throw new FormatException("Service identifier is not a valid guid.");  }
 
-                    Location location = LocationManager.GetLocationInfo(loc);
+                    ServiceItem service = ServiceManager.GetServiceInfo(loc);
 
-                    JObject locationj = new JObject();
-                    locationj.Add("name", location.Name);
-                    locationj.Add("type", (byte) location.Type);
-                    if (location.Parent != Guid.Empty)
-                        locationj.Add("parent", location.Parent);
+                    JObject serviceData = new JObject();
+                    serviceData.Add("name", service.Name);
+                    serviceData.Add("type", service.ServiceType);
 
-                    returnData.Add("location", locationj);
+                    // TODO: ServiceHelper.AddAdditionalServiceData();
+                    // Call the service DLL to see if it has any more information to add?
+
+                    returnData.Add("service", serviceData);
                     break;
 
                 case "system":

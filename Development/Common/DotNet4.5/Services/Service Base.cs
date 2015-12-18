@@ -35,13 +35,14 @@ namespace Ostenvighx.Suibhne.Services {
         public abstract void Start();
         public abstract void Stop(String reason = "");
 
-        protected virtual void HandleConnectionComplete() {
+        protected virtual void ConnectionComplete() {
             if (this.OnConnectionComplete != null)
                 OnConnectionComplete(this);
         }
 
-        protected virtual void HandleDisconnectComplete() {
-            
+        protected virtual void DisconnectionComplete() {
+            if (this.OnDisconnectComplete != null)
+                OnDisconnectComplete(this);
         }
         #endregion
 

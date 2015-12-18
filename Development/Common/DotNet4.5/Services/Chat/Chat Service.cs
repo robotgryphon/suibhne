@@ -25,63 +25,15 @@ namespace Ostenvighx.Suibhne.Services.Chat {
         /// <value>The server hostname.</value>
         public Chat.Location Server { get; protected set; }
 
-        /// <summary>
-        /// A list of all the listened locations.
-        /// This list contains joined channels.
-        /// </summary>
-        public Dictionary<Guid, Location> Listened {
-            get;
-            protected set;
-        }
+        protected virtual void LocationJoined(Location l, String extraJSON = "") { }
 
-        /// <summary>
-        /// Get a reference to an Location object by name. Useful for locationID lookups.
-        /// </summary>
-        /// <param name="locationName">Location to attempt lookup on.</param>
-        /// <returns>Reference to the Location for a given locationName.</returns>
-        public Guid GetLocationIdByName(String locationName) {
-            Guid returned = Guid.Empty;
-            foreach (KeyValuePair<Guid, Location> location in Listened) {
-                if (location.Value.Name.Equals(locationName.ToLower()))
-                    return location.Key;
-            }
+        protected virtual void LocationLeft(Location l, String extraJSON = "") { }
 
-            return returned;
-        }
+        protected virtual void UserJoined(Location l, User u, String extraJSON = "") { }
 
-        /// <summary>
-        /// Get a reference to an Location object by name. Useful for locationID lookups.
-        /// </summary>
-        /// <param name="locationName">Location to attempt lookup on.</param>
-        /// <returns>Reference to the Location for a given locationName.</returns>
-        public Location GetLocationByName(String locationName) {
-            Guid locationID = GetLocationIdByName(locationName);
-            if (locationID != Guid.Empty)
-                return Listened[locationID];
+        protected virtual void UserLeft(Location l, User u, String extraJSON = "") { }
 
-            return Location.Unknown;
-        }
-
-        public abstract void JoinLocation(Guid g);
-
-        public abstract void LeaveLocation(Guid g);
-
-        protected virtual void LocationJoined(Guid l, String extraJSON = "") {
-        }
-
-        protected virtual void LocationLeft(Guid l, String extraJSON = "") { }
-
-        protected virtual void UserJoined(Guid l, User u, String extraJSON = "") {
-            
-        }
-
-        protected virtual void UserLeft(Guid l, User u, String extraJSON = "") {
-            
-        }
-
-        protected virtual void UserQuit(Guid l, User u, String extraJSON = "") {
-            
-        }
+        protected virtual void UserQuit(Location l, User u, String extraJSON = "") { }
 
         public abstract void SendMessage(String routing, Message msg);
 

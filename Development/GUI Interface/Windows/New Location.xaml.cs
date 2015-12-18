@@ -1,4 +1,5 @@
-﻿using Ostenvighx.Suibhne.Services.Chat;
+﻿using Ostenvighx.Suibhne.Services;
+using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.IO;
 using System.Windows;
@@ -44,11 +45,16 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
             Guid newID = Guid.NewGuid();
             switch (addTypeString) {
                 case "network":
-                    LocationManager.AddNewNetwork(newID, type.Content.ToString(), name.Text);
+                    Services.ServiceItem newService = new Services.ServiceItem();
+                    newService.Identifier = newID;
+                    newService.Name = name.Text;
+                    newService.ServiceType = type.Content.ToString();
+
+                    ServiceManager.AddService(newService);
                     break;
 
                 case "location":
-                    LocationManager.AddNewLocation(Guid.Parse(type.Uid), newID, name.Text);
+                    // TODO: Reimplement new service location handler
                     break;
             }
 
@@ -66,8 +72,8 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
                     dropLabel.Content = "Parent Network:";
                     networkType.Items.Clear();
 
-                    foreach(Guid netID in LocationManager.GetServiceIdentifiers()) {
-                        Location l = LocationManager.GetLocationInfo(netID);
+                    foreach(Guid netID in ServiceManager.GetServiceIdentifiers()) {
+                        Location l = ServiceManager.GetServiceInfo(netID);
                         ComboBoxItem cbi = new ComboBoxItem();
                         cbi.Content = l.Name;
                         cbi.Uid = netID.ToString();

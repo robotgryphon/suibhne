@@ -304,10 +304,12 @@ namespace Ostenvighx.Suibhne.Extensions {
                 Debug.WriteLine("Trying to start extension with file " + filename, "Extensions");
 
                 ProcessStartInfo psi = new ProcessStartInfo();
+                psi.RedirectStandardOutput = true;
+                psi.CreateNoWindow = true;
                 psi.WorkingDirectory = extDir;
                 psi.FileName = filename;
                 psi.Arguments = "--launch";
-                psi.UseShellExecute = true;
+                psi.UseShellExecute = false;
 
                 Process.Start(psi);
             }

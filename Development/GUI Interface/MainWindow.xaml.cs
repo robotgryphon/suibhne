@@ -82,13 +82,13 @@ namespace Ostenvighx.Suibhne.Gui {
         }
 
         private void click_LocationsEditor(object sender, RoutedEventArgs e) {
-            Wins.Locations win = new Wins.Locations();
+            Wins.ConnectionList win = new Wins.ConnectionList();
             win.ShowDialog();
         }
 
         private void click_NewLocation(object sender, RoutedEventArgs e) {
-            Wins.New_Location win = new Wins.New_Location();
-            win.ShowDialog();
+            // Wins.New_Location win = new Wins.New_Location();
+            // win.ShowDialog();
         }
 
         private void InjectEventHandler(object sender, RoutedEventArgs e) {

@@ -111,17 +111,17 @@ namespace Ostenvighx.Suibhne.Commands {
             throw new KeyNotFoundException("That command is not registered.");
         }
 
-        internal String[] GetAvailableCommandsForUser(User u, bool includeAccessLevels = false) {
+        internal String[] GetCommandsForLevel(byte level, bool includeAccessLevels = false) {
             List<String> available = new List<String>();
 
             foreach (KeyValuePair<String, CommandMap> cm in CommandManager.Instance.CommandMapping) {
                 if (ExtensionSystem.Instance.Extensions.ContainsKey(cm.Value.Extension)) {
                     if (ExtensionSystem.Instance.Extensions[cm.Value.Extension].Ready)
-                        if(cm.Value.AccessLevel <= u.NetworkAuthLevel)
+                        if(cm.Value.AccessLevel <= level)
                             available.Add(cm.Key + (includeAccessLevels ? " (" + cm.Value.AccessLevel + ")" : ""));
                 } else {
                     // Command is hard-coded into here
-                    if (cm.Value.AccessLevel <= u.NetworkAuthLevel)
+                    if (cm.Value.AccessLevel <= level)
                         available.Add(cm.Key + (includeAccessLevels ? " (" + cm.Value.AccessLevel + ")" : ""));
                 }
             }

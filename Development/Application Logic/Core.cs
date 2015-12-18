@@ -81,10 +81,10 @@ namespace Ostenvighx.Suibhne {
         private static void LoadServiceInformation() {
             Core.ConnectedServices = new Dictionary<Guid, Services.ServiceConnector>();
 
-            Guid[] serviceIDs = LocationManager.GetServiceIdentifiers();
+            Guid[] serviceIDs = ServiceManager.GetServiceIdentifiers();
             foreach (Guid serviceID in serviceIDs) {
                 try {
-                    ServiceConnector serv = ServiceHelper.GenerateConnector(serviceID);
+                    ServiceConnector serv = Services.ServiceLoader.GenerateConnector(serviceID);
                     if(serv != null)
                         Core.ConnectedServices.Add(serviceID, serv);
                 }

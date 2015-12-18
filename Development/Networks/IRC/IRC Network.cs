@@ -25,14 +25,14 @@ namespace Ostenvighx.Suibhne.Services.Irc {
         protected Socket _conn;
 
         /// <summary>
-        /// Port number being used by the socket.
-        /// </summary>
-        protected int port;
-
-        /// <summary>
         /// Global buffer for incoming data on socket.
         /// </summary>
         protected byte[] GlobalBuffer;
+
+        /// <summary>
+        /// Port number being used by the socket.
+        /// </summary>
+        protected int port;
         #endregion
 
         protected String unfinishedData;
@@ -50,7 +50,6 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             this._conn = null;
             this.GlobalBuffer = new byte[2048];
 
-            this.Listened = new Dictionary<Guid, Chat.Location>();
             this.Status = Services.Reference.ConnectionStatus.NotReady;
 
             this._conn = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -94,34 +93,6 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             DoNetworkSetup(config);
         }
 
-        public override void Setup(String configBase) {
-
-            DirectoryInfo di = new DirectoryInfo(configBase);
-
-            // Get config root by going up a couple of levels (ROOT/Networks/Identifier/)
-            this.ConfigRoot = di.FullName;
-
-            IniConfigSource configLoaded = new IniConfigSource(ConfigRoot + "/Services/" + Identifier + "/service.ini");
-            configLoaded.CaseSensitive = false;
-
-            DoNetworkSetup(configLoaded);
-        }
-
-        private void DoNetworkSetup(IConfigSource config) {
-            this.Me = new Chat.User(
-                config.Configs["Account Settings"].GetString("userName", "user"),
-                config.Configs["Authentification"].GetString("authPass", ""),
-                config.Configs["Account Settings"].GetString("displayName", "IrcUser"));
-
-            this.Server = new Chat.Location(
-                config.Configs["Host Settings"].GetString("host", "localhost"),
-                config.Configs["Host Settings"].GetString("servPass", ""),
-                Chat.Reference.LocationType.Network);
-
-            this.port = config.Configs["Host Settings"].GetInt("port", 6667);
-            this.Status = Services.Reference.ConnectionStatus.Disconnected;
-        }
-
         /// <summary>
         /// Sends a NICK command to the server to try and change the bot's current DisplayName.
         /// </summary>
@@ -134,6 +105,91 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                 Chat.User tmpMe = new Chat.User(Me.UniqueID, log ? Me.DisplayName : Me.LastDisplayName, nickname);
                 if (log) Me = tmpMe;
             }
+        }
+
+        public override string[] GetSupportedEvents() {
+            return new string[] {
+                "user_joined",
+                "user_left",
+                "user_quit",
+                "message_received",
+                "user_changed",
+                "topic_changed",
+
+                "network_connected",
+                "network_disconnected"
+            };
+        }
+
+        /// <summary>
+        /// Part a locationID on the server with a specified message.
+        /// </summary>
+        /// <param name="locationID">Public to leave. Must be in the current locationID list.</param>
+        /// <param name="reason">Message to send upon leaving the locationID.</param>
+        public void LeaveLocation(String locationName, String reason) {
+            if (Status == Services.Reference.ConnectionStatus.Connected) {
+                if (locationName != null && locationName != "") {
+                    Chat.Location l = new Location(locationName);
+
+                    SendRaw("PART " + l.Name + " :" + reason);
+                    base.LocationLeft(l);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sends a well-formed message, using the message's location as the destination and other
+        /// values as expected. The message's SENDER parameter does not matter, but it should
+        /// be kept in practice that it matches the bot's current DisplayName on the server.
+        /// </summary>
+        /// <param name="message">Message to send to the server.</param>
+        public override void SendMessage(String routing, Chat.Message message) {
+            if (Status == Services.Reference.ConnectionStatus.Connected && message != null) {
+
+                try {
+                    JObject r = JObject.Parse(routing);
+                    String location = "";
+                    if (r["respond_to"] == null)
+                        throw new FormatException("Cannot route message, target not defined.");
+
+                    location = r["respond_to"].ToString();
+
+                    SendRaw("PRIVMSG " + location + " :" +
+                    // (message.IsAction ? "\u0001ACTION " : "") + 
+                    message.message
+                    // + (m.IsAction ? "\u0001" : "")
+                  );
+                }
+
+                catch (Exception e) { }
+
+
+            }
+        }
+
+        /// <summary>
+        /// Send a raw command to the server.
+        /// </summary>
+        /// <param name="message">Line to send to the server.</param>
+        /// <param name="log">If set to <c>true</c>, log the raw command to the output window. (Enabled by default)</param>
+        public void SendRaw(String data) {
+            if (this._conn.Connected && Status != Services.Reference.ConnectionStatus.Disconnected) {
+                byte[] bdata = Encoding.UTF8.GetBytes(data + "\r\n");
+                _conn.Send(bdata);
+            }
+        }
+
+        public override void Setup(String configBase) {
+
+            DirectoryInfo di = new DirectoryInfo(configBase);
+
+            // Get config root by going up a couple of levels (ROOT/Networks/Identifier/)
+            this.ConfigRoot = di.FullName;
+
+            IniConfigSource configLoaded = new IniConfigSource(ConfigRoot + "/Services/" + Identifier + "/service.ini");
+            configLoaded.CaseSensitive = false;
+
+            DoNetworkSetup(configLoaded);
         }
 
         /// <summary>
@@ -151,6 +207,17 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                     Console.WriteLine(e);
                 }
             }
+        }
+
+        /// <summary>
+        /// Closes the connection to the server after finishing the input buffer.
+        /// Defaults with quit message "Leaving".
+        /// </summary>
+        /// <param name="reason">Specifies a quit message to send in place of default.</param>
+        public override void Stop(String reason = "Leaving") {
+            SendRaw("QUIT :" + reason);
+            Status = Services.Reference.ConnectionStatus.Disconnected;
+            base.DisconnectionComplete();
         }
 
         /// <summary>
@@ -239,8 +306,66 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             }
         }
 
+        /// <summary>
+        /// Join a locationID on the server. This will automatically check the location
+        /// password as well, if it is defined it will use it.
+        /// </summary>
+        /// <param name="locationID">Public (as an Location) to join.</param>
+        internal void JoinLocation(String name) {
+            if (Status == Services.Reference.ConnectionStatus.Connected) {
+
+                // Load location information
+                IniConfigSource l = new IniConfigSource(ConfigRoot + "/Services/" + this.Identifier + "/Locations/" + name + ".ini");
+                l.CaseSensitive = false;
+
+                Chat.Location location = new Chat.Location("");
+                if (l.Configs["Location"] != null && l.Configs["Location"].GetString("Name") != null) {
+                    location.Name = l.Configs["Location"].GetString("name");
+                } else {
+                    return;
+                }
+
+                location.Password = l.Configs["Location"].GetString("Password", "");
+                if (location.Password != "") {
+                    SendRaw("JOIN " + location.Name + " " + location.Password);
+                } else {
+                    SendRaw("JOIN " + location.Name);
+                }
+
+                location.Parent = this.Identifier;
+                SendRaw("WHO " + location.Name);
+
+                base.LocationJoined(location);
+            }
+        }
+
+        internal void SendMessage(Message m) {
+            JObject routing = new JObject();
+            routing.Add("serviceID", Identifier);
+            routing.Add("respond_to", m.location);
+
+            SendMessage(routing.ToString(), m);
+        }
+
+        /// <summary>
+        /// Internal method to handle a NICK line sent from the server.
+        /// </summary>
+        /// <param name="line">Line to parse.</param>
+        protected void HandleNicknameChange(String line) {
+            String[] dataChunks = line.Split(new char[] { ' ' });
+
+            User changer = User.Parse(dataChunks[0]);
+            changer.LastDisplayName = changer.DisplayName;
+            changer.DisplayName = dataChunks[2].TrimStart(':');
+
+            if (changer.LastDisplayName == Me.DisplayName) {
+                Me.LastDisplayName = Me.DisplayName;
+                Me.DisplayName = changer.DisplayName;
+            }
+        }
+
         // Hook connection complete, make sure we identify before triggering rest of the base handler actions.
-        protected override void HandleConnectionComplete() {
+        protected override void ConnectionComplete() {
             Debug.WriteLine("Connection complete on " + Identifier);
 
             if (Me.LastDisplayName != "") {
@@ -251,15 +376,11 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                 SendMessage(message);
             }
 
-            foreach (String directory in Directory.GetDirectories(ConfigRoot + "/Services/" + Identifier + "/Locations/")) {
-                String id = new DirectoryInfo(directory).Name;
-                Guid idGuid;
-                try { idGuid = Guid.Parse(id); }
-                catch (FormatException) { Console.WriteLine("Failed to get location info from directory " + directory + "- invalid GUID."); break; }
-            }
+            this.ConnectToChannels();
 
-            base.HandleConnectionComplete();
+            base.ConnectionComplete();
         }
+
         /// <summary>
         /// Method to handle incoming data, line by line.
         /// Actual parsing is done here, not in DataRecievedCallback.
@@ -279,13 +400,13 @@ namespace Ostenvighx.Suibhne.Services.Irc {
 
                     case "315":
                         // End of WHO response
-                        ParseWhoList(line);
+                        // ParseWhoList(line);
                         break;
 
 
                     case "352":
                         // who response
-                        ParseWhoResponse(line);
+                        // ParseWhoResponse(line);
                         break;
 
                     case "353":
@@ -317,12 +438,12 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                     case "376":
                         // End MOTD
                         Status = Services.Reference.ConnectionStatus.Connected;
-                        HandleConnectionComplete();
+                        ConnectionComplete();
                         break;
 
                     case "422":
                         Status = Services.Reference.ConnectionStatus.Connected;
-                        HandleConnectionComplete();
+                        ConnectionComplete();
                         break;
 
                     case "433":
@@ -339,26 +460,17 @@ namespace Ostenvighx.Suibhne.Services.Irc {
 
                     case "join":
                         User joiner = User.Parse(dataChunks[0]);
-                        this.HandleUserJoined(GetLocationIdByName(dataChunks[2].TrimStart(':')), joiner);
+                        this.HandleUserJoined(dataChunks[2].TrimStart(':'), joiner);
                         break;
 
                     case "part":
                         User parter = User.Parse(dataChunks[0]);
-                        this.HandleUserLeft(GetLocationIdByName(dataChunks[2].TrimStart(':')), parter);
+                        this.HandleUserLeft(dataChunks[2].TrimStart(':'), parter);
                         break;
 
                     case "quit":
                         Chat.User quitter = User.Parse(dataChunks[0]);
-                        UserQuit(Identifier, quitter);
-
-                        foreach (Chat.Location listened in Listened.Values) {
-                            string hostmask = dataChunks[0].Substring(line.IndexOf("@") + 1);
-                            if (listened.AccessLevels.ContainsKey("*@" + hostmask))
-                                listened.AccessLevels.Remove("*@" + hostmask);
-
-                            if (listened.AccessLevels.ContainsKey(quitter.DisplayName + "@" + hostmask))
-                                listened.AccessLevels.Remove(quitter.DisplayName + "@" + hostmask);
-                        }
+                        this.HandleUserQuit(quitter);
                         break;
                     #endregion
 
@@ -367,11 +479,10 @@ namespace Ostenvighx.Suibhne.Services.Irc {
                         String topic = line.Substring(line.IndexOf(" :") + 2).TrimEnd(new char[] { '\r', '\n' }).Trim();
 
                         Console.WriteLine(u.DisplayName + " has changed the topic to " + topic);
-                        Guid id = this.GetLocationIdByName(dataChunks[2]);
-                        String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"unique_id\": \"" + u.UniqueID + "\", \"display_name\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
 
-                        FireEvent(json);
-
+                        // TODO: Reimplement topic changed
+                        // String json = "{ \"event\": \"topic_changed\", \"location\": \"" + id.ToString() + "\", \"changer\": { \"unique_id\": \"" + u.UniqueID + "\", \"display_name\": \"" + u.DisplayName + "\"}, \"topic\": \"" + topic + "\"}";
+                        // FireEvent(json);
                         break;
 
                     case "mode":
@@ -381,7 +492,7 @@ namespace Ostenvighx.Suibhne.Services.Irc {
 
                     case "privmsg":
                     case "notice":
-                        if(Status == Services.Reference.ConnectionStatus.Connected)
+                        if (Status == Services.Reference.ConnectionStatus.Connected)
                             HandleIncomingMessage(line);
                         break;
 
@@ -418,161 +529,7 @@ namespace Ostenvighx.Suibhne.Services.Irc {
 
             base.MessageRecieved(msg, extra.ToString());
         }
-
-        /// <summary>
-        /// Join a locationID on the server. This will automatically check the location
-        /// password as well, if it is defined it will use it.
-        /// </summary>
-        /// <param name="locationID">Public (as an Location) to join.</param>
-        public override void JoinLocation(Guid locationID) {
-            if (Status == Services.Reference.ConnectionStatus.Connected) {
-                if (locationID != Guid.Empty && !this.Listened.ContainsKey(locationID)) {
-
-                    // Load location information
-                    IniConfigSource l = new IniConfigSource(ConfigRoot + "/Services/" + this.Identifier + "/Locations/" + locationID + "/location.ini");
-                    l.CaseSensitive = false;
-
-                    Chat.Location location = new Chat.Location("");
-                    if (l.Configs["Location"] != null && l.Configs["Location"].GetString("Name") != null) {
-                        location.Name = l.Configs["Location"].GetString("name");
-                    } else {
-                        return;
-                    }
-
-                    location.Password = l.Configs["Location"].GetString("Password", "");
-                    if (location.Password != "") {
-                        SendRaw("JOIN " + location.Name + " " + location.Password);
-                    } else {
-                        SendRaw("JOIN " + location.Name);
-                    }
-
-                    location.Parent = this.Identifier;
-                    Listened.Add(locationID, location);
-
-                    SendRaw("WHO " + location.Name);
-
-                    base.LocationJoined(locationID);
-                }
-            }
-        }
-
-        public override void LeaveLocation(Guid g) {
-            LeaveLocation(g, "Leaving");
-        }
-
-        /// <summary>
-        /// Part a locationID on the server with a specified message.
-        /// </summary>
-        /// <param name="locationID">Public to leave. Must be in the current locationID list.</param>
-        /// <param name="reason">Message to send upon leaving the locationID.</param>
-        public void LeaveLocation(Guid locationID, String reason) {
-            if (Status == Services.Reference.ConnectionStatus.Connected) {
-                if (locationID != null && locationID != Guid.Empty) {
-                    if (Listened.ContainsKey(locationID)) {
-                        Chat.Location l = Listened[locationID];
-
-                        SendRaw("PART " + Listened[locationID].Name + " :" + reason);
-                        this.Listened.Remove(locationID);
-                        base.LocationLeft(locationID);
-                    } else {
-                        throw new Exception("Location not found or already exited.");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Send a raw command to the server.
-        /// </summary>
-        /// <param name="message">Line to send to the server.</param>
-        /// <param name="log">If set to <c>true</c>, log the raw command to the output window. (Enabled by default)</param>
-        public void SendRaw(String data) {
-            if (this._conn.Connected && Status != Services.Reference.ConnectionStatus.Disconnected) {
-                byte[] bdata = Encoding.UTF8.GetBytes(data + "\r\n");
-                _conn.Send(bdata);
-            }
-        }
-
-        internal void SendMessage(Message m) {
-            JObject routing = new JObject();
-            routing.Add("serviceID", Identifier);
-            routing.Add("respond_to", m.location);
-
-            SendMessage(routing.ToString(), m);
-        }
-
-        /// <summary>
-        /// Sends a well-formed message, using the message's location as the destination and other
-        /// values as expected. The message's SENDER parameter does not matter, but it should
-        /// be kept in practice that it matches the bot's current DisplayName on the server.
-        /// </summary>
-        /// <param name="message">Message to send to the server.</param>
-        public override void SendMessage(String routing, Chat.Message message) {
-            if (Status == Services.Reference.ConnectionStatus.Connected && message != null) {
-
-                try {
-                    JObject r = JObject.Parse(routing);
-                    String location = "";
-                    if (r["respond_to"] == null)
-                        throw new FormatException("Cannot route message, target not defined.");
-
-                    location = r["respond_to"].ToString();
-
-                    SendRaw("PRIVMSG " + location + " :" +
-                    // (message.IsAction ? "\u0001ACTION " : "") + 
-                    message.message
-                    // + (m.IsAction ? "\u0001" : "")
-                  );
-                }
-
-                catch (Exception e) { }
-
-                
-            }
-        }
-
-        protected void HandleUserJoined(Guid l, User u) {
-            base.UserJoined(l, u);
-            SendRaw("WHO " + Listened[l].Name);
-        }
-
-        protected void HandleUserLeft(Guid l, Chat.User u) {
-            // Make sure we only send a new names list if it's not US that left.
-            if (u.DisplayName.ToLower() != Me.DisplayName.ToLower())
-                SendRaw("WHO " + Listened[l].Name);
-
-            base.UserLeft(l, u);
-        }
-
-        /// <summary>
-        /// Internal method to handle a NICK line sent from the server.
-        /// </summary>
-        /// <param name="line">Line to parse.</param>
-        protected void HandleNicknameChange(String line) {
-            String[] dataChunks = line.Split(new char[] { ' ' });
-
-            User changer = User.Parse(dataChunks[0]);
-            changer.LastDisplayName = changer.DisplayName;
-            changer.DisplayName = dataChunks[2].TrimStart(':');
-
-            if (changer.LastDisplayName == Me.DisplayName) {
-                Me.LastDisplayName = Me.DisplayName;
-                Me.DisplayName = changer.DisplayName;
-            }
-
-            foreach (Chat.Location location in Listened.Values) {
-                foreach (String host in location.AccessLevels.Keys) {
-                    if (host.StartsWith(changer.LastDisplayName)) {
-                        byte accessLevel = location.AccessLevels[host];
-                        location.AccessLevels.Remove(host);
-                        location.AccessLevels.Add(changer.DisplayName + "@" + host.Substring(host.IndexOf("@") + 1), accessLevel);
-
-                        break;
-                    }
-                }
-            }
-        }
-
+        
         /// <summary>
         /// Deal with incoming PING requests and send matching PONG commands back to
         /// the server that sent them.
@@ -583,18 +540,35 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             SendRaw("PONG " + dataChunks[1]);
         }
 
-        /// <summary>
-        /// Closes the connection to the server after finishing the input buffer.
-        /// Defaults with quit message "Leaving".
-        /// </summary>
-        /// <param name="reason">Specifies a quit message to send in place of default.</param>
-        public override void Stop(String reason = "Leaving") {
-            SendRaw("QUIT :" + reason);
-            Status = Services.Reference.ConnectionStatus.Disconnected;
-            base.HandleDisconnectComplete();
+        protected void HandleUserLeft(String locationName, Chat.User u) {
+            // Make sure we only send a new names list if it's not US that left.
+            if (u.DisplayName.ToLower() != Me.DisplayName.ToLower())
+                SendRaw("WHO " + locationName);
+
+            base.UserLeft(new Location(locationName), u);
         }
 
+        private void ConnectToChannels() {
+            foreach (String filename in Directory.GetFiles(ConfigRoot + "Services/" + Identifier + "/Locations/", "*.ini", SearchOption.TopDirectoryOnly)) {
+                String fn = new FileInfo(filename).Name;
+                JoinLocation(fn.Substring(0, fn.IndexOf('.')));
+            }
+        }
 
+        private void DoNetworkSetup(IConfigSource config) {
+            this.Me = new Chat.User(
+                config.Configs["Account Settings"].GetString("userName", "user"),
+                config.Configs["Authentification"].GetString("authPass", ""),
+                config.Configs["Account Settings"].GetString("displayName", "IrcUser"));
+
+            this.Server = new Chat.Location(
+                config.Configs["Host Settings"].GetString("host", "localhost"),
+                config.Configs["Host Settings"].GetString("servPass", ""),
+                Chat.Reference.LocationType.Network);
+
+            this.port = config.Configs["Host Settings"].GetInt("port", 6667);
+            this.Status = Services.Reference.ConnectionStatus.Disconnected;
+        }
         private void HandleModeChange(String line) {
             Match match = Regex.Match(line, RegularExpressions.SENDER_REGEX_RAW + @" MODE " + RegularExpressions.LOCATION_REGEX + @" " + @"(?<data>.*)", RegexOptions.ExplicitCapture);
             if (!match.Success)
@@ -603,7 +577,41 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             SendRaw("WHO " + match.Groups["location"].Value);
         }
 
+        private void HandleUserJoined(String locationName, User u) {
+            base.UserJoined(new Location(locationName), u);
+            SendRaw("WHO " + locationName);
+        }
+
+        private void HandleUserQuit(Chat.User quitter) {
+            base.UserQuit(this.Server, quitter);
+        }
+        
+        // TODO: Reimplement access levels at a later date. System needs work.
+        /*
         #region Who Responses
+        /// <summary>
+        /// Goes through the temporary who feedback and gets all the hostmasks, translating them into ban strings for the final access list
+        /// </summary>
+        private void ParseWhoList(String line) {
+            String[] lineBits = line.Split(new char[] { ' ' });
+
+            Chat.Location location = new Location(lineBits[3]);
+            location.AccessLevels.Clear();
+
+            foreach (KeyValuePair<string, Dictionary<string, byte>> hostmaskItem in TempUserAccessLevels) {
+                if (hostmaskItem.Value.Count > 1) {
+                    // Remap keys
+                    foreach (KeyValuePair<string, byte> user in hostmaskItem.Value) {
+                        location.AccessLevels.Add(user.Key + "@" + hostmaskItem.Key, user.Value);
+                    }
+                } else {
+                    location.AccessLevels.Add("*@" + hostmaskItem.Key, hostmaskItem.Value.Values.ElementAt(0));
+                }
+            }
+
+            TempUserAccessLevels.Clear();
+        }
+
         private void ParseWhoResponse(String line) {
 
             /// :foxtaur.furnet.org 352 Delenas #ostenvighx ~Delenas fur-3EB9DC59.hsd1.pa.comcast.net foxtaur.furnet.org Delenas Hr~ :0 Delenas Freshtt
@@ -632,44 +640,8 @@ namespace Ostenvighx.Suibhne.Services.Irc {
             TempUserAccessLevels[bits[5]].Add(bits[7], level);
 
         }
-
-        /// <summary>
-        /// Goes through the temporary who feedback and gets all the hostmasks, translating them into ban strings for the final access list
-        /// </summary>
-        private void ParseWhoList(String line) {
-            String[] lineBits = line.Split(new char[] { ' ' });
-            Guid locationID = GetLocationIdByName(lineBits[3]);
-            Chat.Location location = Listened[locationID];
-            location.AccessLevels.Clear();
-
-            foreach (KeyValuePair<string, Dictionary<string, byte>> hostmaskItem in TempUserAccessLevels) {
-                if (hostmaskItem.Value.Count > 1) {
-                    // Remap keys
-                    foreach (KeyValuePair<string, byte> user in hostmaskItem.Value) {
-                        location.AccessLevels.Add(user.Key + "@" + hostmaskItem.Key, user.Value);
-                    }
-                } else {
-                    location.AccessLevels.Add("*@" + hostmaskItem.Key, hostmaskItem.Value.Values.ElementAt(0));
-                }
-            }
-
-            TempUserAccessLevels.Clear();
-        }
         #endregion
-
-        public override string[] GetSupportedEvents() {
-            return new string[] {
-                "user_joined",
-                "user_left",
-                "user_quit",
-                "message_received",
-                "user_changed",
-                "topic_changed",
-
-                "network_connected",
-                "network_disconnected"
-            };
-        }
+        */
     }
 }
 

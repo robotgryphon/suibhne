@@ -1,0 +1,25 @@
+﻿{
+  "Host Settings": {
+    "fields": {
+      "host": { "type": "text", "default": "localhost", "label": "Host Name" },
+      "port": { "type": "integer", "default": 6667, "label": "Port Number" },
+      "servPass": { "type": "password", "label": "Server Password" }
+    }
+  },
+
+  "Account Settings": {
+    "fields": {
+      "userName": { "type": "text", "default": "Suibhne", "label": "Username" },
+      "displayName": { "type": "text", "default": "Suibhne", "label": "Display Name" },
+      "realName": { "type": "text", "default": "Suibhne", "label": "Real Name" }
+    }
+  },
+
+  "Authentification": {
+    "summary": "Authentification is used to identify with NickServ or similar services on the network.",
+    "fields": {
+      "authPass": { "type": "password", "label": "Password" }
+    }
+  }
+
+}
