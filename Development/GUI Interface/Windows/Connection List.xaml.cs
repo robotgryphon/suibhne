@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 
-namespace Ostenvighx.Suibhne.Gui.Wins {
+namespace Ostenvighx.Suibhne.Gui.Windows {
     /// <summary>
     /// Interaction logic for Locations.xaml
     /// </summary>
@@ -41,73 +41,51 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
             Windows.ConnectionEditor ce = new Windows.ConnectionEditor(selectedItem);
             ce.Show();
-            // LocationEditor le = new LocationEditor(locationID);
-            // le.Show();
         }
 
-        /*
-
         protected void Add(object sender, RoutedEventArgs e) {
-            New_Location n = new New_Location();
+            String[] serviceConnectors = ServiceManager.GetAllServiceConnectors();
+            if(serviceConnectors.Length == 0) {
+                MessageBox.Show("You don't have any service connectors registered!");
+                e.Handled = true;
+                return;
+            }
+
+            Windows.NewServiceConnection n = new Windows.NewServiceConnection();
             n.ShowDialog();            
         }
 
+        
         protected void Rename(object sender, RoutedEventArgs e) {
-            TreeViewItem selectedItem = (TreeViewItem)itemsList.SelectedItem;
-            if (selectedItem == null || selectedItem.Uid == null || selectedItem.Uid == Guid.Empty.ToString()) {
+            if (ItemsList.SelectedItem == null) {
                 MessageBox.Show("Please select an item to rename.");
+                e.Handled = true;
                 return;
             }
 
-            Guid locationID = Guid.Parse(selectedItem.Uid);
-
-            // Double check it's a valid location
-            Location locationInfo = ServiceManager.GetServiceInfo(locationID);
-            if (locationInfo == null)
-                return;
-
-            Wins.RenameDialog rnd = new RenameDialog(locationID);
+            RenameDialog rnd = new RenameDialog(((ServiceItem) ItemsList.SelectedItem).Identifier);
             rnd.ShowDialog();
-
-            String new_name = rnd.text.Text;
-            ServiceManager.Rename(locationID, new_name);
 
             PopulateLocationList();
         }
-
         
         private void Delete(object sender, RoutedEventArgs e) {
-            TreeViewItem selectedItem = (TreeViewItem)itemsList.SelectedItem;
-            if (selectedItem == null || selectedItem.Uid == null || selectedItem.Uid == Guid.Empty.ToString()) {
-                MessageBox.Show("Please select an item to delete.");
+            if(ItemsList.SelectedItem == null) {
+                MessageBox.Show("Please select a service connection to delete.");
+                e.Handled = true;
                 return;
             }
 
-            Guid locationID = Guid.Parse(selectedItem.Uid);
-            Location locationInfo = ServiceManager.GetServiceInfo(locationID);
-            if (locationInfo == null)
-                return;
+            ServiceItem selected = (ServiceItem) ItemsList.SelectedItem;
+            MessageBoxResult result = MessageBox.Show("Are you SURE you want to delete '" + selected.Name + 
+                "? This process cannot be reversed.", "Confirm Deletion", MessageBoxButton.YesNo);
 
-            MessageBoxResult result = MessageBox.Show("Are you SURE you want to delete '" + locationInfo.Name + "? This process will also delete any children.", "Comfirm Deletion", MessageBoxButton.YesNo);
             if (result != MessageBoxResult.Yes)
                 return;
 
-            Core.Log("Deleting item " + locationInfo.Name + " with id " + locationID + ".");
-            switch (locationInfo.Type) {
-                case Services.Chat.Reference.LocationType.Network:
-                    ((TreeView) selectedItem.Parent).Items.Remove(selectedItem);
-                    break;
+            ServiceManager.Delete(selected.Identifier);
 
-                case Services.Chat.Reference.LocationType.Public:
-                case Services.Chat.Reference.LocationType.Private:
-                    ((TreeViewItem)selectedItem.Parent).Items.Remove(selectedItem);
-                    break;
-
-            }
-
-            itemsList.Items.Refresh();
-
-            ServiceManager.Delete(locationID);
-        } */
+            PopulateLocationList();
+        }
     }
 }

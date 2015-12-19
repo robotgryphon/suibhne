@@ -79,7 +79,7 @@ namespace Ostenvighx.Suibhne.Gui {
         }
 
         private void click_LocationsEditor(object sender, RoutedEventArgs e) {
-            Wins.ConnectionList win = new Wins.ConnectionList();
+            Windows.ConnectionList win = new Windows.ConnectionList();
             win.ShowDialog();
         }
 

@@ -3,7 +3,7 @@ using Ostenvighx.Suibhne.Services.Chat;
 using System;
 using System.Windows;
 
-namespace Ostenvighx.Suibhne.Gui.Wins {
+namespace Ostenvighx.Suibhne.Gui.Windows {
     /// <summary>
     /// Interaction logic for RenameDialog.xaml
     /// </summary>
@@ -27,9 +27,12 @@ namespace Ostenvighx.Suibhne.Gui.Wins {
 
             this.text.Text = l.Name;
         }
+
         private void Confirm(object sender, RoutedEventArgs e) {
             if (this.text.Text.Trim() == "")
                 return;
+
+            ServiceManager.Rename(id, text.Text.Trim());
 
             this.Close();
         }
