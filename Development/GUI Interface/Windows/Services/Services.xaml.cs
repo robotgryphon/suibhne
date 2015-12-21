@@ -16,35 +16,69 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using System.Xml;
+using System.Globalization;
 
-namespace Ostenvighx.Suibhne.Gui.Windows {
+namespace Ostenvighx.Suibhne.Gui.Windows.Services {
+    public class ServiceToVisibility : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value != null && value.GetType() == typeof(ServiceItem))
+                return Visibility.Visible;
+
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
     /// <summary>
-    /// Interaction logic for Service_Connection_Editor.xaml
+    /// Interaction logic for Services.xaml
     /// </summary>
-    public partial class ConnectionEditor : Window {
-
-        private ServiceItem item;
+    public partial class Services : Window {
         private Dictionary<String, FrameworkElement> fields;
+        private Boolean FieldChanged;
 
-        public ConnectionEditor(ServiceItem si) {
-            this.item = si;
+        public Services() {
+            FieldChanged = false;
             InitializeComponent();
         }
+
+        // TODO: Change internal commands to work with new again
 
         public override void EndInit() {
             base.EndInit();
 
-            this.ServiceNameArea.Content = item.Name;
-            LoadFields();
+            List<ServiceItem> items = ServiceManager.GetServices();
+            // Add items here for debug
+
+            ServiceList.ItemsSource = items;
+        }
+
+        private void ServiceList_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (FieldChanged) {
+                MessageBoxResult conf = MessageBox.Show("You have unsaved changes. Do you still want to change the file you're editing?", "Discard Changes", MessageBoxButton.YesNo);
+                if (conf == MessageBoxResult.Yes) {
+                    FieldChanged = false;
+                    LoadFields();
+                }
+            } else {
+                LoadFields();
+            }
         }
 
         private void LoadFields() {
+
+            if (ServiceList.SelectedItem == null)
+                return;
+
+            ServiceItem item = (ServiceItem)ServiceList.SelectedItem;
+
             IniConfigSource config = null;
-            this.connContainer.Children.Clear();
+            this.EditArea.Children.Clear();
             this.fields = new Dictionary<string, FrameworkElement>();
 
-            if(File.Exists(Core.ConfigDirectory + "Services/" + item.Identifier + "/service.ini")) {
+            if (File.Exists(Core.ConfigDirectory + "Services/" + item.Identifier + "/service.ini")) {
                 config = new IniConfigSource(Core.ConfigDirectory + "Services/" + item.Identifier + "/service.ini");
             }
 
@@ -57,7 +91,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                     Expander sect = new Expander();
                     sect.Margin = new Thickness(10);
                     sect.Header = ((JProperty)sectionFull).Name;
-
+                    
                     StackPanel sectPanel = new StackPanel();
                     sect.Content = sectPanel;
 
@@ -78,7 +112,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                         if (sectionParts["fields"] == null)
                             continue;
 
-                        if(sectionParts["summary"] != null) {
+                        if (sectionParts["summary"] != null) {
                             TextBlock summaryBlock = new TextBlock();
                             summaryBlock.Text = sectionParts["summary"].ToString();
                             summaryBlock.Foreground = new SolidColorBrush(Colors.DarkGray);
@@ -86,10 +120,10 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                             sectPanel.Children.Add(summaryBlock);
                         }
 
-                        JObject fields = (JObject) sectionParts["fields"];
+                        JObject fields = (JObject)sectionParts["fields"];
 
                         foreach (JToken field in fields.Children()) {
-                            JProperty fieldsSection = (JProperty) field;
+                            JProperty fieldsSection = (JProperty)field;
                             foreach (JToken fieldToken in fieldsSection.Children()) {
                                 Grid fieldWrapper = new Grid();
                                 ColumnDefinition Label = new ColumnDefinition();
@@ -128,6 +162,9 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
 
                                         if (fieldValue != null)
                                             (ui as TextBox).Text = fieldValue;
+
+                                        (ui as TextBox).TextChanged += (s, e) => { FieldChanged = true; };
+
                                         break;
 
                                     case "checkbox":
@@ -137,24 +174,28 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                                         ui = new CheckBox();
                                         try {
                                             if (
-                                                f["default"] != null && 
-                                                Boolean.Parse(f["default"].ToString())  ) {
+                                                f["default"] != null &&
+                                                Boolean.Parse(f["default"].ToString())) {
                                                 (ui as CheckBox).IsChecked = true;
                                             }
 
                                             if (fieldValue != null)
                                                 (ui as CheckBox).IsChecked = Boolean.Parse(fieldValue);
 
+                                            (ui as CheckBox).IsEnabledChanged += (s, e) => { FieldChanged = true; };
+
                                         }
                                         catch (Exception) { }
 
-                                        
+
                                         break;
 
                                     case "password":
                                         ui = new PasswordBox();
                                         if (fieldValue != null)
                                             (ui as PasswordBox).Password = fieldValue;
+
+                                        (ui as PasswordBox).PasswordChanged += (s, e) => { FieldChanged = true; };
                                         break;
                                 }
                                 #endregion
@@ -170,11 +211,11 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                                 sectPanel.Children.Add(fieldWrapper);
                             }
                         }
-                        
+
 
                     }
 
-                    this.connContainer.Children.Add(sect);
+                    EditArea.Children.Add(sect);
 
                 }
             }
@@ -184,11 +225,23 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
             }
         }
 
-        private void ReloadFromDisk(object sender, RoutedEventArgs e) {
-            LoadFields();
+        private void ReloadHandler(object sender, RoutedEventArgs e) {
+            if (ServiceList.SelectedItem == null)
+                return;
+
+            e.Handled = true;
+
+            MessageBoxResult conf = MessageBox.Show("Are you sure you want to reload the configuration from memory? All changes will be lost!", "Reload?", MessageBoxButton.YesNo);
+            if(conf == MessageBoxResult.Yes)
+                LoadFields();
         }
 
-        private void WriteToDisk(object sender, RoutedEventArgs rea) {
+        private void SaveHandler(object sender, RoutedEventArgs e) {
+            if (ServiceList.SelectedItem == null)
+                return;
+
+            ServiceItem item = (ServiceItem)ServiceList.SelectedItem;
+
             IniConfigSource config = new IniConfigSource(Core.ConfigDirectory + "Services/" + item.Identifier + "/service.ini");
             MessageBoxResult confirm = MessageBox.Show("By agreeing, you allow the configuration file at " + config.SavePath +
                 " to be completely overwritten.", "Overwrite?", MessageBoxButton.OKCancel);
@@ -204,7 +257,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                     if (sectionInConfig == null)
                         sectionInConfig = config.AddConfig((serviceSection as JProperty).Name);
 
-                    JObject serviceSectionAsObject = (JObject) serviceSection.First;
+                    JObject serviceSectionAsObject = (JObject)serviceSection.First;
                     if (serviceSectionAsObject["fields"] == null) {
                         Debug.WriteLine("Skipping service section write: " + (serviceSection as JProperty).Name + "; no fields to write.");
                         continue;
@@ -218,7 +271,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                         FrameworkElement fieldInForm = this.fields[(serviceSection as JProperty).Name + ":::" + (field as JProperty).Name];
 
                         object value = "";
-                        switch(((field as JProperty).First as JObject)["type"].ToString().ToLower()) {
+                        switch (((field as JProperty).First as JObject)["type"].ToString().ToLower()) {
                             case "text":
                                 value = (fieldInForm as TextBox).Text;
                                 break;
@@ -243,7 +296,7 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                                 break;
                         }
 
-                        sectionInConfig.Set((field as JProperty).Name, value); 
+                        sectionInConfig.Set((field as JProperty).Name, value);
                     }
 
                     Debug.WriteLine("");
@@ -253,9 +306,35 @@ namespace Ostenvighx.Suibhne.Gui.Windows {
                 config.Save();
             }
 
-            catch(Exception e) {
-                Console.WriteLine(e);
+            catch (Exception ex) {
+                Console.WriteLine(ex);
             }
+        }
+
+        private void AddNewHandler(object sender, RoutedEventArgs e) {
+            Windows.NewServiceConnection n = new NewServiceConnection();
+            n.ShowDialog();
+        }
+
+        private void RefreshHandler(object sender, RoutedEventArgs e) {
+            ServiceList.ItemsSource = ServiceManager.GetServices();
+        }
+
+        private void RenameHandler(object sender, RoutedEventArgs e) {
+            Windows.RenameDialog rd = new RenameDialog(((ServiceItem)ServiceList.SelectedItem).Identifier);
+            rd.ShowDialog();
+
+            ServiceList.ItemsSource = ServiceManager.GetServices();
+        }
+
+        private void DeleteHandler(object sender, RoutedEventArgs e) {
+
+            MessageBoxResult conf = MessageBox.Show("Really delete?", "Confirm Deletion", MessageBoxButton.YesNo);
+            if (conf != MessageBoxResult.Yes)
+                return;
+
+            ServiceManager.Delete(((ServiceItem) ServiceList.SelectedItem).Identifier);
+            ServiceList.ItemsSource = ServiceManager.GetServices();
         }
     }
 }

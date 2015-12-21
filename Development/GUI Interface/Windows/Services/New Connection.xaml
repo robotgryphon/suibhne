@@ -1,0 +1,44 @@
+﻿<Window x:Class="Ostenvighx.Suibhne.Gui.Windows.NewServiceConnection"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Ostenvighx.Suibhne.Gui.Windows"
+        mc:Ignorable="d"
+        Title="New_Service" Height="600" Width="800"
+        Background="#FFE8FFDE">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
+
+        <Border Margin="10,0" Grid.Row="0" BorderBrush="Gray" BorderThickness="0,0,0,1">
+            <TextBlock FontSize="24" VerticalAlignment="Center" Margin="10,4">Add a new service connection</TextBlock>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Label FontSize="16">Name the new connection and choose a connector</Label>
+
+                <TextBlock TextWrapping="Wrap" Margin="4,0,10,20">To get started, you need to give the new connection a friendly name so you can recognize it,
+                as well as choose which service connector you want to use.</TextBlock>
+
+                <Label>Connection Name</Label>
+                <TextBox Name="ConnName" Margin="4,0,10,0" Height="30" VerticalContentAlignment="Center"></TextBox>
+
+                <TextBlock></TextBlock>
+
+                <Label>Service Connector</Label>
+                <ComboBox Name="ConnConnector" Margin="4,0,10,0" Height="30" VerticalContentAlignment="Center"></ComboBox>
+            </StackPanel>
+        </ScrollViewer>
+        
+
+        <StackPanel HorizontalAlignment="Right" Grid.Row="2" Margin="5,0,5,5" Orientation="Horizontal">
+            <Button Margin="5,0" Padding="5" Click="Cancel">Cancel</Button>
+            <Button Margin="5,0" Padding="5" Click="Submit">Add new connection</Button>
+        </StackPanel>
+    </Grid>
+</Window>
